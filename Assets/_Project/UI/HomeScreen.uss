@@ -1,0 +1,238 @@
+/* ── Variables ─────────────────────────────────────── */
+:root {
+    --color-bg:           rgb(15, 15, 31);
+    --color-nav:          rgb(25, 25, 46);
+    --color-panel:        rgb(25, 25, 51);
+    --color-panel-header: rgb(35, 35, 66);
+    --color-accent:       rgb(46, 107, 242);
+    --color-accent-dim:   rgba(46, 107, 242, 0.35);
+    --color-text:         rgb(255, 255, 255);
+    --color-text-dim:     rgb(180, 200, 255);
+    --color-text-muted:   rgb(120, 130, 160);
+    --color-online:       rgb(51, 255, 76);
+    --color-offline:      rgb(100, 100, 120);
+    --nav-height:         70px;
+    --friend-width:       220px;
+}
+
+/* ── Root ──────────────────────────────────────────── */
+.root {
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-bg);
+}
+
+/* ── NavBar ────────────────────────────────────────── */
+.nav-bar {
+    flex-direction: row;
+    align-items: center;
+    height: var(--nav-height);
+    background-color: var(--color-nav);
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.logo {
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    width: 160px;
+    margin-right: 20px;
+}
+
+.nav-tabs {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+.nav-tab {
+    background-color: rgba(0,0,0,0);
+    border-width: 0;
+    color: var(--color-text-dim);
+    font-size: 17px;
+    padding: 0 16px;
+    height: 70px;
+    border-radius: 0;
+    transition: color 0.15s ease, border-bottom-width 0.15s ease;
+    border-bottom-width: 0;
+    border-bottom-color: var(--color-accent);
+    cursor: link;
+}
+
+.nav-tab:hover {
+    color: var(--color-text);
+    background-color: rgba(255,255,255,0.05);
+}
+
+.nav-tab--active {
+    color: var(--color-text);
+    border-bottom-width: 3px;
+    border-bottom-color: var(--color-accent);
+}
+
+.nav-right {
+    flex-direction: row;
+    align-items: center;
+}
+
+.nav-icon-btn {
+    background-color: rgba(0,0,0,0);
+    border-width: 0;
+    color: var(--color-text-muted);
+    font-size: 15px;
+    padding: 0 12px;
+    height: 70px;
+    border-radius: 0;
+    cursor: link;
+}
+
+.nav-icon-btn:hover {
+    color: var(--color-text);
+    background-color: rgba(255,255,255,0.05);
+}
+
+/* ── Main Area ─────────────────────────────────────── */
+.main-area {
+    flex-direction: row;
+    flex-grow: 1;
+}
+
+/* ── Content ───────────────────────────────────────── */
+.content {
+    flex-grow: 1;
+    position: relative;
+}
+
+.page {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.page--active {
+    display: flex;
+}
+
+.page-placeholder {
+    font-size: 32px;
+    color: var(--color-text-muted);
+}
+
+/* ── Game Icon ─────────────────────────────────────── */
+.game-icon {
+    width: 320px;
+    height: 320px;
+    background-color: rgb(26, 31, 71);
+    border-width: 2px;
+    border-color: var(--color-accent-dim);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    transition: border-color 0.2s ease;
+}
+
+.game-icon:hover {
+    border-color: var(--color-accent);
+}
+
+.game-icon__title {
+    font-size: 46px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    margin-bottom: 8px;
+}
+
+.game-icon__subtitle {
+    font-size: 16px;
+    color: var(--color-text-dim);
+    letter-spacing: 2px;
+}
+
+/* ── Play Button ───────────────────────────────────── */
+.play-btn {
+    position: absolute;
+    bottom: 36px;
+    left: 50%;
+    translate: -50% 0;
+    width: 230px;
+    height: 62px;
+    background-color: var(--color-accent);
+    border-width: 0;
+    border-radius: 4px;
+    color: var(--color-text);
+    font-size: 22px;
+    -unity-font-style: bold;
+    transition: background-color 0.15s ease, scale 0.1s ease;
+    cursor: link;
+}
+
+.play-btn:hover {
+    background-color: rgb(70, 130, 255);
+    scale: 1.03 1.03;
+}
+
+.play-btn:active {
+    background-color: rgb(30, 80, 200);
+    scale: 0.97 0.97;
+}
+
+/* ── Friend Panel ──────────────────────────────────── */
+.friend-panel {
+    width: var(--friend-width);
+    background-color: var(--color-panel);
+    flex-direction: column;
+}
+
+.friend-panel__header {
+    height: 50px;
+    background-color: var(--color-panel-header);
+    align-items: center;
+    justify-content: center;
+}
+
+.friend-panel__title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+}
+
+.friend-list {
+    flex-grow: 1;
+    padding: 8px 0;
+}
+
+/* Friend row (generated at runtime) */
+.friend-row {
+    flex-direction: row;
+    align-items: center;
+    height: 44px;
+    padding: 0 12px;
+}
+
+.friend-row:hover {
+    background-color: rgba(255,255,255,0.05);
+}
+
+.friend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 5px;
+    margin-right: 10px;
+}
+
+.friend-dot--online  { background-color: var(--color-online); }
+.friend-dot--offline { background-color: var(--color-offline); }
+
+.friend-name {
+    font-size: 15px;
+    color: var(--color-text);
+    flex-grow: 1;
+}
+
+.friend-name--offline {
+    color: var(--color-text-muted);
+}

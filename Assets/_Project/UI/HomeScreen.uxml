@@ -1,0 +1,66 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
+    <ui:Template name="HomeScreen" src="HomeScreen.uxml" />
+    <Style src="HomeScreen.uss" />
+
+    <!-- Root -->
+    <ui:VisualElement name="root" class="root">
+
+        <!-- NavBar -->
+        <ui:VisualElement name="nav-bar" class="nav-bar">
+            <ui:Label name="logo" text="ENIGMA" class="logo" />
+
+            <ui:VisualElement name="nav-tabs" class="nav-tabs">
+                <ui:Button name="tab-game"      text="ゲーム"  class="nav-tab nav-tab--active" />
+                <ui:Button name="tab-inventory" text="所持品" class="nav-tab" />
+                <ui:Button name="tab-gacha"     text="ガチャ" class="nav-tab" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="nav-right">
+                <ui:Button name="btn-settings"     text="設定" class="nav-icon-btn" />
+                <ui:Button name="btn-notification" text="通知" class="nav-icon-btn" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Main Area -->
+        <ui:VisualElement name="main-area" class="main-area">
+
+            <!-- Content (tabs switch this) -->
+            <ui:VisualElement name="content" class="content">
+
+                <!-- Tab: ゲーム -->
+                <ui:VisualElement name="page-game" class="page page--active">
+                    <ui:VisualElement name="game-icon" class="game-icon">
+                        <ui:Label text="ENIGMA" class="game-icon__title" />
+                        <ui:Label text="3D MOBA" class="game-icon__subtitle" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- Tab: 所持品 -->
+                <ui:VisualElement name="page-inventory" class="page">
+                    <ui:Label text="所持品" class="page-placeholder" />
+                </ui:VisualElement>
+
+                <!-- Tab: ガチャ -->
+                <ui:VisualElement name="page-gacha" class="page">
+                    <ui:Label text="ガチャ" class="page-placeholder" />
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+            <!-- Play Button (game tab only) -->
+            <ui:Button name="btn-play" text="プレイ開始" class="play-btn" />
+
+            <!-- Friend Panel -->
+            <ui:VisualElement name="friend-panel" class="friend-panel">
+                <ui:VisualElement class="friend-panel__header">
+                    <ui:Label text="フレンド" class="friend-panel__title" />
+                </ui:VisualElement>
+
+                <ui:ScrollView name="friend-list" class="friend-list">
+                    <!-- Populated at runtime by HomeScreenController -->
+                </ui:ScrollView>
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
