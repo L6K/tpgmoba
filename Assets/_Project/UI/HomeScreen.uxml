@@ -1,8 +1,6 @@
-<ui:UXML xmlns:ui="UnityEngine.UIElements" xmlns:uie="UnityEditor.UIElements">
-    <ui:Template name="HomeScreen" src="HomeScreen.uxml" />
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
     <Style src="HomeScreen.uss" />
 
-    <!-- Root -->
     <ui:VisualElement name="root" class="root">
 
         <!-- NavBar -->
@@ -15,23 +13,57 @@
                 <ui:Button name="tab-gacha"     text="ガチャ" class="nav-tab" />
             </ui:VisualElement>
 
-            <ui:VisualElement class="nav-right">
-                <ui:Button name="btn-settings"     text="設定" class="nav-icon-btn" />
+            <!-- 区切り線 -->
+            <ui:VisualElement class="nav-divider" />
+
+            <!-- 通知 → 設定 の順（逆に） -->
+            <ui:VisualElement name="nav-right" class="nav-right">
                 <ui:Button name="btn-notification" text="通知" class="nav-icon-btn" />
+                <ui:Button name="btn-settings"     text="設定" class="nav-icon-btn" />
             </ui:VisualElement>
+
+            <!-- 区切り線 -->
+            <ui:VisualElement class="nav-divider" />
+
+            <!-- プロフィールボタン -->
+            <ui:Button name="btn-profile" class="profile-btn">
+                <ui:VisualElement class="profile-icon" />
+            </ui:Button>
         </ui:VisualElement>
 
         <!-- Main Area -->
         <ui:VisualElement name="main-area" class="main-area">
 
-            <!-- Content (tabs switch this) -->
+            <!-- Content -->
             <ui:VisualElement name="content" class="content">
 
                 <!-- Tab: ゲーム -->
                 <ui:VisualElement name="page-game" class="page page--active">
-                    <ui:VisualElement name="game-icon" class="game-icon">
-                        <ui:Label text="ENIGMA" class="game-icon__title" />
-                        <ui:Label text="3D MOBA" class="game-icon__subtitle" />
+                    <ui:VisualElement class="game-center-col">
+
+                        <!-- ゲームアイコン -->
+                        <ui:VisualElement name="game-icon" class="game-icon">
+                            <ui:Label text="ENIGMA" class="game-icon__title" />
+                            <ui:Label text="3D MOBA" class="game-icon__subtitle" />
+                        </ui:VisualElement>
+
+                        <!-- ソロ枠（3人スロット）-->
+                        <ui:VisualElement class="party-slots">
+                            <ui:VisualElement class="party-slot party-slot--empty">
+                                <ui:Label text="+" class="party-slot__plus" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="party-slot party-slot--self">
+                                <ui:VisualElement class="party-slot__icon" />
+                                <ui:Label text="あなた" class="party-slot__label" />
+                            </ui:VisualElement>
+                            <ui:VisualElement class="party-slot party-slot--empty">
+                                <ui:Label text="+" class="party-slot__plus" />
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+
+                        <!-- プレイ開始ボタン -->
+                        <ui:Button name="btn-play" text="プレイ開始" class="play-btn" />
+
                     </ui:VisualElement>
                 </ui:VisualElement>
 
@@ -47,18 +79,12 @@
 
             </ui:VisualElement>
 
-            <!-- Play Button (game tab only) -->
-            <ui:Button name="btn-play" text="プレイ開始" class="play-btn" />
-
             <!-- Friend Panel -->
             <ui:VisualElement name="friend-panel" class="friend-panel">
                 <ui:VisualElement class="friend-panel__header">
                     <ui:Label text="フレンド" class="friend-panel__title" />
                 </ui:VisualElement>
-
-                <ui:ScrollView name="friend-list" class="friend-list">
-                    <!-- Populated at runtime by HomeScreenController -->
-                </ui:ScrollView>
+                <ui:ScrollView name="friend-list" class="friend-list" />
             </ui:VisualElement>
 
         </ui:VisualElement>

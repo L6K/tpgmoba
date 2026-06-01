@@ -7,12 +7,13 @@ namespace Enigma.UI
     {
         [SerializeField] UIDocument uiDocument;
 
-        // Tab pages
+        [Header("Profile")]
+        [SerializeField] Texture2D playerIcon; // Inspector でアイコン画像を設定
+
         VisualElement pageGame, pageInventory, pageGacha;
         Button tabGame, tabInventory, tabGacha;
-        Button btnPlay;
+        Button btnPlay, btnProfile;
 
-        // Friend data (placeholder until networking is implemented)
         static readonly (string name, bool online)[] FriendData =
         {
             ("山田", true),
@@ -32,21 +33,30 @@ namespace Enigma.UI
             tabInventory = root.Q<Button>("tab-inventory");
             tabGacha     = root.Q<Button>("tab-gacha");
             btnPlay      = root.Q<Button>("btn-play");
+            btnProfile   = root.Q<Button>("btn-profile");
 
             tabGame.clicked      += () => SwitchTab(0);
             tabInventory.clicked += () => SwitchTab(1);
             tabGacha.clicked     += () => SwitchTab(2);
             btnPlay.clicked      += OnPlayClicked;
+            btnProfile.clicked   += OnProfileClicked;
+
+            // プロフィールアイコン画像が設定されていれば適用
+            if (playerIcon != null)
+            {
+                var profileIcon = btnProfile.Q<VisualElement>("profile-icon");
+                profileIcon?.style.backgroundImage.Equals(Background.FromTexture2D(playerIcon));
+                profileIcon.style.backgroundImage = Background.FromTexture2D(playerIcon);
+            }
 
             BuildFriendList(root.Q<ScrollView>("friend-list"));
-
             SwitchTab(0);
         }
 
         void SwitchTab(int index)
         {
             VisualElement[] pages = { pageGame, pageInventory, pageGacha };
-            Button[] tabs         = { tabGame, tabInventory, tabGacha };
+            Button[]        tabs  = { tabGame, tabInventory, tabGacha };
 
             for (int i = 0; i < pages.Length; i++)
             {
@@ -54,15 +64,18 @@ namespace Enigma.UI
                 SetClass(pages[i], "page--active", active);
                 SetClass(tabs[i],  "nav-tab--active", active);
             }
-
-            // プレイボタンはゲームタブのみ表示
-            btnPlay.style.display = index == 0 ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
         void OnPlayClicked()
         {
-            Debug.Log("[HomeScreen] プレイ開始ボタンが押されました");
+            Debug.Log("[HomeScreen] プレイ開始");
             // TODO: SceneManager.LoadScene("CharacterSelect");
+        }
+
+        void OnProfileClicked()
+        {
+            Debug.Log("[HomeScreen] プロフィール表示");
+            // TODO: プロフィールパネルを開く
         }
 
         void BuildFriendList(ScrollView list)
@@ -87,10 +100,10 @@ namespace Enigma.UI
             }
         }
 
-        static void SetClass(VisualElement el, string className, bool active)
+        static void SetClass(VisualElement el, string cls, bool active)
         {
-            if (active) el.AddToClassList(className);
-            else        el.RemoveFromClassList(className);
+            if (active) el.AddToClassList(cls);
+            else        el.RemoveFromClassList(cls);
         }
     }
 }

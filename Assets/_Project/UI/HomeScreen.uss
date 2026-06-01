@@ -11,6 +11,7 @@
     --color-text-muted:   rgb(120, 130, 160);
     --color-online:       rgb(51, 255, 76);
     --color-offline:      rgb(100, 100, 120);
+    --color-divider:      rgba(255, 255, 255, 0.12);
     --nav-height:         70px;
     --friend-width:       220px;
 }
@@ -30,7 +31,7 @@
     height: var(--nav-height);
     background-color: var(--color-nav);
     padding-left: 20px;
-    padding-right: 20px;
+    padding-right: 12px;
 }
 
 .logo {
@@ -54,9 +55,9 @@
     padding: 0 16px;
     height: 70px;
     border-radius: 0;
-    transition: color 0.15s ease, border-bottom-width 0.15s ease;
     border-bottom-width: 0;
     border-bottom-color: var(--color-accent);
+    transition: color 0.15s ease;
     cursor: link;
 }
 
@@ -69,6 +70,15 @@
     color: var(--color-text);
     border-bottom-width: 3px;
     border-bottom-color: var(--color-accent);
+}
+
+/* 区切り線 */
+.nav-divider {
+    width: 1px;
+    height: 32px;
+    background-color: var(--color-divider);
+    margin-left: 8px;
+    margin-right: 8px;
 }
 
 .nav-right {
@@ -90,6 +100,36 @@
 .nav-icon-btn:hover {
     color: var(--color-text);
     background-color: rgba(255,255,255,0.05);
+}
+
+/* ── Profile Button ────────────────────────────────── */
+.profile-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 21px;
+    background-color: rgba(0,0,0,0);
+    border-width: 2px;
+    border-color: var(--color-accent-dim);
+    padding: 0;
+    margin-left: 4px;
+    cursor: link;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s ease;
+}
+
+.profile-btn:hover {
+    border-color: var(--color-accent);
+    background-color: rgba(46, 107, 242, 0.15);
+}
+
+.profile-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 17px;
+    /* プレースホルダー: グラデーション風の背景色 */
+    background-color: rgb(60, 80, 160);
+    /* 実際のアイコン画像は HomeScreenController から設定 */
 }
 
 /* ── Main Area ─────────────────────────────────────── */
@@ -121,6 +161,14 @@
     color: var(--color-text-muted);
 }
 
+/* ── Game Center Column ────────────────────────────── */
+/* アイコン・パーティ枠・ボタンを縦に並べて中央揃え */
+.game-center-col {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
 /* ── Game Icon ─────────────────────────────────────── */
 .game-icon {
     width: 320px;
@@ -131,7 +179,7 @@
     border-radius: 4px;
     align-items: center;
     justify-content: center;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     transition: border-color 0.2s ease;
 }
 
@@ -152,12 +200,71 @@
     letter-spacing: 2px;
 }
 
+/* ── Party Slots ───────────────────────────────────── */
+.party-slots {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.party-slot {
+    width: 80px;
+    height: 80px;
+    border-radius: 40px;
+    border-width: 2px;
+    align-items: center;
+    justify-content: center;
+    margin-left: 10px;
+    margin-right: 10px;
+    flex-direction: column;
+}
+
+.party-slot--empty {
+    border-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.04);
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+    cursor: link;
+}
+
+.party-slot--empty:hover {
+    border-color: var(--color-accent);
+    background-color: rgba(46, 107, 242, 0.1);
+}
+
+.party-slot__plus {
+    font-size: 28px;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.party-slot--empty:hover .party-slot__plus {
+    color: var(--color-accent);
+}
+
+.party-slot--self {
+    border-color: var(--color-accent);
+    background-color: rgb(26, 31, 71);
+}
+
+.party-slot__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 24px;
+    background-color: rgb(60, 80, 160);
+    margin-bottom: 0;
+}
+
+.party-slot__label {
+    font-size: 11px;
+    color: var(--color-text-dim);
+    margin-top: 4px;
+    /* party-slot の外側に小さく表示 */
+    position: absolute;
+    bottom: -18px;
+}
+
 /* ── Play Button ───────────────────────────────────── */
 .play-btn {
-    position: absolute;
-    bottom: 36px;
-    left: 50%;
-    translate: -50% 0;
     width: 230px;
     height: 62px;
     background-color: var(--color-accent);
@@ -166,6 +273,7 @@
     color: var(--color-text);
     font-size: 22px;
     -unity-font-style: bold;
+    margin-top: 16px;
     transition: background-color 0.15s ease, scale 0.1s ease;
     cursor: link;
 }
@@ -205,7 +313,6 @@
     padding: 8px 0;
 }
 
-/* Friend row (generated at runtime) */
 .friend-row {
     flex-direction: row;
     align-items: center;
