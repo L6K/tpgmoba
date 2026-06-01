@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__coplay-mcp__get_unity_editor_state",
+      "Bash(claude mcp *)",
+      "Skill(update-config)",
+      "Bash(Test-Path *)",
+      "mcp__coplay-mcp__install_unity_package",
+      "Bash(gh extension *)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)",
+      "Bash(gh release *)",
+      "Bash(gh help *)",
+      "Bash(gh env *)",
+      "Bash(gh config *)"
+    ]
+  }
+}
