@@ -10,6 +10,9 @@ namespace Enigma.UI
         [Header("Profile")]
         [SerializeField] Texture2D playerIcon;
 
+        [Header("Data")]
+        [SerializeField] FriendDatabase friendDatabase;
+
         // ── メインタブ ─────────────────────────────────
         VisualElement pageGame, pageInventory, pageGacha;
         Button tabGame, tabInventory, tabGacha;
@@ -25,11 +28,6 @@ namespace Enigma.UI
         Label  labelBgmVal, labelSeVal, labelVoiceVal;
         DropdownField dropdownQuality, dropdownWindow;
 
-        // ── フレンドデータ（仮） ───────────────────────
-        static readonly (string name, bool online)[] FriendData =
-        {
-            ("山田", true), ("鈴木", false), ("田中", true),
-        };
 
         void OnEnable()
         {
@@ -163,20 +161,73 @@ namespace Enigma.UI
         void BuildFriendList(ScrollView list)
         {
             list.Clear();
-            foreach (var (name, online) in FriendData)
+
+            if (friendDatabase == null)
+            {
+                Debug.LogWarning("[HomeScreen] FriendDatabase が設定されていません");
+                return;
+            }
+
+            var friends = friendDatabase.GetSorted();
+
+            // ヘッダーのオンライン人数を更新
+            var countLabel = uiDocument.rootVisualElement.Q<Label>("friend-count");
+            if (countLabel != null)
+                countLabel.text = $"{friendDatabase.OnlineCount}/{friendDatabase.TotalCount}";
+
+            foreach (var friend in friends)
             {
                 var row = new VisualElement();
                 row.AddToClassList("friend-row");
+
+                // オンラインドット
                 var dot = new VisualElement();
                 dot.AddToClassList("friend-dot");
-                dot.AddToClassList(online ? "friend-dot--online" : "friend-dot--offline");
-                var label = new Label(name);
-                label.AddToClassList("friend-name");
-                if (!online) label.AddToClassList("friend-name--offline");
+                dot.AddToClassList(friend.IsOnline ? "friend-dot--online" : "friend-dot--offline");
+
+                // 名前＋ステータスの縦並び
+                var info = new VisualElement();
+                info.AddToClassList("friend-info");
+
+                var nameLabel = new Label(friend.displayName);
+                nameLabel.AddToClassList("friend-name");
+                if (!friend.IsOnline) nameLabel.AddToClassList("friend-name--offline");
+
+                var statusLabel = new Label(friend.StatusLabel);
+                statusLabel.AddToClassList("friend-status");
+                statusLabel.AddToClassList(friend.status switch
+                {
+                    FriendStatus.InGame  => "friend-status--ingame",
+                    FriendStatus.InQueue => "friend-status--inqueue",
+                    FriendStatus.Online  => "friend-status--online",
+                    _                    => "",
+                });
+
+                info.Add(nameLabel);
+                info.Add(statusLabel);
+
+                // レベル表示
+                var levelLabel = new Label($"Lv.{friend.level}");
+                levelLabel.AddToClassList("friend-level");
+
+                // 招待ボタン（オンラインのみ）
+                var inviteBtn = new Button(() => OnInviteFriend(friend));
+                inviteBtn.text = "招待";
+                inviteBtn.AddToClassList("friend-invite-btn");
+                if (!friend.IsOnline) inviteBtn.style.display = DisplayStyle.None;
+
                 row.Add(dot);
-                row.Add(label);
+                row.Add(info);
+                row.Add(levelLabel);
+                row.Add(inviteBtn);
                 list.Add(row);
             }
+        }
+
+        void OnInviteFriend(FriendData friend)
+        {
+            Debug.Log($"[HomeScreen] {friend.displayName} を招待しました");
+            // TODO: ネットワーク経由でパーティ招待を送信
         }
 
         static void SetClass(VisualElement el, string cls, bool active)

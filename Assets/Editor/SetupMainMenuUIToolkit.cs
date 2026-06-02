@@ -54,9 +54,17 @@ public class SetupMainMenuUIToolkit
 
         // HomeScreenController を追加
         var controller = uiGO.AddComponent<Enigma.UI.HomeScreenController>();
-        // SerializedObject 経由で uiDocument フィールドを設定
         var so = new SerializedObject(controller);
         so.FindProperty("uiDocument").objectReferenceValue = uiDoc;
+
+        // FriendDatabase を自動で設定
+        var friendDb = AssetDatabase.LoadAssetAtPath<Enigma.UI.FriendDatabase>(
+            "Assets/_Project/Data/FriendDatabase.asset");
+        if (friendDb != null)
+            so.FindProperty("friendDatabase").objectReferenceValue = friendDb;
+        else
+            Debug.LogWarning("[Enigma] FriendDatabase not found. Run CreateFriendDatabase first.");
+
         so.ApplyModifiedProperties();
 
         // EventSystem（新InputSystem対応）

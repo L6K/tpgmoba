@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 94a175be945ba75498e6ed39f5534851, type: 3}
+  m_Name: "Friend_\u7530\u4E2D\u30B1\u30F3\u30B8"
+  m_EditorClassIdentifier: Assembly-CSharp::Enigma.UI.FriendData
+  displayName: "\u7530\u4E2D\u30B1\u30F3\u30B8"
+  level: 18
+  avatar: {fileID: 0}
+  status: 3

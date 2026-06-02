@@ -87,6 +87,7 @@
             <ui:VisualElement name="friend-panel" class="friend-panel">
                 <ui:VisualElement class="friend-panel__header">
                     <ui:Label text="フレンド" class="friend-panel__title" />
+                    <ui:Label name="friend-count" text="0/0" class="friend-count" />
                 </ui:VisualElement>
                 <ui:ScrollView name="friend-list" class="friend-list" />
             </ui:VisualElement>

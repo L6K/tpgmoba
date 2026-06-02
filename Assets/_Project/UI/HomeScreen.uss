@@ -300,10 +300,22 @@
     justify-content: center;
 }
 
+.friend-panel__header {
+    flex-direction: row;
+}
+
 .friend-panel__title {
     font-size: 16px;
     -unity-font-style: bold;
     color: var(--color-text);
+    flex-grow: 1;
+}
+
+.friend-count {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    -unity-text-align: middle-right;
+    margin-right: 12px;
 }
 
 .friend-list {
@@ -340,6 +352,49 @@
 
 .friend-name--offline {
     color: var(--color-text-muted);
+}
+
+.friend-info {
+    flex-direction: column;
+    flex-grow: 1;
+    justify-content: center;
+}
+
+.friend-status {
+    font-size: 11px;
+    color: var(--color-text-muted);
+    margin-top: 1px;
+}
+
+.friend-status--ingame  { color: rgb(255, 180, 50); }
+.friend-status--inqueue { color: rgb(50, 200, 255); }
+.friend-status--online  { color: var(--color-text-muted); }
+
+.friend-invite-btn {
+    display: none;
+    width: 48px;
+    height: 26px;
+    background-color: var(--color-accent);
+    border-width: 0;
+    border-radius: 4px;
+    color: var(--color-text);
+    font-size: 12px;
+    cursor: link;
+    transition: background-color 0.1s ease;
+}
+
+.friend-invite-btn:hover {
+    background-color: rgb(70, 130, 255);
+}
+
+.friend-row:hover .friend-invite-btn {
+    display: flex;
+}
+
+.friend-level {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-right: 6px;
 }
 
 /* ══ 設定オーバーレイ ══════════════════════════════ */
