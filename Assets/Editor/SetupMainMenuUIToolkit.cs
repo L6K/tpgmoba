@@ -59,10 +59,10 @@ public class SetupMainMenuUIToolkit
         so.FindProperty("uiDocument").objectReferenceValue = uiDoc;
         so.ApplyModifiedProperties();
 
-        // EventSystem
+        // EventSystem（新InputSystem対応）
         var es = new GameObject("EventSystem");
         es.AddComponent<UnityEngine.EventSystems.EventSystem>();
-        es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+        es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
 
         string scenePath = "Assets/Scenes/MainMenu.unity";
         EditorSceneManager.SaveScene(scene, scenePath);
