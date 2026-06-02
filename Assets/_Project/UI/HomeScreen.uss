@@ -291,17 +291,19 @@
     width: var(--friend-width);
     background-color: var(--color-panel);
     flex-direction: column;
+    overflow: hidden;
 }
 
 .friend-panel__header {
-    height: 50px;
-    background-color: var(--color-panel-header);
-    align-items: center;
-    justify-content: center;
+    flex-shrink: 0;
 }
 
 .friend-panel__header {
     flex-direction: row;
+    height: 50px;
+    background-color: var(--color-panel-header);
+    align-items: center;
+    padding-left: 12px;
 }
 
 .friend-panel__title {
@@ -326,8 +328,8 @@
 .friend-row {
     flex-direction: row;
     align-items: center;
-    height: 44px;
-    padding: 0 12px;
+    min-height: 52px;
+    padding: 6px 12px;
 }
 
 .friend-row:hover {
