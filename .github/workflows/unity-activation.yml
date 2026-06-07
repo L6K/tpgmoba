@@ -1,23 +1,41 @@
 name: Unity License Activation
 
-# このワークフローは初回一回だけ手動で実行してください
-# 実行後にアーティファクト (Unity_v6000.x.ulf) をダウンロードし、
-# GitHub Secrets に UNITY_LICENSE として登録します
+# ══ 使い方 ══════════════════════════════════════════
+# 1. このワークフローを手動実行（Run workflow）
+# 2. Artifacts から Unity_v*.alf をダウンロード
+# 3. https://license.unity3d.com/manual に .alf をアップロード
+# 4. ダウンロードされた .ulf ファイルの内容を GitHub Secret に登録
+#    Settings > Secrets > Actions > New secret
+#    名前: UNITY_LICENSE  値: .ulf ファイルの全テキスト
+# ═══════════════════════════════════════════════════
 
 on:
   workflow_dispatch: {}
 
 jobs:
   activation:
-    name: Request Unity License
+    name: Generate Activation File (.alf)
     runs-on: ubuntu-latest
     steps:
-      - name: Request manual activation file
-        id: getManualLicenseFile
-        uses: game-ci/unity-request-activation-file@v2
+      - name: Create .alf activation file
+        run: |
+          # Unity Editor をインストールして .alf を生成
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            unityci/editor:ubuntu-6000.3.16f1-base-3 \
+            unity-editor \
+              -batchmode \
+              -nographics \
+              -logFile /workspace/unity.log \
+              -createManualActivationFile \
+              -quit || true
+          # .alf ファイルを確認
+          ls -la /workspace/*.alf || echo "No .alf file found, check unity.log"
+          cat /workspace/unity.log || true
 
-      - name: Upload activation file
+      - name: Upload .alf artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Unity_v${{ steps.getManualLicenseFile.outputs.unityVersion }}
-          path: ${{ steps.getManualLicenseFile.outputs.filePath }}
+          name: Unity_alf
+          path: "*.alf"
+          if-no-files-found: warn
