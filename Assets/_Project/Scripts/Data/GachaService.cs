@@ -8,73 +8,62 @@ namespace Enigma.Data
     /// クリスタル残高とガチャ抽選を担当（暫定実装）。
     /// SQLite 導入後は gacha_log テーブルへの記録を追加すること。
     /// </summary>
-    public static class GachaService
+    public sealed class GachaService : IGachaService
     {
-        // ── Keys ──────────────────────────────────────
-        const string KEY_CRYSTALS = "gacha_crystals";
+        private const string KeyCrystals = "gacha_crystals";
 
-        // ── Costs ─────────────────────────────────────
         public const int SinglePullCost = 150;
         public const int TenPullCost    = 1500;
 
-        // ── Crystals ──────────────────────────────────
-        public static int Crystals
+        private readonly ISaveStore        _store;
+        private readonly ICharacterOwnership _ownership;
+        private readonly IRandomSource     _random;
+
+        private int _crystals;
+
+        public int Crystals => _crystals;
+
+        public GachaService(ISaveStore store, ICharacterOwnership ownership, IRandomSource random)
         {
-            get => PlayerPrefs.GetInt(KEY_CRYSTALS, 3000);
-            private set
-            {
-                PlayerPrefs.SetInt(KEY_CRYSTALS, value);
-                PlayerPrefs.Save();
-            }
+            _store     = store;
+            _ownership = ownership;
+            _random    = random;
+            _crystals  = _store.GetInt(KeyCrystals, 3000);
         }
 
-        // ── PullResult ────────────────────────────────
-        public readonly struct PullResult
-        {
-            public readonly CharacterData character;
-            public readonly bool isNew;
-
-            public PullResult(CharacterData character, bool isNew)
-            {
-                this.character = character;
-                this.isNew     = isNew;
-            }
-        }
-
-        // ── TryPull ───────────────────────────────────
         /// <summary>
         /// count（1 または 10）回ガチャを引く。
-        /// 残高不足または db が空の場合は false を返す。
+        /// 残高不足または pool が空の場合は false を返す。
         /// </summary>
-        public static bool TryPull(CharacterDatabase db, int count, List<PullResult> results)
+        public bool TryPull(IReadOnlyList<CharacterData> pool, int count, List<PullResult> results)
         {
-            if (db == null || db.characters == null) return false;
+            if (pool == null) return false;
 
             int cost = count == 10 ? TenPullCost : SinglePullCost * count;
 
-            // 有効なキャラクターのみ対象
-            var pool = new List<CharacterData>();
-            foreach (var c in db.characters)
+            // null 要素を除外した有効プールを構築
+            var validPool = new List<CharacterData>();
+            foreach (var c in pool)
             {
-                if (c != null) pool.Add(c);
+                if (c != null) validPool.Add(c);
             }
 
-            if (pool.Count == 0) return false;
-            if (Crystals < cost)  return false;
+            if (validPool.Count == 0) return false;
+            if (_crystals < cost)     return false;
 
-            Crystals -= cost;
+            _crystals -= cost;
+            _store.SetInt(KeyCrystals, _crystals);
+            _store.Save();
 
             for (int i = 0; i < count; i++)
             {
-                // 等確率抽選
-                var chara = pool[Random.Range(0, pool.Count)];
+                var chara = validPool[_random.Next(validPool.Count)];
 
-                // 抽選 → 判定 → Unlock の順序を保つ
-                bool wasOwned = CharacterOwnership.IsOwned(chara);
+                bool wasOwned = _ownership.IsOwned(chara);
                 bool isNew    = !wasOwned;
 
                 if (isNew)
-                    CharacterOwnership.Unlock(chara.charId);
+                    _ownership.Unlock(chara.CharId);
 
                 results.Add(new PullResult(chara, isNew));
             }

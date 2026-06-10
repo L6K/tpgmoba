@@ -50,14 +50,24 @@ Assets/
 └── TutorialInfo/           # Unity デフォルト（触らない）
 ```
 
-## コーディング規約
+## コーディング規約（標準 C# 規約準拠）
 
 - **名前空間**: `Enigma.{サブシステム名}` (例: `Enigma.Abilities`)
-- **クラス/メソッド**: PascalCase
-- **フィールド**: camelCase、SerializeField は `_` プレフィックスなし
+- **クラス/メソッド/プロパティ/定数**: PascalCase（`KEY_BGM` のような SCREAMING_SNAKE は禁止）
+- **プライベートフィールド**: `_camelCase`（`[SerializeField]` 付きも同様）
+- **パブリック API**: フィールドではなくプロパティを公開する。ScriptableObject のデータ定義のみ public PascalCase フィールド可
 - **インターフェース**: `I` プレフィックス (例: `IDamageable`)
+- **シリアライズ済みフィールドのリネーム**: 必ず `[FormerlySerializedAs]` を付けてアセット/シーン参照を保護する
 - **ScriptableObject**: データ定義に積極的に使用
 - コメントは WHY が非自明な場合のみ記述
+
+## 設計方針（疎結合・テスタビリティ）
+
+- **static クラスへの直接依存は禁止**。サービスはインターフェース（`ISaveStore`, `IGachaService` 等）+ コンストラクタ注入の plain C# クラスで実装する
+- **Unity API（PlayerPrefs / Screen / QualitySettings / Random 等）は直接呼ばず抽象でラップ**し、テストでフェイクに差し替え可能にする
+- **MonoBehaviour は Humble Object**: ロジックを持たず、サービスの組み立ては composition root（`GameServices`）経由で取得する
+- **ユニットテスト**: ロジックは EditMode テスト（`Assets/_Project/Tests/EditMode`）で fake を注入して検証する。新しいサービスを追加したらテストも書く
+- アセンブリ: ゲームコードは `Enigma.asmdef`、テストは `Enigma.Tests.EditMode.asmdef`
 
 ## 主要システム
 

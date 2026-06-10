@@ -33,18 +33,18 @@ public class CreateFriendDatabase
             var existing = AssetDatabase.LoadAssetAtPath<FriendData>(path);
             if (existing != null)
             {
-                existing.displayName = name;
-                existing.level       = level;
-                existing.status      = status;
+                existing.DisplayName = name;
+                existing.Level       = level;
+                existing.Status      = status;
                 EditorUtility.SetDirty(existing);
                 createdFriends[i] = existing;
             }
             else
             {
                 var data = ScriptableObject.CreateInstance<FriendData>();
-                data.displayName = name;
-                data.level       = level;
-                data.status      = status;
+                data.DisplayName = name;
+                data.Level       = level;
+                data.Status      = status;
                 AssetDatabase.CreateAsset(data, path);
                 createdFriends[i] = data;
             }
@@ -57,7 +57,7 @@ public class CreateFriendDatabase
 
         // SerializedObject 経由で friends リストを設定
         var so = new SerializedObject(db);
-        var friendsProp = so.FindProperty("friends");
+        var friendsProp = so.FindProperty("_friends");
         friendsProp.arraySize = createdFriends.Length;
         for (int i = 0; i < createdFriends.Length; i++)
             friendsProp.GetArrayElementAtIndex(i).objectReferenceValue = createdFriends[i];

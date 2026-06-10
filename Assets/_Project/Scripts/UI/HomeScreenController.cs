@@ -1,180 +1,189 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
+using UnityEngine.Serialization;
 using Enigma.Character;
+using Enigma.Core;
 using Enigma.Data;
 
 namespace Enigma.UI
 {
     public class HomeScreenController : MonoBehaviour
     {
-        [SerializeField] UIDocument uiDocument;
+        [FormerlySerializedAs("uiDocument")]
+        [SerializeField] private UIDocument _uiDocument;
 
         [Header("Profile")]
-        [SerializeField] Texture2D playerIcon;
+        [FormerlySerializedAs("playerIcon")]
+        [SerializeField] private Texture2D _playerIcon;
 
         [Header("Data")]
-        [SerializeField] FriendDatabase friendDatabase;
-        [SerializeField] CharacterDatabase characterDatabase;
+        [FormerlySerializedAs("friendDatabase")]
+        [SerializeField] private FriendDatabase _friendDatabase;
+
+        [FormerlySerializedAs("characterDatabase")]
+        [SerializeField] private CharacterDatabase _characterDatabase;
 
         // ── メインタブ ─────────────────────────────────
-        VisualElement pageGame, pageInventory, pageGacha;
-        Button tabGame, tabInventory, tabGacha;
-        Button btnPlay, btnProfile, btnSettings;
+        private VisualElement _pageGame, _pageInventory, _pageGacha;
+        private Button _tabGame, _tabInventory, _tabGacha;
+        private Button _btnPlay, _btnProfile, _btnSettings;
 
         // ── 所持品サブタブ ─────────────────────────────
-        Button itabChars, itabSkins, itabItems;
-        ScrollView charGrid;
-        VisualElement ipageSkins, ipageItems;
+        private Button _itabChars, _itabSkins, _itabItems;
+        private ScrollView _charGrid;
+        private VisualElement _ipageSkins, _ipageItems;
 
         // ── 設定オーバーレイ ───────────────────────────
-        VisualElement settingsOverlay;
-        VisualElement spageSound, spageGraphics, spageControls, spageGame;
-        Button stabSound, stabGraphics, stabControls, stabGameTab;
-        Button btnCloseSettings, btnApplySettings;
+        private VisualElement _settingsOverlay;
+        private VisualElement _spageSound, _spageGraphics, _spageControls, _spageGame;
+        private Button _stabSound, _stabGraphics, _stabControls, _stabGameTab;
+        private Button _btnCloseSettings, _btnApplySettings;
 
         // ── ガチャ ─────────────────────────────────────
-        VisualElement gachaResultOverlay;
-        ScrollView    gachaResultGrid;
-        Button        btnGacha1, btnGacha10, btnCloseGachaResult;
-        Label         labelCrystals;
+        private VisualElement _gachaResultOverlay;
+        private ScrollView    _gachaResultGrid;
+        private Button        _btnGacha1, _btnGacha10, _btnCloseGachaResult;
+        private Label         _labelCrystals;
 
         // ── プロフィールオーバーレイ ───────────────────
-        VisualElement profileOverlay;
-        VisualElement profileOverlayIcon;
-        Button        btnCloseProfile;
-        Label         profileCharCount, profileCrystalCount;
-        Label         profileOverlayName, profileOverlayLevel;
+        private VisualElement _profileOverlay;
+        private VisualElement _profileOverlayIcon;
+        private Button        _btnCloseProfile;
+        private Label         _profileCharCount, _profileCrystalCount;
+        private Label         _profileOverlayName, _profileOverlayLevel;
 
-        Slider sliderBgm, sliderSe, sliderVoice;
-        Label  labelBgmVal, labelSeVal, labelVoiceVal;
-        DropdownField dropdownQuality, dropdownWindow;
+        private Slider        _sliderBgm, _sliderSe, _sliderVoice;
+        private Label         _labelBgmVal, _labelSeVal, _labelVoiceVal;
+        private DropdownField _dropdownQuality, _dropdownWindow;
 
 
-        void OnEnable()
+        private void OnEnable()
         {
-            SettingsManager.Load();
-            var root = uiDocument.rootVisualElement;
+            if (!GameServices.IsInitialized) GameServices.Initialize();
+
+            GameServices.Settings.Load();
+            var root = _uiDocument.rootVisualElement;
 
             // メインタブ
-            pageGame      = root.Q<VisualElement>("page-game");
-            pageInventory = root.Q<VisualElement>("page-inventory");
-            pageGacha     = root.Q<VisualElement>("page-gacha");
-            tabGame       = root.Q<Button>("tab-game");
-            tabInventory  = root.Q<Button>("tab-inventory");
-            tabGacha      = root.Q<Button>("tab-gacha");
-            btnPlay       = root.Q<Button>("btn-play");
-            btnProfile    = root.Q<Button>("btn-profile");
-            btnSettings   = root.Q<Button>("btn-settings");
+            _pageGame      = root.Q<VisualElement>("page-game");
+            _pageInventory = root.Q<VisualElement>("page-inventory");
+            _pageGacha     = root.Q<VisualElement>("page-gacha");
+            _tabGame       = root.Q<Button>("tab-game");
+            _tabInventory  = root.Q<Button>("tab-inventory");
+            _tabGacha      = root.Q<Button>("tab-gacha");
+            _btnPlay       = root.Q<Button>("btn-play");
+            _btnProfile    = root.Q<Button>("btn-profile");
+            _btnSettings   = root.Q<Button>("btn-settings");
 
-            tabGame.clicked      += () => SwitchTab(0);
-            tabInventory.clicked += () => SwitchTab(1);
-            tabGacha.clicked     += () => SwitchTab(2);
-            btnPlay.clicked      += OnPlayClicked;
-            btnProfile.clicked   += OnProfileClicked;
-            btnSettings.clicked  += OpenSettings;
+            _tabGame.clicked      += () => SwitchTab(0);
+            _tabInventory.clicked += () => SwitchTab(1);
+            _tabGacha.clicked     += () => SwitchTab(2);
+            _btnPlay.clicked      += OnPlayClicked;
+            _btnProfile.clicked   += OnProfileClicked;
+            _btnSettings.clicked  += OpenSettings;
 
             // 設定オーバーレイ
-            settingsOverlay  = root.Q<VisualElement>("settings-overlay");
-            spageSound       = root.Q<VisualElement>("spage-sound");
-            spageGraphics    = root.Q<VisualElement>("spage-graphics");
-            spageControls    = root.Q<VisualElement>("spage-controls");
-            spageGame        = root.Q<VisualElement>("spage-game");
-            stabSound        = root.Q<Button>("stab-sound");
-            stabGraphics     = root.Q<Button>("stab-graphics");
-            stabControls     = root.Q<Button>("stab-controls");
-            stabGameTab      = root.Q<Button>("stab-game");
-            btnCloseSettings = root.Q<Button>("btn-close-settings");
-            btnApplySettings = root.Q<Button>("btn-settings-apply");
+            _settingsOverlay  = root.Q<VisualElement>("settings-overlay");
+            _spageSound       = root.Q<VisualElement>("spage-sound");
+            _spageGraphics    = root.Q<VisualElement>("spage-graphics");
+            _spageControls    = root.Q<VisualElement>("spage-controls");
+            _spageGame        = root.Q<VisualElement>("spage-game");
+            _stabSound        = root.Q<Button>("stab-sound");
+            _stabGraphics     = root.Q<Button>("stab-graphics");
+            _stabControls     = root.Q<Button>("stab-controls");
+            _stabGameTab      = root.Q<Button>("stab-game");
+            _btnCloseSettings = root.Q<Button>("btn-close-settings");
+            _btnApplySettings = root.Q<Button>("btn-settings-apply");
 
-            stabSound.clicked    += () => SwitchSettingsTab(0);
-            stabGraphics.clicked += () => SwitchSettingsTab(1);
-            stabControls.clicked += () => SwitchSettingsTab(2);
-            stabGameTab.clicked  += () => SwitchSettingsTab(3);
-            btnCloseSettings.clicked += CloseSettings;
-            btnApplySettings.clicked += ApplySettings;
+            _stabSound.clicked    += () => SwitchSettingsTab(0);
+            _stabGraphics.clicked += () => SwitchSettingsTab(1);
+            _stabControls.clicked += () => SwitchSettingsTab(2);
+            _stabGameTab.clicked  += () => SwitchSettingsTab(3);
+            _btnCloseSettings.clicked += CloseSettings;
+            _btnApplySettings.clicked += ApplySettings;
 
             // スライダー・ドロップダウン
-            sliderBgm   = root.Q<Slider>("slider-bgm");
-            sliderSe    = root.Q<Slider>("slider-se");
-            sliderVoice = root.Q<Slider>("slider-voice");
-            labelBgmVal   = root.Q<Label>("label-bgm-val");
-            labelSeVal    = root.Q<Label>("label-se-val");
-            labelVoiceVal = root.Q<Label>("label-voice-val");
-            dropdownQuality = root.Q<DropdownField>("dropdown-quality");
-            dropdownWindow  = root.Q<DropdownField>("dropdown-window");
+            _sliderBgm   = root.Q<Slider>("slider-bgm");
+            _sliderSe    = root.Q<Slider>("slider-se");
+            _sliderVoice = root.Q<Slider>("slider-voice");
+            _labelBgmVal   = root.Q<Label>("label-bgm-val");
+            _labelSeVal    = root.Q<Label>("label-se-val");
+            _labelVoiceVal = root.Q<Label>("label-voice-val");
+            _dropdownQuality = root.Q<DropdownField>("dropdown-quality");
+            _dropdownWindow  = root.Q<DropdownField>("dropdown-window");
 
-            sliderBgm.RegisterValueChangedCallback(e =>
-                labelBgmVal.text = $"{Mathf.RoundToInt(e.newValue * 100)}%");
-            sliderSe.RegisterValueChangedCallback(e =>
-                labelSeVal.text = $"{Mathf.RoundToInt(e.newValue * 100)}%");
-            sliderVoice.RegisterValueChangedCallback(e =>
-                labelVoiceVal.text = $"{Mathf.RoundToInt(e.newValue * 100)}%");
+            _sliderBgm.RegisterValueChangedCallback(e =>
+                _labelBgmVal.text = $"{Mathf.RoundToInt(e.newValue * 100)}%");
+            _sliderSe.RegisterValueChangedCallback(e =>
+                _labelSeVal.text = $"{Mathf.RoundToInt(e.newValue * 100)}%");
+            _sliderVoice.RegisterValueChangedCallback(e =>
+                _labelVoiceVal.text = $"{Mathf.RoundToInt(e.newValue * 100)}%");
 
             // 保存済み設定を反映
-            sliderBgm.value   = SettingsManager.BgmVolume;
-            sliderSe.value    = SettingsManager.SeVolume;
-            sliderVoice.value = SettingsManager.VoiceVolume;
-            dropdownQuality.index = SettingsManager.QualityLevel;
-            dropdownWindow.index  = SettingsManager.WindowMode;
+            _sliderBgm.value         = GameServices.Settings.BgmVolume;
+            _sliderSe.value          = GameServices.Settings.SeVolume;
+            _sliderVoice.value       = GameServices.Settings.VoiceVolume;
+            _dropdownQuality.index   = GameServices.Settings.QualityLevel;
+            _dropdownWindow.index    = GameServices.Settings.WindowMode;
 
             // ナビバーのプロフィールアイコン画像設定
-            if (playerIcon != null)
+            if (_playerIcon != null)
                 root.Q<VisualElement>("profile-icon").style.backgroundImage =
-                    Background.FromTexture2D(playerIcon);
+                    Background.FromTexture2D(_playerIcon);
 
             // プロフィールオーバーレイ
-            profileOverlay      = root.Q<VisualElement>("profile-overlay");
-            profileOverlayIcon  = root.Q<VisualElement>("profile-overlay-icon");
-            btnCloseProfile     = root.Q<Button>("btn-close-profile");
-            profileCharCount    = root.Q<Label>("profile-char-count");
-            profileCrystalCount = root.Q<Label>("profile-crystal-count");
-            profileOverlayName  = root.Q<Label>("profile-overlay-name");
-            profileOverlayLevel = root.Q<Label>("profile-overlay-level");
+            _profileOverlay      = root.Q<VisualElement>("profile-overlay");
+            _profileOverlayIcon  = root.Q<VisualElement>("profile-overlay-icon");
+            _btnCloseProfile     = root.Q<Button>("btn-close-profile");
+            _profileCharCount    = root.Q<Label>("profile-char-count");
+            _profileCrystalCount = root.Q<Label>("profile-crystal-count");
+            _profileOverlayName  = root.Q<Label>("profile-overlay-name");
+            _profileOverlayLevel = root.Q<Label>("profile-overlay-level");
 
-            btnCloseProfile.clicked += CloseProfile;
+            _btnCloseProfile.clicked += CloseProfile;
 
             // オーバーレイアイコンにも同じ画像を設定（ナビアイコンと共通）
-            if (playerIcon != null)
-                profileOverlayIcon.style.backgroundImage =
-                    Background.FromTexture2D(playerIcon);
+            if (_playerIcon != null)
+                _profileOverlayIcon.style.backgroundImage =
+                    Background.FromTexture2D(_playerIcon);
 
             // 所持品サブタブ
-            itabChars  = root.Q<Button>("itab-chars");
-            itabSkins  = root.Q<Button>("itab-skins");
-            itabItems  = root.Q<Button>("itab-items");
-            charGrid   = root.Q<ScrollView>("char-grid");
-            ipageSkins = root.Q<VisualElement>("ipage-skins");
-            ipageItems = root.Q<VisualElement>("ipage-items");
+            _itabChars  = root.Q<Button>("itab-chars");
+            _itabSkins  = root.Q<Button>("itab-skins");
+            _itabItems  = root.Q<Button>("itab-items");
+            _charGrid   = root.Q<ScrollView>("char-grid");
+            _ipageSkins = root.Q<VisualElement>("ipage-skins");
+            _ipageItems = root.Q<VisualElement>("ipage-items");
 
-            itabChars.clicked += () => SwitchInventoryTab(0);
-            itabSkins.clicked += () => SwitchInventoryTab(1);
-            itabItems.clicked += () => SwitchInventoryTab(2);
+            _itabChars.clicked += () => SwitchInventoryTab(0);
+            _itabSkins.clicked += () => SwitchInventoryTab(1);
+            _itabItems.clicked += () => SwitchInventoryTab(2);
 
             BuildFriendList(root.Q<ScrollView>("friend-list"));
             BuildCharacterGrid();
 
             // ガチャ
-            labelCrystals      = root.Q<Label>("crystal-count");
-            btnGacha1          = root.Q<Button>("btn-gacha-1");
-            btnGacha10         = root.Q<Button>("btn-gacha-10");
-            gachaResultOverlay = root.Q<VisualElement>("gacha-result-overlay");
-            gachaResultGrid    = root.Q<ScrollView>("gacha-result-grid");
-            btnCloseGachaResult = root.Q<Button>("btn-close-gacha-result");
+            _labelCrystals      = root.Q<Label>("crystal-count");
+            _btnGacha1          = root.Q<Button>("btn-gacha-1");
+            _btnGacha10         = root.Q<Button>("btn-gacha-10");
+            _gachaResultOverlay = root.Q<VisualElement>("gacha-result-overlay");
+            _gachaResultGrid    = root.Q<ScrollView>("gacha-result-grid");
+            _btnCloseGachaResult = root.Q<Button>("btn-close-gacha-result");
 
-            btnGacha1.clicked           += () => OnGachaPull(1);
-            btnGacha10.clicked          += () => OnGachaPull(10);
-            btnCloseGachaResult.clicked += () => gachaResultOverlay.style.display = DisplayStyle.None;
+            _btnGacha1.clicked           += () => OnGachaPull(1);
+            _btnGacha10.clicked          += () => OnGachaPull(10);
+            _btnCloseGachaResult.clicked += () => _gachaResultOverlay.style.display = DisplayStyle.None;
 
             RefreshGachaUI();
             SwitchTab(0);
         }
 
         // ── メインタブ切り替え ─────────────────────────
-        void SwitchTab(int index)
+        private void SwitchTab(int index)
         {
-            VisualElement[] pages = { pageGame, pageInventory, pageGacha };
-            Button[]        tabs  = { tabGame, tabInventory, tabGacha };
+            VisualElement[] pages = { _pageGame, _pageInventory, _pageGacha };
+            Button[]        tabs  = { _tabGame, _tabInventory, _tabGacha };
             for (int i = 0; i < pages.Length; i++)
             {
                 bool active = i == index;
@@ -184,11 +193,11 @@ namespace Enigma.UI
         }
 
         // ── 所持品サブタブ切り替え ─────────────────────
-        void SwitchInventoryTab(int index)
+        private void SwitchInventoryTab(int index)
         {
-            Button[]        tabs  = { itabChars, itabSkins, itabItems };
-            // ipage-chars は ScrollView (charGrid) なので VisualElement[] に合わせて扱う
-            VisualElement[] pages = { charGrid, ipageSkins, ipageItems };
+            Button[]        tabs  = { _itabChars, _itabSkins, _itabItems };
+            // ipage-chars は ScrollView (_charGrid) なので VisualElement[] に合わせて扱う
+            VisualElement[] pages = { _charGrid, _ipageSkins, _ipageItems };
             for (int i = 0; i < pages.Length; i++)
             {
                 bool active = i == index;
@@ -198,46 +207,46 @@ namespace Enigma.UI
         }
 
         // ── キャラクターグリッド構築 ───────────────────
-        void BuildCharacterGrid()
+        private void BuildCharacterGrid()
         {
-            if (charGrid == null) return;
-            charGrid.Clear();
+            if (_charGrid == null) return;
+            _charGrid.Clear();
 
-            if (characterDatabase == null)
+            if (_characterDatabase == null)
             {
                 Debug.LogWarning("[HomeScreen] CharacterDatabase が設定されていません");
                 return;
             }
 
-            var chars = characterDatabase.GetSorted();
+            var chars = _characterDatabase.GetSorted(GameServices.Ownership);
             foreach (var chara in chars)
             {
                 var card = new VisualElement();
                 card.AddToClassList("char-card");
-                if (!CharacterOwnership.IsOwned(chara))
+                if (!GameServices.Ownership.IsOwned(chara))
                     card.AddToClassList("char-card--locked");
 
                 // アイコン領域
                 var iconEl = new VisualElement();
                 iconEl.AddToClassList("char-card__icon");
 
-                if (chara.icon != null)
+                if (chara.Icon != null)
                 {
-                    iconEl.style.backgroundImage = Background.FromTexture2D(chara.icon);
+                    iconEl.style.backgroundImage = Background.FromTexture2D(chara.Icon);
                 }
                 else
                 {
-                    // icon が null → themeColor 背景 + 頭文字
-                    iconEl.style.backgroundColor = new StyleColor(chara.themeColor);
-                    var initial = new Label(chara.displayName.Length > 0
-                        ? chara.displayName[..1]
+                    // Icon が null → ThemeColor 背景 + 頭文字
+                    iconEl.style.backgroundColor = new StyleColor(chara.ThemeColor);
+                    var initial = new Label(chara.DisplayName.Length > 0
+                        ? chara.DisplayName[..1]
                         : "?");
                     initial.AddToClassList("char-card__initial");
                     iconEl.Add(initial);
                 }
 
                 // 未所持ラベル（カード右上）
-                if (!CharacterOwnership.IsOwned(chara))
+                if (!GameServices.Ownership.IsOwned(chara))
                 {
                     var lockedLabel = new Label("未所持");
                     lockedLabel.AddToClassList("char-card__locked-label");
@@ -245,7 +254,7 @@ namespace Enigma.UI
                 }
 
                 // 名前
-                var nameLabel = new Label(chara.displayName);
+                var nameLabel = new Label(chara.DisplayName);
                 nameLabel.AddToClassList("char-card__name");
 
                 // ロール
@@ -255,37 +264,37 @@ namespace Enigma.UI
                 card.Add(iconEl);
                 card.Add(nameLabel);
                 card.Add(roleLabel);
-                charGrid.Add(card);
+                _charGrid.Add(card);
             }
         }
 
         // ── ガチャ UI ──────────────────────────────────
-        void RefreshGachaUI()
+        private void RefreshGachaUI()
         {
-            if (labelCrystals != null)
-                labelCrystals.text = GachaService.Crystals.ToString("N0");
+            if (_labelCrystals != null)
+                _labelCrystals.text = GameServices.Gacha.Crystals.ToString("N0");
 
-            if (btnGacha1  != null) btnGacha1.SetEnabled(GachaService.Crystals  >= GachaService.SinglePullCost);
-            if (btnGacha10 != null) btnGacha10.SetEnabled(GachaService.Crystals >= GachaService.TenPullCost);
+            if (_btnGacha1  != null) _btnGacha1.SetEnabled(GameServices.Gacha.Crystals  >= GachaService.SinglePullCost);
+            if (_btnGacha10 != null) _btnGacha10.SetEnabled(GameServices.Gacha.Crystals >= GachaService.TenPullCost);
         }
 
-        void OnGachaPull(int count)
+        private void OnGachaPull(int count)
         {
-            var results = new List<GachaService.PullResult>();
+            var results = new List<PullResult>();
 
-            if (!GachaService.TryPull(characterDatabase, count, results))
+            if (!GameServices.Gacha.TryPull(_characterDatabase.Characters, count, results))
             {
                 Debug.LogWarning("[HomeScreen] ガチャ失敗: 残高不足またはキャラクター未登録");
                 return;
             }
 
             // 結果オーバーレイを表示
-            gachaResultOverlay.style.display = DisplayStyle.Flex;
-            gachaResultGrid.Clear();
+            _gachaResultOverlay.style.display = DisplayStyle.Flex;
+            _gachaResultGrid.Clear();
 
             foreach (var result in results)
             {
-                var chara = result.character;
+                var chara = result.Character;
 
                 var card = new VisualElement();
                 card.AddToClassList("char-card");
@@ -294,24 +303,24 @@ namespace Enigma.UI
                 var iconEl = new VisualElement();
                 iconEl.AddToClassList("char-card__icon");
 
-                if (chara.icon != null)
+                if (chara.Icon != null)
                 {
-                    iconEl.style.backgroundImage = Background.FromTexture2D(chara.icon);
+                    iconEl.style.backgroundImage = Background.FromTexture2D(chara.Icon);
                 }
                 else
                 {
-                    iconEl.style.backgroundColor = new StyleColor(chara.themeColor);
-                    var initial = new Label(chara.displayName.Length > 0 ? chara.displayName[..1] : "?");
+                    iconEl.style.backgroundColor = new StyleColor(chara.ThemeColor);
+                    var initial = new Label(chara.DisplayName.Length > 0 ? chara.DisplayName[..1] : "?");
                     initial.AddToClassList("char-card__initial");
                     iconEl.Add(initial);
                 }
 
                 // NEW / 重複バッジ（アイコン左上に絶対配置）
-                var badge = new Label(result.isNew ? "NEW!" : "重複");
-                badge.AddToClassList(result.isNew ? "gacha-badge--new" : "gacha-badge--dupe");
+                var badge = new Label(result.IsNew ? "NEW!" : "重複");
+                badge.AddToClassList(result.IsNew ? "gacha-badge--new" : "gacha-badge--dupe");
                 iconEl.Add(badge);
 
-                var nameLabel = new Label(chara.displayName);
+                var nameLabel = new Label(chara.DisplayName);
                 nameLabel.AddToClassList("char-card__name");
 
                 var roleLabel = new Label(chara.RoleLabel);
@@ -320,7 +329,7 @@ namespace Enigma.UI
                 card.Add(iconEl);
                 card.Add(nameLabel);
                 card.Add(roleLabel);
-                gachaResultGrid.Add(card);
+                _gachaResultGrid.Add(card);
             }
 
             // 所持状態が変わったのでグリッドを更新
@@ -329,57 +338,55 @@ namespace Enigma.UI
         }
 
         // ── プロフィールオーバーレイ開閉 ───────────────
-        void OpenProfile()
+        private void OpenProfile()
         {
             // 開くたびに最新値に更新（ガチャ後に古い値が残らないようにするため）
-            if (characterDatabase != null)
+            if (_characterDatabase != null)
             {
-                var all   = characterDatabase.GetSorted();
-                int owned = 0;
-                foreach (var c in all)
-                    if (CharacterOwnership.IsOwned(c)) owned++;
-                profileCharCount.text = $"{owned} / {all.Count}";
+                int owned = _characterDatabase.CountOwned(GameServices.Ownership);
+                int total = _characterDatabase.TotalCount;
+                _profileCharCount.text = $"{owned} / {total}";
             }
             else
             {
-                profileCharCount.text = "-";
+                _profileCharCount.text = "-";
             }
 
-            profileCrystalCount.text = GachaService.Crystals.ToString("N0");
+            _profileCrystalCount.text = GameServices.Gacha.Crystals.ToString("N0");
 
-            profileOverlay.style.display = DisplayStyle.Flex;
+            _profileOverlay.style.display = DisplayStyle.Flex;
         }
 
-        void CloseProfile() =>
-            profileOverlay.style.display = DisplayStyle.None;
+        private void CloseProfile() =>
+            _profileOverlay.style.display = DisplayStyle.None;
 
         // ── 設定オーバーレイ開閉 ───────────────────────
-        void OpenSettings()
+        private void OpenSettings()
         {
-            settingsOverlay.style.display = DisplayStyle.Flex;
+            _settingsOverlay.style.display = DisplayStyle.Flex;
             SwitchSettingsTab(0);
         }
 
-        void CloseSettings() =>
-            settingsOverlay.style.display = DisplayStyle.None;
+        private void CloseSettings() =>
+            _settingsOverlay.style.display = DisplayStyle.None;
 
-        void ApplySettings()
+        private void ApplySettings()
         {
-            SettingsManager.Apply(
-                sliderBgm.value,
-                sliderSe.value,
-                sliderVoice.value,
-                dropdownQuality.index,
-                dropdownWindow.index
+            GameServices.Settings.Apply(
+                _sliderBgm.value,
+                _sliderSe.value,
+                _sliderVoice.value,
+                _dropdownQuality.index,
+                _dropdownWindow.index
             );
             // 適用後も設定画面は閉じない。閉じるのは ✕ ボタン / ESC のみ
         }
 
         // ── 設定タブ切り替え ───────────────────────────
-        void SwitchSettingsTab(int index)
+        private void SwitchSettingsTab(int index)
         {
-            VisualElement[] pages = { spageSound, spageGraphics, spageControls, spageGame };
-            Button[]        tabs  = { stabSound, stabGraphics, stabControls, stabGameTab };
+            VisualElement[] pages = { _spageSound, _spageGraphics, _spageControls, _spageGame };
+            Button[]        tabs  = { _stabSound, _stabGraphics, _stabControls, _stabGameTab };
             for (int i = 0; i < pages.Length; i++)
             {
                 bool active = i == index;
@@ -389,7 +396,7 @@ namespace Enigma.UI
         }
 
         // ── ESC キーでオーバーレイを閉じる ────────────
-        void Update()
+        private void Update()
         {
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard == null) return;
@@ -397,47 +404,47 @@ namespace Enigma.UI
             if (!keyboard.escapeKey.wasPressedThisFrame) return;
 
             // 優先順: ガチャ結果 > プロフィール > 設定（最前面の1つだけ閉じる）
-            if (gachaResultOverlay != null &&
-                gachaResultOverlay.style.display == DisplayStyle.Flex)
+            if (_gachaResultOverlay != null &&
+                _gachaResultOverlay.style.display == DisplayStyle.Flex)
             {
-                gachaResultOverlay.style.display = DisplayStyle.None;
+                _gachaResultOverlay.style.display = DisplayStyle.None;
                 return;
             }
 
-            if (profileOverlay != null &&
-                profileOverlay.style.display == DisplayStyle.Flex)
+            if (_profileOverlay != null &&
+                _profileOverlay.style.display == DisplayStyle.Flex)
             {
                 CloseProfile();
                 return;
             }
 
-            if (settingsOverlay.style.display == DisplayStyle.Flex)
+            if (_settingsOverlay.style.display == DisplayStyle.Flex)
             {
                 CloseSettings();
             }
         }
 
         // ── その他ボタン ───────────────────────────────
-        void OnPlayClicked()    => Debug.Log("[HomeScreen] プレイ開始");
-        void OnProfileClicked() => OpenProfile();
+        private void OnPlayClicked()    => Debug.Log("[HomeScreen] プレイ開始");
+        private void OnProfileClicked() => OpenProfile();
 
         // ── フレンドリスト構築 ─────────────────────────
-        void BuildFriendList(ScrollView list)
+        private void BuildFriendList(ScrollView list)
         {
             list.Clear();
 
-            if (friendDatabase == null)
+            if (_friendDatabase == null)
             {
                 Debug.LogWarning("[HomeScreen] FriendDatabase が設定されていません");
                 return;
             }
 
-            var friends = friendDatabase.GetSorted();
+            var friends = _friendDatabase.GetSorted();
 
             // ヘッダーのオンライン人数を更新
-            var countLabel = uiDocument.rootVisualElement.Q<Label>("friend-count");
+            var countLabel = _uiDocument.rootVisualElement.Q<Label>("friend-count");
             if (countLabel != null)
-                countLabel.text = $"{friendDatabase.OnlineCount}/{friendDatabase.TotalCount}";
+                countLabel.text = $"{_friendDatabase.OnlineCount}/{_friendDatabase.TotalCount}";
 
             foreach (var friend in friends)
             {
@@ -453,13 +460,13 @@ namespace Enigma.UI
                 var info = new VisualElement();
                 info.AddToClassList("friend-info");
 
-                var nameLabel = new Label(friend.displayName);
+                var nameLabel = new Label(friend.DisplayName);
                 nameLabel.AddToClassList("friend-name");
                 if (!friend.IsOnline) nameLabel.AddToClassList("friend-name--offline");
 
                 var statusLabel = new Label(friend.StatusLabel);
                 statusLabel.AddToClassList("friend-status");
-                statusLabel.AddToClassList(friend.status switch
+                statusLabel.AddToClassList(friend.Status switch
                 {
                     FriendStatus.InGame  => "friend-status--ingame",
                     FriendStatus.InQueue => "friend-status--inqueue",
@@ -471,7 +478,7 @@ namespace Enigma.UI
                 info.Add(statusLabel);
 
                 // レベル表示
-                var levelLabel = new Label($"Lv.{friend.level}");
+                var levelLabel = new Label($"Lv.{friend.Level}");
                 levelLabel.AddToClassList("friend-level");
 
                 // 招待ボタン（オンラインのみ）
@@ -488,13 +495,13 @@ namespace Enigma.UI
             }
         }
 
-        void OnInviteFriend(FriendData friend)
+        private void OnInviteFriend(FriendData friend)
         {
-            Debug.Log($"[HomeScreen] {friend.displayName} を招待しました");
+            Debug.Log($"[HomeScreen] {friend.DisplayName} を招待しました");
             // TODO: ネットワーク経由でパーティ招待を送信
         }
 
-        static void SetClass(VisualElement el, string cls, bool active)
+        private static void SetClass(VisualElement el, string cls, bool active)
         {
             if (active) el.AddToClassList(cls);
             else        el.RemoveFromClassList(cls);
