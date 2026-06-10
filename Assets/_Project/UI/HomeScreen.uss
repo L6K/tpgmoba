@@ -407,7 +407,8 @@
 .overlay {
     position: absolute;
     left: 0; top: 0; right: 0; bottom: 0;
-    background-color: rgba(10, 12, 22, 0.97);
+    /* Valorant 風: 背後のホーム画面を完全に隠すフラットな全画面 */
+    background-color: rgb(10, 12, 22);
     flex-direction: column;
 }
 
@@ -536,13 +537,14 @@
     margin-right: 12px;
 }
 
-.setting-slider > .unity-base-slider__tracker {
+/* tracker/dragger は Slider の直下ではなく drag-container 配下にあるため子孫セレクタで指定 */
+.setting-slider .unity-base-slider__tracker {
     background-color: rgba(255, 255, 255, 0.15);
     height: 4px;
     border-radius: 2px;
 }
 
-.setting-slider > .unity-base-slider__dragger {
+.setting-slider .unity-base-slider__dragger {
     background-color: var(--color-accent);
     width: 16px;
     height: 16px;
@@ -561,12 +563,24 @@
 .setting-dropdown {
     flex-grow: 1;
     margin-left: 8px;
+}
+
+/* 見た目を持つのはルートではなく内側の __input 要素のため子孫セレクタで指定 */
+.setting-dropdown .unity-base-popup-field__input {
     background-color: rgb(22, 26, 42);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.15);
     border-radius: 4px;
-    color: var(--color-text);
     font-size: 15px;
+    padding-left: 10px;
+}
+
+.setting-dropdown .unity-base-popup-field__text {
+    color: var(--color-text);
+}
+
+.setting-dropdown .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: var(--color-text-dim);
 }
 
 .settings-placeholder {
