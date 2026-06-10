@@ -239,5 +239,53 @@
 
         </ui:VisualElement>
 
+        <!-- ══ プロフィールオーバーレイ ════════════════════════════ -->
+        <ui:VisualElement name="profile-overlay" class="overlay" style="display: none;">
+
+            <!-- ヘッダー行（設定オーバーレイと同形式） -->
+            <ui:VisualElement class="settings-header">
+                <ui:Label text="プロフィール" class="settings-title" />
+                <ui:Button name="btn-close-profile" text="✕ 閉じる" class="settings-close-btn" />
+            </ui:VisualElement>
+
+            <!-- コンテンツ：中央寄せ 1 カラム -->
+            <ui:VisualElement class="profile-content">
+                <ui:VisualElement class="profile-column">
+
+                    <!-- プレイヤーアイコン（96px 円形） -->
+                    <ui:VisualElement name="profile-overlay-icon" class="profile-overlay__icon" />
+
+                    <!-- プレイヤー名 -->
+                    <ui:Label name="profile-overlay-name" text="プレイヤー名" class="profile-overlay__name" />
+
+                    <!-- レベル -->
+                    <ui:Label name="profile-overlay-level" text="Lv.1" class="profile-overlay__level" />
+
+                    <!-- アカウントセクション -->
+                    <ui:Label text="アカウント" class="settings-section-title" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="所持キャラクター" class="setting-label" />
+                        <ui:Label name="profile-char-count" text="-" class="profile-stat-value" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="所持クリスタル" class="setting-label" />
+                        <ui:Label name="profile-crystal-count" text="-" class="profile-stat-value" />
+                    </ui:VisualElement>
+
+                    <!-- 戦績セクション -->
+                    <ui:Label text="戦績" class="settings-section-title settings-section-title--spaced" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="試合数 / 勝率" class="setting-label" />
+                        <ui:Label text="準備中" class="profile-stat-value" />
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
     </ui:VisualElement>
 </ui:UXML>

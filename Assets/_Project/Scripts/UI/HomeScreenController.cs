@@ -39,6 +39,13 @@ namespace Enigma.UI
         Button        btnGacha1, btnGacha10, btnCloseGachaResult;
         Label         labelCrystals;
 
+        // ── プロフィールオーバーレイ ───────────────────
+        VisualElement profileOverlay;
+        VisualElement profileOverlayIcon;
+        Button        btnCloseProfile;
+        Label         profileCharCount, profileCrystalCount;
+        Label         profileOverlayName, profileOverlayLevel;
+
         Slider sliderBgm, sliderSe, sliderVoice;
         Label  labelBgmVal, labelSeVal, labelVoiceVal;
         DropdownField dropdownQuality, dropdownWindow;
@@ -111,9 +118,25 @@ namespace Enigma.UI
             dropdownQuality.index = SettingsManager.QualityLevel;
             dropdownWindow.index  = SettingsManager.WindowMode;
 
-            // プロフィールアイコン
+            // ナビバーのプロフィールアイコン画像設定
             if (playerIcon != null)
                 root.Q<VisualElement>("profile-icon").style.backgroundImage =
+                    Background.FromTexture2D(playerIcon);
+
+            // プロフィールオーバーレイ
+            profileOverlay      = root.Q<VisualElement>("profile-overlay");
+            profileOverlayIcon  = root.Q<VisualElement>("profile-overlay-icon");
+            btnCloseProfile     = root.Q<Button>("btn-close-profile");
+            profileCharCount    = root.Q<Label>("profile-char-count");
+            profileCrystalCount = root.Q<Label>("profile-crystal-count");
+            profileOverlayName  = root.Q<Label>("profile-overlay-name");
+            profileOverlayLevel = root.Q<Label>("profile-overlay-level");
+
+            btnCloseProfile.clicked += CloseProfile;
+
+            // オーバーレイアイコンにも同じ画像を設定（ナビアイコンと共通）
+            if (playerIcon != null)
+                profileOverlayIcon.style.backgroundImage =
                     Background.FromTexture2D(playerIcon);
 
             // 所持品サブタブ
@@ -305,6 +328,31 @@ namespace Enigma.UI
             BuildCharacterGrid();
         }
 
+        // ── プロフィールオーバーレイ開閉 ───────────────
+        void OpenProfile()
+        {
+            // 開くたびに最新値に更新（ガチャ後に古い値が残らないようにするため）
+            if (characterDatabase != null)
+            {
+                var all   = characterDatabase.GetSorted();
+                int owned = 0;
+                foreach (var c in all)
+                    if (CharacterOwnership.IsOwned(c)) owned++;
+                profileCharCount.text = $"{owned} / {all.Count}";
+            }
+            else
+            {
+                profileCharCount.text = "-";
+            }
+
+            profileCrystalCount.text = GachaService.Crystals.ToString("N0");
+
+            profileOverlay.style.display = DisplayStyle.Flex;
+        }
+
+        void CloseProfile() =>
+            profileOverlay.style.display = DisplayStyle.None;
+
         // ── 設定オーバーレイ開閉 ───────────────────────
         void OpenSettings()
         {
@@ -348,11 +396,18 @@ namespace Enigma.UI
 
             if (!keyboard.escapeKey.wasPressedThisFrame) return;
 
-            // ガチャ結果オーバーレイが最前面にある場合は設定より優先して閉じる
+            // 優先順: ガチャ結果 > プロフィール > 設定（最前面の1つだけ閉じる）
             if (gachaResultOverlay != null &&
                 gachaResultOverlay.style.display == DisplayStyle.Flex)
             {
                 gachaResultOverlay.style.display = DisplayStyle.None;
+                return;
+            }
+
+            if (profileOverlay != null &&
+                profileOverlay.style.display == DisplayStyle.Flex)
+            {
+                CloseProfile();
                 return;
             }
 
@@ -364,7 +419,7 @@ namespace Enigma.UI
 
         // ── その他ボタン ───────────────────────────────
         void OnPlayClicked()    => Debug.Log("[HomeScreen] プレイ開始");
-        void OnProfileClicked() => Debug.Log("[HomeScreen] プロフィール");
+        void OnProfileClicked() => OpenProfile();
 
         // ── フレンドリスト構築 ─────────────────────────
         void BuildFriendList(ScrollView list)

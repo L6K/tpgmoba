@@ -537,11 +537,14 @@
     margin-right: 12px;
 }
 
-/* tracker/dragger は Slider の直下ではなく drag-container 配下にあるため子孫セレクタで指定 */
+/* tracker/dragger は Slider の直下ではなく drag-container 配下にあるため子孫セレクタで指定。
+   両方とも top:50% + 高さの半分の負マージンで垂直中心を揃える（線が丸の中心を貫通する） */
 .setting-slider .unity-base-slider__tracker {
     background-color: rgba(255, 255, 255, 0.15);
     height: 4px;
     border-radius: 2px;
+    top: 50%;
+    margin-top: -2px;
 }
 
 .setting-slider .unity-base-slider__dragger {
@@ -550,7 +553,8 @@
     height: 16px;
     border-radius: 8px;
     border-width: 0;
-    margin-top: -6px;
+    top: 50%;
+    margin-top: -8px;
 }
 
 .setting-value {
@@ -930,4 +934,65 @@
     position: absolute;
     top: 6px;
     left: 6px;
+}
+
+/* ══ プロフィールオーバーレイ ════════════════════════════════ */
+
+/* コンテンツ領域: 中央寄せ、上部余白あり */
+.profile-content {
+    flex-grow: 1;
+    align-items: center;
+    padding-top: 32px;
+    padding-bottom: 32px;
+    overflow: hidden;
+}
+
+/* 1カラムコンテナ: settings-page と同幅・同構造だが常時 flex 表示 */
+.profile-column {
+    flex-direction: column;
+    width: 70%;
+    max-width: 880px;
+    flex-grow: 1;
+}
+
+/* プレイヤーアイコン（96px 円形） */
+.profile-overlay__icon {
+    width: 96px;
+    height: 96px;
+    border-radius: 48px;
+    background-color: rgb(60, 80, 160);
+    align-self: center;
+    border-width: 2px;
+    border-color: var(--color-accent);
+}
+
+/* プレイヤー名 */
+.profile-overlay__name {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    letter-spacing: 1px;
+    align-self: center;
+    margin-top: 12px;
+}
+
+/* レベル表示 */
+.profile-overlay__level {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    align-self: center;
+    margin-bottom: 24px;
+}
+
+/* 統計値（setting-row 内で右寄せ） */
+.profile-stat-value {
+    font-size: 15px;
+    color: var(--color-text);
+    -unity-text-align: middle-right;
+    flex-grow: 1;
+}
+
+/* 戦績セクション見出しに上マージンを付与するモディファイア */
+.settings-section-title--spaced {
+    margin-top: 28px;
 }
