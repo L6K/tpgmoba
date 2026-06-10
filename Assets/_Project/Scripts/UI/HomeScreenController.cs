@@ -1,6 +1,8 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Enigma.Character;
+using Enigma.Data;
 
 namespace Enigma.UI
 {
@@ -30,6 +32,12 @@ namespace Enigma.UI
         VisualElement spageSound, spageGraphics, spageControls, spageGame;
         Button stabSound, stabGraphics, stabControls, stabGameTab;
         Button btnCloseSettings, btnApplySettings;
+
+        // ── ガチャ ─────────────────────────────────────
+        VisualElement gachaResultOverlay;
+        ScrollView    gachaResultGrid;
+        Button        btnGacha1, btnGacha10, btnCloseGachaResult;
+        Label         labelCrystals;
 
         Slider sliderBgm, sliderSe, sliderVoice;
         Label  labelBgmVal, labelSeVal, labelVoiceVal;
@@ -122,6 +130,20 @@ namespace Enigma.UI
 
             BuildFriendList(root.Q<ScrollView>("friend-list"));
             BuildCharacterGrid();
+
+            // ガチャ
+            labelCrystals      = root.Q<Label>("crystal-count");
+            btnGacha1          = root.Q<Button>("btn-gacha-1");
+            btnGacha10         = root.Q<Button>("btn-gacha-10");
+            gachaResultOverlay = root.Q<VisualElement>("gacha-result-overlay");
+            gachaResultGrid    = root.Q<ScrollView>("gacha-result-grid");
+            btnCloseGachaResult = root.Q<Button>("btn-close-gacha-result");
+
+            btnGacha1.clicked           += () => OnGachaPull(1);
+            btnGacha10.clicked          += () => OnGachaPull(10);
+            btnCloseGachaResult.clicked += () => gachaResultOverlay.style.display = DisplayStyle.None;
+
+            RefreshGachaUI();
             SwitchTab(0);
         }
 
@@ -169,7 +191,7 @@ namespace Enigma.UI
             {
                 var card = new VisualElement();
                 card.AddToClassList("char-card");
-                if (!chara.ownedByDefault)
+                if (!CharacterOwnership.IsOwned(chara))
                     card.AddToClassList("char-card--locked");
 
                 // アイコン領域
@@ -192,7 +214,7 @@ namespace Enigma.UI
                 }
 
                 // 未所持ラベル（カード右上）
-                if (!chara.ownedByDefault)
+                if (!CharacterOwnership.IsOwned(chara))
                 {
                     var lockedLabel = new Label("未所持");
                     lockedLabel.AddToClassList("char-card__locked-label");
@@ -212,6 +234,75 @@ namespace Enigma.UI
                 card.Add(roleLabel);
                 charGrid.Add(card);
             }
+        }
+
+        // ── ガチャ UI ──────────────────────────────────
+        void RefreshGachaUI()
+        {
+            if (labelCrystals != null)
+                labelCrystals.text = GachaService.Crystals.ToString("N0");
+
+            if (btnGacha1  != null) btnGacha1.SetEnabled(GachaService.Crystals  >= GachaService.SinglePullCost);
+            if (btnGacha10 != null) btnGacha10.SetEnabled(GachaService.Crystals >= GachaService.TenPullCost);
+        }
+
+        void OnGachaPull(int count)
+        {
+            var results = new List<GachaService.PullResult>();
+
+            if (!GachaService.TryPull(characterDatabase, count, results))
+            {
+                Debug.LogWarning("[HomeScreen] ガチャ失敗: 残高不足またはキャラクター未登録");
+                return;
+            }
+
+            // 結果オーバーレイを表示
+            gachaResultOverlay.style.display = DisplayStyle.Flex;
+            gachaResultGrid.Clear();
+
+            foreach (var result in results)
+            {
+                var chara = result.character;
+
+                var card = new VisualElement();
+                card.AddToClassList("char-card");
+
+                // アイコン領域
+                var iconEl = new VisualElement();
+                iconEl.AddToClassList("char-card__icon");
+
+                if (chara.icon != null)
+                {
+                    iconEl.style.backgroundImage = Background.FromTexture2D(chara.icon);
+                }
+                else
+                {
+                    iconEl.style.backgroundColor = new StyleColor(chara.themeColor);
+                    var initial = new Label(chara.displayName.Length > 0 ? chara.displayName[..1] : "?");
+                    initial.AddToClassList("char-card__initial");
+                    iconEl.Add(initial);
+                }
+
+                // NEW / 重複バッジ（アイコン左上に絶対配置）
+                var badge = new Label(result.isNew ? "NEW!" : "重複");
+                badge.AddToClassList(result.isNew ? "gacha-badge--new" : "gacha-badge--dupe");
+                iconEl.Add(badge);
+
+                var nameLabel = new Label(chara.displayName);
+                nameLabel.AddToClassList("char-card__name");
+
+                var roleLabel = new Label(chara.RoleLabel);
+                roleLabel.AddToClassList("char-card__role");
+
+                card.Add(iconEl);
+                card.Add(nameLabel);
+                card.Add(roleLabel);
+                gachaResultGrid.Add(card);
+            }
+
+            // 所持状態が変わったのでグリッドを更新
+            RefreshGachaUI();
+            BuildCharacterGrid();
         }
 
         // ── 設定オーバーレイ開閉 ───────────────────────
@@ -249,14 +340,23 @@ namespace Enigma.UI
             }
         }
 
-        // ── ESC キーで設定を閉じる ─────────────────────
+        // ── ESC キーでオーバーレイを閉じる ────────────
         void Update()
         {
             var keyboard = UnityEngine.InputSystem.Keyboard.current;
             if (keyboard == null) return;
 
-            if (keyboard.escapeKey.wasPressedThisFrame &&
-                settingsOverlay.style.display == DisplayStyle.Flex)
+            if (!keyboard.escapeKey.wasPressedThisFrame) return;
+
+            // ガチャ結果オーバーレイが最前面にある場合は設定より優先して閉じる
+            if (gachaResultOverlay != null &&
+                gachaResultOverlay.style.display == DisplayStyle.Flex)
+            {
+                gachaResultOverlay.style.display = DisplayStyle.None;
+                return;
+            }
+
+            if (settingsOverlay.style.display == DisplayStyle.Flex)
             {
                 CloseSettings();
             }

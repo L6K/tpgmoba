@@ -772,3 +772,162 @@
     top: 6px;
     right: 6px;
 }
+
+/* ══ ガチャページ ════════════════════════════════════════ */
+
+/* クリスタル残高ヘッダー（右寄せ行） */
+.gacha-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 12px 32px 12px 32px;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+.gacha-header__label {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin-right: 8px;
+}
+
+.gacha-header__count {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+}
+
+/* バナー＋ボタンを縦に中央寄せするコンテナ */
+.gacha-body {
+    flex-grow: 1;
+    align-self: stretch;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* バナーカード */
+.gacha-banner {
+    width: 520px;
+    height: 240px;
+    background-color: rgb(16, 19, 32);
+    border-width: 1px;
+    border-color: var(--color-accent);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    margin-bottom: 32px;
+}
+
+.gacha-banner__title {
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+}
+
+.gacha-banner__subtitle {
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+/* ボタン行 */
+.gacha-buttons {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ガチャボタン共通 */
+.gacha-btn {
+    width: 200px;
+    height: 54px;
+    border-radius: 4px;
+    font-size: 17px;
+    -unity-font-style: bold;
+    cursor: link;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* 単発（セカンダリ）: 透過背景 + 白枠 */
+.gacha-btn {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.6);
+    color: var(--color-text);
+    margin-right: 16px;
+}
+
+.gacha-btn:hover {
+    border-color: var(--color-accent);
+    background-color: rgba(46, 107, 242, 0.1);
+}
+
+.gacha-btn:disabled {
+    opacity: 0.4;
+}
+
+/* 10連（プライマリ）: アクセント塗り */
+.gacha-btn--primary {
+    background-color: var(--color-accent);
+    border-width: 0;
+    color: var(--color-text);
+    margin-right: 0;
+}
+
+.gacha-btn--primary:hover {
+    background-color: rgb(70, 130, 255);
+    border-color: rgba(0, 0, 0, 0);
+}
+
+.gacha-btn--primary:active {
+    background-color: rgb(30, 80, 200);
+}
+
+.gacha-btn--primary:disabled {
+    opacity: 0.4;
+}
+
+/* ══ ガチャ結果グリッド ══════════════════════════════════ */
+
+/* ScrollView ルート */
+.gacha-result-grid {
+    flex-grow: 1;
+    align-self: stretch;
+}
+
+/* ScrollView の content-container は viewport を挟んだ孫要素のため子孫セレクタで指定 */
+.gacha-result-grid #unity-content-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 24px;
+    align-content: flex-start;
+}
+
+/* NEW! バッジ（カード左上に絶対配置） */
+.gacha-badge--new {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    background-color: var(--color-accent);
+    border-radius: 2px;
+    padding: 2px 5px;
+    position: absolute;
+    top: 6px;
+    left: 6px;
+}
+
+/* 重複バッジ */
+.gacha-badge--dupe {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    background-color: rgba(80, 80, 100, 0.85);
+    border-radius: 2px;
+    padding: 2px 5px;
+    position: absolute;
+    top: 6px;
+    left: 6px;
+}

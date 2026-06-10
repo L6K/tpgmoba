@@ -100,8 +100,29 @@
                 </ui:VisualElement>
 
                 <!-- Tab: ガチャ -->
-                <ui:VisualElement name="page-gacha" class="page">
-                    <ui:Label text="ガチャ" class="page-placeholder" />
+                <ui:VisualElement name="page-gacha" class="page page--flow">
+
+                    <!-- クリスタル残高ヘッダー -->
+                    <ui:VisualElement class="gacha-header">
+                        <ui:Label text="クリスタル" class="gacha-header__label" />
+                        <ui:Label name="crystal-count" text="3,000" class="gacha-header__count" />
+                    </ui:VisualElement>
+
+                    <!-- バナー＋ボタン -->
+                    <ui:VisualElement class="gacha-body">
+
+                        <ui:VisualElement class="gacha-banner">
+                            <ui:Label text="スタンダードバナー" class="gacha-banner__title" />
+                            <ui:Label text="全キャラクターが等確率で排出" class="gacha-banner__subtitle" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement class="gacha-buttons">
+                            <ui:Button name="btn-gacha-1"  text="単発  150"    class="gacha-btn" />
+                            <ui:Button name="btn-gacha-10" text="10連  1,500"  class="gacha-btn gacha-btn--primary" />
+                        </ui:VisualElement>
+
+                    </ui:VisualElement>
+
                 </ui:VisualElement>
 
             </ui:VisualElement>
@@ -196,6 +217,24 @@
             <!-- フッター行 -->
             <ui:VisualElement class="settings-footer">
                 <ui:Button name="btn-settings-apply" text="適用" class="settings-apply-btn" />
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+        <!-- ══ ガチャ結果オーバーレイ ══════════════════════════ -->
+        <ui:VisualElement name="gacha-result-overlay" class="overlay" style="display: none;">
+
+            <!-- ヘッダー行 -->
+            <ui:VisualElement class="settings-header">
+                <ui:Label text="獲得結果" class="settings-title" />
+            </ui:VisualElement>
+
+            <!-- 結果グリッド（ScrollView） -->
+            <ui:ScrollView name="gacha-result-grid" class="gacha-result-grid" />
+
+            <!-- フッター行 -->
+            <ui:VisualElement class="settings-footer">
+                <ui:Button name="btn-close-gacha-result" text="閉じる" class="settings-apply-btn" />
             </ui:VisualElement>
 
         </ui:VisualElement>
