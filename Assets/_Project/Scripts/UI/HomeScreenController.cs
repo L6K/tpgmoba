@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.Serialization;
+using UnityEngine.InputSystem;
+using System;
 using Enigma.Character;
 using Enigma.Core;
 using Enigma.Data;
@@ -56,6 +58,12 @@ namespace Enigma.UI
         private Slider        _sliderBgm, _sliderSe, _sliderVoice;
         private Label         _labelBgmVal, _labelSeVal, _labelVoiceVal;
         private DropdownField _dropdownQuality, _dropdownWindow;
+
+        // ── ゲームタブ ─────────────────────────────────
+        private DropdownField _dropdownCastMode;
+        private Button[]      _rebindBtns;
+        // 現在リバインド待ちのスロット（-1 = 待ち状態なし）
+        private int           _rebindingSlot = -1;
 
 
         private void OnEnable()
@@ -176,6 +184,23 @@ namespace Enigma.UI
             _btnCloseGachaResult.clicked += () => _gachaResultOverlay.style.display = DisplayStyle.None;
 
             RefreshGachaUI();
+
+            // ゲームタブ: キャスト方式ドロップダウン
+            _dropdownCastMode = root.Q<DropdownField>("dropdown-castmode");
+            _dropdownCastMode.index = (int)GameServices.ControlSettings.CastMode;
+            _dropdownCastMode.RegisterValueChangedCallback(_ =>
+                GameServices.ControlSettings.SetCastMode((CastMode)_dropdownCastMode.index));
+
+            // ゲームタブ: リバインドボタン（スロット 0..3）
+            _rebindBtns = new Button[4];
+            for (int i = 0; i < 4; i++)
+            {
+                var slot = i;
+                _rebindBtns[i] = root.Q<Button>($"btn-rebind-{slot}");
+                _rebindBtns[i].text = GameServices.ControlSettings.GetSkillKey(slot).ToString();
+                _rebindBtns[i].clicked += () => StartRebind(slot);
+            }
+
             SwitchTab(0);
         }
 
@@ -395,11 +420,70 @@ namespace Enigma.UI
             }
         }
 
+        // ── リバインド開始 ─────────────────────────────
+        private void StartRebind(int slot)
+        {
+            // 別スロットが待受中なら先にキャンセル
+            if (_rebindingSlot >= 0) CancelRebind();
+
+            _rebindingSlot = slot;
+            _rebindBtns[slot].text = "キー入力待ち...";
+            _rebindBtns[slot].AddToClassList("rebind-btn--listening");
+        }
+
+        private void CancelRebind()
+        {
+            if (_rebindingSlot < 0) return;
+            var slot = _rebindingSlot;
+            _rebindingSlot = -1;
+            _rebindBtns[slot].text = GameServices.ControlSettings.GetSkillKey(slot).ToString();
+            _rebindBtns[slot].RemoveFromClassList("rebind-btn--listening");
+        }
+
+        private void ConfirmRebind(Key key)
+        {
+            var slot = _rebindingSlot;
+            _rebindingSlot = -1;
+            GameServices.ControlSettings.SetSkillKey(slot, key);
+            _rebindBtns[slot].text = key.ToString();
+            _rebindBtns[slot].RemoveFromClassList("rebind-btn--listening");
+        }
+
         // ── ESC キーでオーバーレイを閉じる ────────────
         private void Update()
         {
-            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            var keyboard = Keyboard.current;
             if (keyboard == null) return;
+
+            // リバインド待受中: ESC はキャンセルのみ（オーバーレイは閉じない）
+            if (_rebindingSlot >= 0)
+            {
+                if (keyboard.escapeKey.wasPressedThisFrame)
+                {
+                    CancelRebind();
+                    return;
+                }
+
+                // 全 Key を走査して最初に押されたキーを確定
+                foreach (Key k in Enum.GetValues(typeof(Key)))
+                {
+                    // None・不正値はスキップ
+                    if (k == Key.None) continue;
+                    try
+                    {
+                        if (keyboard[k].wasPressedThisFrame)
+                        {
+                            ConfirmRebind(k);
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        // IMESelected 等、インデクサが対応しないキーは無視
+                    }
+                }
+                return;
+            }
 
             if (!keyboard.escapeKey.wasPressedThisFrame) return;
 

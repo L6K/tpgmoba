@@ -996,3 +996,27 @@
 .settings-section-title--spaced {
     margin-top: 28px;
 }
+
+/* ── リバインドボタン ────────────────────────────────── */
+.rebind-btn {
+    width: 160px;
+    height: 36px;
+    background-color: rgb(22, 26, 42);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    color: var(--color-text);
+    font-size: 14px;
+    cursor: link;
+    transition: border-color 0.15s ease;
+}
+
+.rebind-btn:hover {
+    border-color: var(--color-accent);
+}
+
+/* キー入力待ち状態: アクセント枠 + 文字色をアクセントカラーに */
+.rebind-btn--listening {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}

@@ -208,8 +208,35 @@
 
                 <!-- ゲーム -->
                 <ui:VisualElement name="spage-game" class="settings-page">
-                    <ui:Label text="ゲーム" class="settings-section-title" />
-                    <ui:Label text="準備中" class="settings-placeholder" />
+                    <ui:Label text="キャスト方式" class="settings-section-title" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="スキルのキャスト方式" class="setting-label" />
+                        <ui:DropdownField name="dropdown-castmode" class="setting-dropdown"
+                            choices="クイックキャスト,範囲付きクイックキャスト,クイックキャストなし" index="0" />
+                    </ui:VisualElement>
+
+                    <ui:Label text="キーバインド" class="settings-section-title settings-section-title--spaced" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="スキル1（Q枠）" class="setting-label" />
+                        <ui:Button name="btn-rebind-0" text="Q" class="rebind-btn" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="スキル2（W枠）" class="setting-label" />
+                        <ui:Button name="btn-rebind-1" text="W" class="rebind-btn" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="スキル3（E枠）" class="setting-label" />
+                        <ui:Button name="btn-rebind-2" text="E" class="rebind-btn" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="スキル4（R枠）" class="setting-label" />
+                        <ui:Button name="btn-rebind-3" text="R" class="rebind-btn" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
 
             </ui:VisualElement>
