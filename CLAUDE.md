@@ -7,6 +7,13 @@
 - 例外: **実装難易度が特に高い箇所**はメインセッションが直接実装してよい
 - サブエージェントへのプロンプトには、対象ファイルパス・命名規約・設計方針を必ず含める（サブエージェントはこの会話の文脈を持たない）
 
+## 設計書の管理（Confluence が正）
+
+- 設計書は **Confluence の「Enigma」スペース**（https://n4t.atlassian.net/wiki/spaces/Enigma）で管理する。**Confluence 側を正とする**
+- ローカル `docs/` は参照用スナップショット。設計変更時は Confluence を更新すること
+- ページ構成はローカル `docs/` と同じ3階層: `01_基本設計` / `02_システム設計` / `03_詳細設計`
+- Atlassian MCP（cloudId: `6d20cfec-8405-427d-8fb6-7d9e9bac6a22`、スペースID: `65843`）でページの読み書きが可能
+
 ## プロジェクト概要
 
 **Enigma（エニグマ）** は Fantasy × SF テーマの 3D MOBA。Smite 風の TPS 視点（肩越しカメラ）、Unity HDRP レンダリング。
