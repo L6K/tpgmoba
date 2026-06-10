@@ -6,12 +6,10 @@ namespace Enigma.Combat
     {
         [SerializeField] private float _maxHp = 200f;
 
-        public HealthModel Model { get; private set; }
+        private HealthModel _model;
 
-        private void Awake()
-        {
-            Model = new HealthModel(_maxHp);
-        }
+        // Awake 前（他コンポーネントの Awake 等）にアクセスされても安全なよう遅延初期化
+        public HealthModel Model => _model ??= new HealthModel(_maxHp);
 
         public void TakeDamage(float amount)
         {

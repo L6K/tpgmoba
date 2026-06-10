@@ -1,0 +1,176 @@
+/* ── デザイントークン（HomeScreen.uss と統一） ───────── */
+:root {
+    --color-bg:        rgb(10, 12, 22);
+    --color-accent:    rgb(46, 107, 242);
+    --color-text:      rgb(255, 255, 255);
+    --color-text-dim:  rgb(170, 180, 205);
+    --color-divider:   rgba(255, 255, 255, 0.08);
+    --color-hud-bg:    rgba(10, 12, 22, 0.72);
+    --color-cd-overlay: rgba(0, 0, 0, 0.62);
+}
+
+/* ── ルート: 全画面・透明・ゲーム操作を遮らない ─────── */
+.hud-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* ── タイマー（上部中央） ───────────────────────────── */
+.hud-timer-container {
+    align-self: center;
+    margin-top: 12px;
+    background-color: var(--color-hud-bg);
+    border-radius: 4px;
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    border-width: 1px;
+    border-color: var(--color-divider);
+}
+
+.hud-timer {
+    font-size: 20px;
+    color: var(--color-text);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    letter-spacing: 3px;
+}
+
+/* ── 下部バー全体 ───────────────────────────────────── */
+.hud-bottom {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: center;
+    align-self: stretch;
+    margin-bottom: 20px;
+    padding-left: 24px;
+    padding-right: 24px;
+}
+
+/* ── HP パネル（下部左） ────────────────────────────── */
+.hud-hp-panel {
+    flex-direction: column;
+    align-items: flex-start;
+    background-color: var(--color-hud-bg);
+    border-radius: 4px;
+    padding: 8px 12px;
+    border-width: 1px;
+    border-color: var(--color-divider);
+    margin-right: 20px;
+    min-width: 180px;
+}
+
+.hud-hp-label {
+    font-size: 11px;
+    color: var(--color-text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+}
+
+.hud-hp-bar-bg {
+    width: 160px;
+    height: 8px;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+/* fill の width は GameHudController が % で制御する */
+.hud-hp-fill {
+    height: 100%;
+    width: 100%;
+    background-color: var(--color-accent);
+    border-radius: 2px;
+}
+
+.hud-hp-text {
+    font-size: 12px;
+    color: var(--color-text-dim);
+}
+
+/* ── スキルスロット列（下部中央） ───────────────────── */
+.hud-skills {
+    flex-direction: row;
+    align-items: flex-end;
+}
+
+/* 各スロット: 64x64 の角丸ボックス */
+.hud-skill-slot {
+    width: 64px;
+    height: 64px;
+    background-color: var(--color-hud-bg);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: var(--color-divider);
+    margin-left: 6px;
+    margin-right: 6px;
+    position: relative;
+    overflow: hidden;
+    align-items: center;
+    justify-content: flex-start;
+    flex-direction: column;
+    padding-top: 6px;
+    padding-bottom: 0;
+}
+
+/* 未設定スロットは彩度・明度を落とす */
+.hud-skill-slot--empty {
+    opacity: 0.38;
+}
+
+/* スキル名（スロット上部・小さい文字） */
+.hud-skill-name {
+    font-size: 9px;
+    color: var(--color-text-dim);
+    -unity-text-align: upper-center;
+    white-space: normal;
+    overflow: hidden;
+    max-width: 60px;
+    flex-shrink: 1;
+    margin-bottom: 2px;
+}
+
+/* キー名（スロット下部固定） */
+.hud-skill-key {
+    position: absolute;
+    bottom: 4px;
+    left: 0;
+    right: 0;
+    font-size: 11px;
+    color: var(--color-text);
+    -unity-font-style: bold;
+    -unity-text-align: lower-center;
+}
+
+/* CD オーバーレイ: 上から height % で覆う（残 CD が多いほど height 大） */
+.hud-skill-cd {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 0%;   /* GameHudController が width/height style で制御 */
+    background-color: var(--color-cd-overlay);
+}
+
+/* CD 残秒テキスト（スロット中央） */
+.hud-skill-cdtext {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    -unity-text-align: middle-center;
+    display: none;
+}

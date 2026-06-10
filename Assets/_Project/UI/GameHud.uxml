@@ -1,0 +1,64 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="GameHud.uss" />
+
+    <!-- ルートは全画面・透明・picking-mode none でゲーム操作を遮らない -->
+    <ui:VisualElement name="hud-root" class="hud-root" picking-mode="Ignore">
+
+        <!-- 上部中央: タイマー -->
+        <ui:VisualElement name="hud-timer-container" class="hud-timer-container">
+            <ui:Label name="hud-timer" class="hud-timer" text="00:00" />
+        </ui:VisualElement>
+
+        <!-- 下部バー全体 -->
+        <ui:VisualElement name="hud-bottom" class="hud-bottom">
+
+            <!-- 下部左: HP バー -->
+            <ui:VisualElement name="hud-hp-panel" class="hud-hp-panel">
+                <ui:Label class="hud-hp-label" text="HP" />
+                <ui:VisualElement name="hud-hp-bar-bg" class="hud-hp-bar-bg">
+                    <ui:VisualElement name="hud-hp-fill" class="hud-hp-fill" />
+                </ui:VisualElement>
+                <ui:Label name="hud-hp-text" class="hud-hp-text" text="200 / 200" />
+            </ui:VisualElement>
+
+            <!-- 下部中央: スキルスロット4つ -->
+            <ui:VisualElement name="hud-skills" class="hud-skills">
+
+                <!-- スロット 0 -->
+                <ui:VisualElement name="hud-skill-0" class="hud-skill-slot">
+                    <ui:Label name="hud-skill-name-0" class="hud-skill-name" text="" />
+                    <ui:VisualElement name="hud-skill-cd-0" class="hud-skill-cd" />
+                    <ui:Label name="hud-skill-cdtext-0" class="hud-skill-cdtext" text="" />
+                    <ui:Label name="hud-skill-key-0" class="hud-skill-key" text="Q" />
+                </ui:VisualElement>
+
+                <!-- スロット 1 -->
+                <ui:VisualElement name="hud-skill-1" class="hud-skill-slot">
+                    <ui:Label name="hud-skill-name-1" class="hud-skill-name" text="" />
+                    <ui:VisualElement name="hud-skill-cd-1" class="hud-skill-cd" />
+                    <ui:Label name="hud-skill-cdtext-1" class="hud-skill-cdtext" text="" />
+                    <ui:Label name="hud-skill-key-1" class="hud-skill-key" text="W" />
+                </ui:VisualElement>
+
+                <!-- スロット 2 -->
+                <ui:VisualElement name="hud-skill-2" class="hud-skill-slot">
+                    <ui:Label name="hud-skill-name-2" class="hud-skill-name" text="" />
+                    <ui:VisualElement name="hud-skill-cd-2" class="hud-skill-cd" />
+                    <ui:Label name="hud-skill-cdtext-2" class="hud-skill-cdtext" text="" />
+                    <ui:Label name="hud-skill-key-2" class="hud-skill-key" text="E" />
+                </ui:VisualElement>
+
+                <!-- スロット 3: デフォルトは未設定（暗く表示） -->
+                <ui:VisualElement name="hud-skill-3" class="hud-skill-slot hud-skill-slot--empty">
+                    <ui:Label name="hud-skill-name-3" class="hud-skill-name" text="" />
+                    <ui:VisualElement name="hud-skill-cd-3" class="hud-skill-cd" />
+                    <ui:Label name="hud-skill-cdtext-3" class="hud-skill-cdtext" text="" />
+                    <ui:Label name="hud-skill-key-3" class="hud-skill-key" text="R" />
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Enigma.Combat
@@ -26,14 +27,17 @@ namespace Enigma.Combat
         {
             yield return new WaitForSeconds(delay);
 
-            // 中心から半径内にある全コライダーを取得してダメージ
+            // 中心から半径内にある全コライダーを取得してダメージ。
+            // CharacterController + CapsuleCollider のような複数コライダー持ちに
+            // 多重ヒットしないよう IDamageable 単位で重複排除する
             var hits = Physics.OverlapSphere(transform.position, _radius);
+            var damaged = new HashSet<IDamageable>();
             foreach (var col in hits)
             {
                 if (_owner != null && col.gameObject == _owner) continue;
 
                 var damageable = col.GetComponentInParent<IDamageable>();
-                if (damageable != null)
+                if (damageable != null && damaged.Add(damageable))
                 {
                     damageable.TakeDamage(_damage);
                 }

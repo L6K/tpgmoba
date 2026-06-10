@@ -266,5 +266,30 @@ namespace Enigma.Ability
             if (action == CastAction.Cast && slot >= 0)
                 TryCast(slot);
         }
+
+        // ── HUD 公開 API ──────────────────────────────────────
+
+        /// <summary>スロット番号に対応する SkillDefinition を返す。未設定は null。</summary>
+        public SkillDefinition GetSkill(int slot)
+        {
+            if (slot < 0 || slot >= _skills.Length) return null;
+            return _skills[slot];
+        }
+
+        /// <summary>残りクールダウン秒（0〜Duration）。スキル未設定のスロットは 0 を返す。</summary>
+        public float GetCooldownRemaining(int slot)
+        {
+            if (slot < 0 || slot >= _cooldowns.Length || _skills[slot] == null) return 0f;
+            return _cooldowns[slot].Remaining(Time.time);
+        }
+
+        /// <summary>残りクールダウンの割合（0〜1）。スキル未設定のスロットは 0 を返す。</summary>
+        public float GetCooldownFraction(int slot)
+        {
+            if (slot < 0 || slot >= _cooldowns.Length || _skills[slot] == null) return 0f;
+            float duration = _cooldowns[slot].Duration;
+            if (duration <= 0f) return 0f;
+            return Mathf.Clamp01(_cooldowns[slot].Remaining(Time.time) / duration);
+        }
     }
 }
