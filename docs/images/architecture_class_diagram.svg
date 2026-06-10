@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 840" font-family="'Noto Sans JP','Segoe UI',sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#aab4cd"/>
+    </marker>
+    <marker id="impl" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+      <path d="M 1 1 L 11 6 L 1 11 z" fill="#0a0c16" stroke="#7a86a8" stroke-width="1.2"/>
+    </marker>
+  </defs>
+
+  <rect width="1240" height="840" fill="#0a0c16"/>
+  <text x="40" y="44" fill="#ffffff" font-size="22" font-weight="bold" letter-spacing="2">Enigma クラス図 — ホーム画面 / サービス層（DI）</text>
+  <text x="40" y="68" fill="#7a86a8" font-size="12">実線 = 依存（参照） ／ 破線 = インターフェース実装</text>
+
+  <!-- ══ Presentation ══ -->
+  <rect x="60" y="100" width="270" height="64" rx="4" fill="#10131f" stroke="#2e6bf2" stroke-width="1.5"/>
+  <text x="195" y="127" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">HomeScreenController</text>
+  <text x="195" y="148" fill="#7a86a8" font-size="11" text-anchor="middle">«MonoBehaviour / Humble Object»</text>
+
+  <!-- ScriptableObject (right) -->
+  <rect x="930" y="100" width="250" height="64" rx="4" fill="#10131f" stroke="#3e4a6b" stroke-width="1.2"/>
+  <text x="1055" y="127" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">CharacterDatabase</text>
+  <text x="1055" y="148" fill="#7a86a8" font-size="11" text-anchor="middle">«ScriptableObject»</text>
+
+  <rect x="930" y="220" width="250" height="64" rx="4" fill="#10131f" stroke="#3e4a6b" stroke-width="1.2"/>
+  <text x="1055" y="247" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">CharacterData</text>
+  <text x="1055" y="268" fill="#7a86a8" font-size="11" text-anchor="middle">«ScriptableObject» CharId / Role / ThemeColor</text>
+
+  <!-- ══ Composition Root ══ -->
+  <rect x="60" y="230" width="270" height="100" rx="4" fill="#131a30" stroke="#2e6bf2" stroke-width="1.5"/>
+  <text x="195" y="257" fill="#ffffff" font-size="15" font-weight="bold" text-anchor="middle">GameServices</text>
+  <text x="195" y="277" fill="#7a86a8" font-size="11" text-anchor="middle">«Composition Root (static)»</text>
+  <text x="195" y="297" fill="#aab4cd" font-size="11" text-anchor="middle">Settings / Ownership / Gacha</text>
+  <text x="195" y="315" fill="#aab4cd" font-size="11" text-anchor="middle">Initialize() でフェイク差し替え可</text>
+
+  <!-- ══ Interfaces row ══ -->
+  <g>
+    <rect x="60" y="400" width="240" height="56" rx="4" fill="#10131f" stroke="#7a86a8" stroke-width="1.2" stroke-dasharray="5 3"/>
+    <text x="180" y="424" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">ISettingsService</text>
+    <text x="180" y="444" fill="#7a86a8" font-size="11" text-anchor="middle">«interface»</text>
+
+    <rect x="420" y="400" width="240" height="56" rx="4" fill="#10131f" stroke="#7a86a8" stroke-width="1.2" stroke-dasharray="5 3"/>
+    <text x="540" y="424" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">IGachaService</text>
+    <text x="540" y="444" fill="#7a86a8" font-size="11" text-anchor="middle">«interface» TryPull / Crystals</text>
+
+    <rect x="780" y="400" width="260" height="56" rx="4" fill="#10131f" stroke="#7a86a8" stroke-width="1.2" stroke-dasharray="5 3"/>
+    <text x="910" y="424" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">ICharacterOwnership</text>
+    <text x="910" y="444" fill="#7a86a8" font-size="11" text-anchor="middle">«interface» IsOwned / Unlock</text>
+  </g>
+
+  <!-- ══ Implementations row ══ -->
+  <g>
+    <rect x="60" y="540" width="240" height="56" rx="4" fill="#10131f" stroke="#3e4a6b" stroke-width="1.2"/>
+    <text x="180" y="564" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">SettingsService</text>
+    <text x="180" y="584" fill="#7a86a8" font-size="11" text-anchor="middle">PlayerPrefs キー互換</text>
+
+    <rect x="420" y="540" width="240" height="56" rx="4" fill="#10131f" stroke="#3e4a6b" stroke-width="1.2"/>
+    <text x="540" y="564" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">GachaService</text>
+    <text x="540" y="584" fill="#7a86a8" font-size="11" text-anchor="middle">等確率抽選・残高管理</text>
+
+    <rect x="780" y="540" width="260" height="56" rx="4" fill="#10131f" stroke="#3e4a6b" stroke-width="1.2"/>
+    <text x="910" y="564" fill="#ffffff" font-size="14" font-weight="bold" text-anchor="middle">CharacterOwnershipService</text>
+    <text x="910" y="584" fill="#7a86a8" font-size="11" text-anchor="middle">SQLite (owned_chars) へ移行予定</text>
+  </g>
+
+  <!-- ══ Infra abstractions row ══ -->
+  <g>
+    <rect x="60" y="700" width="240" height="72" rx="4" fill="#0e1426" stroke="#3e4a6b" stroke-width="1.2"/>
+    <text x="180" y="726" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">ISaveStore</text>
+    <text x="180" y="744" fill="#7a86a8" font-size="11" text-anchor="middle">impl: PlayerPrefsSaveStore</text>
+    <text x="180" y="761" fill="#7a86a8" font-size="11" text-anchor="middle">test: FakeSaveStore</text>
+
+    <rect x="420" y="700" width="240" height="72" rx="4" fill="#0e1426" stroke="#3e4a6b" stroke-width="1.2"/>
+    <text x="540" y="726" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">IRandomSource</text>
+    <text x="540" y="744" fill="#7a86a8" font-size="11" text-anchor="middle">impl: SystemRandomSource</text>
+    <text x="540" y="761" fill="#7a86a8" font-size="11" text-anchor="middle">test: FakeRandomSource</text>
+
+    <rect x="780" y="700" width="260" height="72" rx="4" fill="#0e1426" stroke="#3e4a6b" stroke-width="1.2"/>
+    <text x="910" y="726" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle">ISystemSettingsApplier</text>
+    <text x="910" y="744" fill="#7a86a8" font-size="11" text-anchor="middle">impl: UnitySystemSettingsApplier</text>
+    <text x="910" y="761" fill="#7a86a8" font-size="11" text-anchor="middle">(Screen / QualitySettings / Audio)</text>
+  </g>
+
+  <!-- ══ Edges ══ -->
+  <!-- controller -> GameServices -->
+  <line x1="195" y1="164" x2="195" y2="226" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <!-- controller -> CharacterDatabase -->
+  <line x1="330" y1="132" x2="926" y2="132" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <!-- CharacterDatabase -> CharacterData -->
+  <line x1="1055" y1="164" x2="1055" y2="216" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+
+  <!-- GameServices -> interfaces -->
+  <line x1="180" y1="330" x2="180" y2="396" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <line x1="330" y1="300" x2="535" y2="396" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <line x1="330" y1="280" x2="900" y2="396" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+
+  <!-- implements (dashed, hollow) -->
+  <line x1="180" y1="540" x2="180" y2="460" stroke="#7a86a8" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#impl)"/>
+  <line x1="540" y1="540" x2="540" y2="460" stroke="#7a86a8" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#impl)"/>
+  <line x1="910" y1="540" x2="910" y2="460" stroke="#7a86a8" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#impl)"/>
+
+  <!-- service deps -->
+  <line x1="180" y1="596" x2="180" y2="696" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <line x1="260" y1="596" x2="850" y2="698" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <line x1="480" y1="596" x2="290" y2="700" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <line x1="540" y1="596" x2="540" y2="696" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <line x1="660" y1="560" x2="776" y2="450" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+  <line x1="910" y1="596" x2="910" y2="696" stroke="#aab4cd" stroke-width="1.4" marker-end="url(#arrow)"/>
+
+  <!-- edge labels -->
+  <text x="205" y="200" fill="#7a86a8" font-size="11">サービス取得</text>
+  <text x="600" y="122" fill="#7a86a8" font-size="11">マスターデータ参照</text>
+  <text x="676" y="528" fill="#7a86a8" font-size="11">所持判定</text>
+</svg>
