@@ -93,91 +93,88 @@
             </ui:VisualElement>
 
         </ui:VisualElement>
-        <!-- ══ 設定オーバーレイ ══════════════════════════ -->
+        <!-- ══ 設定オーバーレイ（Valorant 風全画面） ══════ -->
         <ui:VisualElement name="settings-overlay" class="overlay" style="display: none;">
-            <ui:VisualElement class="settings-panel">
 
-                <!-- ヘッダー -->
-                <ui:VisualElement class="settings-header">
-                    <ui:Label text="設定" class="settings-title" />
-                    <ui:Button name="btn-close-settings" text="✕" class="settings-close-btn" />
-                </ui:VisualElement>
+            <!-- ヘッダー行 -->
+            <ui:VisualElement class="settings-header">
+                <ui:Label text="設定" class="settings-title" />
+                <ui:Button name="btn-close-settings" text="✕ 閉じる" class="settings-close-btn" />
+            </ui:VisualElement>
 
-                <!-- ボディ -->
-                <ui:VisualElement class="settings-body">
+            <!-- 水平タブ行 -->
+            <ui:VisualElement class="settings-tabs">
+                <ui:Button name="stab-sound"    text="サウンド"    class="settings-tab settings-tab--active" />
+                <ui:Button name="stab-graphics" text="グラフィック" class="settings-tab" />
+                <ui:Button name="stab-controls" text="操作"        class="settings-tab" />
+                <ui:Button name="stab-game"     text="ゲーム"      class="settings-tab" />
+            </ui:VisualElement>
 
-                    <!-- 左タブ -->
-                    <ui:VisualElement class="settings-tabs">
-                        <ui:Button name="stab-sound"    text="サウンド"    class="settings-tab settings-tab--active" />
-                        <ui:Button name="stab-graphics" text="グラフィック" class="settings-tab" />
-                        <ui:Button name="stab-controls" text="操作"        class="settings-tab" />
-                        <ui:Button name="stab-game"     text="ゲーム"      class="settings-tab" />
+            <!-- タブ下の区切り線 -->
+            <ui:VisualElement class="settings-tab-divider" />
+
+            <!-- コンテンツ領域（中央寄せ 1 カラム） -->
+            <ui:VisualElement class="settings-content">
+
+                <!-- サウンド -->
+                <ui:VisualElement name="spage-sound" class="settings-page settings-page--active">
+                    <ui:Label text="ボリューム" class="settings-section-title" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="BGM" class="setting-label" />
+                        <ui:Slider name="slider-bgm" low-value="0" high-value="1" value="0.8" class="setting-slider" />
+                        <ui:Label name="label-bgm-val" text="80%" class="setting-value" />
                     </ui:VisualElement>
 
-                    <!-- 右コンテンツ -->
-                    <ui:VisualElement class="settings-content">
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="SE" class="setting-label" />
+                        <ui:Slider name="slider-se" low-value="0" high-value="1" value="1.0" class="setting-slider" />
+                        <ui:Label name="label-se-val" text="100%" class="setting-value" />
+                    </ui:VisualElement>
 
-                        <!-- サウンド -->
-                        <ui:VisualElement name="spage-sound" class="settings-page settings-page--active">
-                            <ui:Label text="サウンド" class="settings-section-title" />
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="BGM" class="setting-label" />
-                                <ui:Slider name="slider-bgm" low-value="0" high-value="1" value="0.8" class="setting-slider" />
-                                <ui:Label name="label-bgm-val" text="80%" class="setting-value" />
-                            </ui:VisualElement>
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="SE" class="setting-label" />
-                                <ui:Slider name="slider-se" low-value="0" high-value="1" value="1.0" class="setting-slider" />
-                                <ui:Label name="label-se-val" text="100%" class="setting-value" />
-                            </ui:VisualElement>
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="ボイス" class="setting-label" />
-                                <ui:Slider name="slider-voice" low-value="0" high-value="1" value="1.0" class="setting-slider" />
-                                <ui:Label name="label-voice-val" text="100%" class="setting-value" />
-                            </ui:VisualElement>
-                        </ui:VisualElement>
-
-                        <!-- グラフィック -->
-                        <ui:VisualElement name="spage-graphics" class="settings-page">
-                            <ui:Label text="グラフィック" class="settings-section-title" />
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="画質" class="setting-label" />
-                                <ui:DropdownField name="dropdown-quality" class="setting-dropdown"
-                                    choices="低,中,高,最高" index="2" />
-                            </ui:VisualElement>
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="ウィンドウモード" class="setting-label" />
-                                <ui:DropdownField name="dropdown-window" class="setting-dropdown"
-                                    choices="ウィンドウ,フルスクリーン,ボーダーレス" index="1" />
-                            </ui:VisualElement>
-                        </ui:VisualElement>
-
-                        <!-- 操作 -->
-                        <ui:VisualElement name="spage-controls" class="settings-page">
-                            <ui:Label text="操作" class="settings-section-title" />
-                            <ui:Label text="準備中" class="settings-placeholder" />
-                        </ui:VisualElement>
-
-                        <!-- ゲーム -->
-                        <ui:VisualElement name="spage-game" class="settings-page">
-                            <ui:Label text="ゲーム" class="settings-section-title" />
-                            <ui:Label text="準備中" class="settings-placeholder" />
-                        </ui:VisualElement>
-
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="ボイス" class="setting-label" />
+                        <ui:Slider name="slider-voice" low-value="0" high-value="1" value="1.0" class="setting-slider" />
+                        <ui:Label name="label-voice-val" text="100%" class="setting-value" />
                     </ui:VisualElement>
                 </ui:VisualElement>
 
-                <!-- フッター -->
-                <ui:VisualElement class="settings-footer">
-                    <ui:Button name="btn-settings-apply" text="適用" class="settings-apply-btn" />
+                <!-- グラフィック -->
+                <ui:VisualElement name="spage-graphics" class="settings-page">
+                    <ui:Label text="ディスプレイ" class="settings-section-title" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="画質" class="setting-label" />
+                        <ui:DropdownField name="dropdown-quality" class="setting-dropdown"
+                            choices="低,中,高,最高" index="2" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="ウィンドウモード" class="setting-label" />
+                        <ui:DropdownField name="dropdown-window" class="setting-dropdown"
+                            choices="ウィンドウ,フルスクリーン,ボーダーレス" index="1" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- 操作 -->
+                <ui:VisualElement name="spage-controls" class="settings-page">
+                    <ui:Label text="操作" class="settings-section-title" />
+                    <ui:Label text="準備中" class="settings-placeholder" />
+                </ui:VisualElement>
+
+                <!-- ゲーム -->
+                <ui:VisualElement name="spage-game" class="settings-page">
+                    <ui:Label text="ゲーム" class="settings-section-title" />
+                    <ui:Label text="準備中" class="settings-placeholder" />
                 </ui:VisualElement>
 
             </ui:VisualElement>
+
+            <!-- フッター行 -->
+            <ui:VisualElement class="settings-footer">
+                <ui:Button name="btn-settings-apply" text="適用" class="settings-apply-btn" />
+            </ui:VisualElement>
+
         </ui:VisualElement>
 
     </ui:VisualElement>

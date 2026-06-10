@@ -137,7 +137,7 @@ namespace Enigma.UI
                 dropdownQuality.index,
                 dropdownWindow.index
             );
-            CloseSettings();
+            // 適用後も設定画面は閉じない。閉じるのは ✕ ボタン / ESC のみ
         }
 
         // ── 設定タブ切り替え ───────────────────────────
@@ -150,6 +150,19 @@ namespace Enigma.UI
                 bool active = i == index;
                 SetClass(pages[i], "settings-page--active", active);
                 SetClass(tabs[i],  "settings-tab--active",  active);
+            }
+        }
+
+        // ── ESC キーで設定を閉じる ─────────────────────
+        void Update()
+        {
+            var keyboard = UnityEngine.InputSystem.Keyboard.current;
+            if (keyboard == null) return;
+
+            if (keyboard.escapeKey.wasPressedThisFrame &&
+                settingsOverlay.style.display == DisplayStyle.Flex)
+            {
+                CloseSettings();
             }
         }
 

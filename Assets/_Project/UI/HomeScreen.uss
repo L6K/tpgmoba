@@ -1,17 +1,17 @@
 /* ── Variables ─────────────────────────────────────── */
 :root {
-    --color-bg:           rgb(15, 15, 31);
-    --color-nav:          rgb(25, 25, 46);
-    --color-panel:        rgb(25, 25, 51);
-    --color-panel-header: rgb(35, 35, 66);
+    --color-bg:           rgb(10, 12, 22);
+    --color-nav:          rgb(16, 19, 32);
+    --color-panel:        rgb(16, 19, 32);
+    --color-panel-header: rgb(22, 26, 42);
     --color-accent:       rgb(46, 107, 242);
     --color-accent-dim:   rgba(46, 107, 242, 0.35);
     --color-text:         rgb(255, 255, 255);
-    --color-text-dim:     rgb(180, 200, 255);
+    --color-text-dim:     rgb(170, 180, 205);
     --color-text-muted:   rgb(120, 130, 160);
     --color-online:       rgb(51, 255, 76);
     --color-offline:      rgb(100, 100, 120);
-    --color-divider:      rgba(255, 255, 255, 0.12);
+    --color-divider:      rgba(255, 255, 255, 0.08);
     --nav-height:         70px;
     --friend-width:       220px;
 }
@@ -40,6 +40,7 @@
     color: var(--color-text);
     width: 160px;
     margin-right: 20px;
+    letter-spacing: 3px;
 }
 
 .nav-tabs {
@@ -59,6 +60,7 @@
     border-bottom-color: var(--color-accent);
     transition: color 0.15s ease;
     cursor: link;
+    letter-spacing: 1px;
 }
 
 .nav-tab:hover {
@@ -175,7 +177,7 @@
 .party-slot {
     width: 200px;
     height: 200px;
-    border-radius: 16px;
+    border-radius: 4px;
     border-width: 2px;
     align-items: center;
     justify-content: center;
@@ -227,7 +229,7 @@
 .game-icon {
     width: 280px;
     height: 280px;
-    background-color: rgb(26, 31, 71);
+    background-color: rgb(16, 20, 36);
     border-width: 2px;
     border-color: var(--color-accent-dim);
     border-radius: 4px;
@@ -399,78 +401,55 @@
     margin-right: 6px;
 }
 
-/* ══ 設定オーバーレイ ══════════════════════════════ */
+/* ══ 設定オーバーレイ（Valorant 風全画面） ════════════ */
 
+/* 浮いたパネルをやめて全画面を直接覆う */
 .overlay {
     position: absolute;
     left: 0; top: 0; right: 0; bottom: 0;
-    background-color: rgba(0, 0, 0, 0.65);
-    align-items: center;
-    justify-content: center;
-}
-
-.settings-panel {
-    width: 760px;
-    height: 520px;
-    background-color: rgb(20, 20, 40);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    background-color: rgba(10, 12, 22, 0.97);
     flex-direction: column;
 }
 
-/* ヘッダー */
+/* ヘッダー行 */
 .settings-header {
     flex-direction: row;
     align-items: center;
-    height: 56px;
-    padding-left: 24px;
-    padding-right: 16px;
-    background-color: rgb(25, 25, 50);
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(255, 255, 255, 0.08);
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
+    height: 64px;
+    padding-left: 48px;
+    padding-right: 32px;
+    flex-shrink: 0;
 }
 
 .settings-title {
-    font-size: 20px;
+    font-size: 22px;
     -unity-font-style: bold;
     color: var(--color-text);
     flex-grow: 1;
+    letter-spacing: 2px;
 }
 
 .settings-close-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 18px;
     background-color: rgba(0,0,0,0);
     border-width: 0;
+    border-radius: 0;
     color: var(--color-text-muted);
-    font-size: 18px;
+    font-size: 15px;
     cursor: link;
-    transition: color 0.15s ease, background-color 0.15s ease;
+    padding: 0 12px;
+    height: 40px;
+    transition: color 0.15s ease;
 }
 
 .settings-close-btn:hover {
     color: var(--color-text);
-    background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* ボディ */
-.settings-body {
-    flex-direction: row;
-    flex-grow: 1;
-}
-
-/* 左タブリスト */
+/* 水平タブ行 */
 .settings-tabs {
-    width: 160px;
-    flex-direction: column;
-    background-color: rgb(17, 17, 35);
-    border-right-width: 1px;
-    border-right-color: rgba(255, 255, 255, 0.08);
-    padding-top: 12px;
+    flex-direction: row;
+    padding-left: 40px;
+    flex-shrink: 0;
 }
 
 .settings-tab {
@@ -480,37 +459,49 @@
     color: var(--color-text-muted);
     font-size: 15px;
     height: 44px;
-    padding-left: 20px;
-    -unity-text-align: middle-left;
+    padding: 0 20px;
+    -unity-text-align: middle-center;
     cursor: link;
-    border-left-width: 3px;
-    border-left-color: rgba(0,0,0,0);
+    /* アクティブ状態の下線を準備（厚み 0 → active で 2px に） */
+    border-bottom-width: 0;
+    border-bottom-color: var(--color-accent);
     transition: color 0.1s ease;
 }
 
 .settings-tab:hover {
     color: var(--color-text);
-    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .settings-tab--active {
     color: var(--color-text);
-    background-color: rgba(46, 107, 242, 0.12);
-    border-left-color: var(--color-accent);
+    border-bottom-width: 2px;
+    border-bottom-color: var(--color-accent);
 }
 
-/* 右コンテンツ */
+/* タブ行下の 1px 区切り線 */
+.settings-tab-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+/* コンテンツ領域: 中央寄せ 1 カラム */
 .settings-content {
     flex-grow: 1;
-    padding: 24px 28px;
+    align-items: center;
+    padding-top: 32px;
+    padding-bottom: 32px;
+    overflow: hidden;
     position: relative;
 }
 
+/* 表示切替は display で行うため絶対配置は不要。親の align-items: center で中央寄せ */
 .settings-page {
     display: none;
     flex-direction: column;
-    position: absolute;
-    left: 28px; top: 24px; right: 28px; bottom: 24px;
+    width: 70%;
+    max-width: 880px;
+    flex-grow: 1;
 }
 
 .settings-page--active {
@@ -518,23 +509,23 @@
 }
 
 .settings-section-title {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--color-text-muted);
-    margin-bottom: 20px;
-    letter-spacing: 1px;
+    margin-bottom: 16px;
+    letter-spacing: 2px;
 }
 
 /* 設定行 */
 .setting-row {
     flex-direction: row;
     align-items: center;
-    height: 52px;
+    height: 56px;
     border-bottom-width: 1px;
-    border-bottom-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
 .setting-label {
-    width: 120px;
+    width: 280px;
     font-size: 15px;
     color: var(--color-text);
 }
@@ -570,7 +561,7 @@
 .setting-dropdown {
     flex-grow: 1;
     margin-left: 8px;
-    background-color: rgb(30, 30, 55);
+    background-color: rgb(22, 26, 42);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.15);
     border-radius: 4px;
@@ -585,13 +576,14 @@
     flex-grow: 1;
 }
 
-/* フッター */
+/* フッター行 */
 .settings-footer {
-    height: 60px;
+    height: 64px;
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
-    padding-right: 20px;
+    padding-right: 48px;
+    flex-shrink: 0;
     border-top-width: 1px;
     border-top-color: rgba(255, 255, 255, 0.08);
 }
