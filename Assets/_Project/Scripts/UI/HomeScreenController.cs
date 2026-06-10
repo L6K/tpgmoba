@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UIElements;
+using Enigma.Character;
 
 namespace Enigma.UI
 {
@@ -12,11 +13,17 @@ namespace Enigma.UI
 
         [Header("Data")]
         [SerializeField] FriendDatabase friendDatabase;
+        [SerializeField] CharacterDatabase characterDatabase;
 
         // ── メインタブ ─────────────────────────────────
         VisualElement pageGame, pageInventory, pageGacha;
         Button tabGame, tabInventory, tabGacha;
         Button btnPlay, btnProfile, btnSettings;
+
+        // ── 所持品サブタブ ─────────────────────────────
+        Button itabChars, itabSkins, itabItems;
+        ScrollView charGrid;
+        VisualElement ipageSkins, ipageItems;
 
         // ── 設定オーバーレイ ───────────────────────────
         VisualElement settingsOverlay;
@@ -101,7 +108,20 @@ namespace Enigma.UI
                 root.Q<VisualElement>("profile-icon").style.backgroundImage =
                     Background.FromTexture2D(playerIcon);
 
+            // 所持品サブタブ
+            itabChars  = root.Q<Button>("itab-chars");
+            itabSkins  = root.Q<Button>("itab-skins");
+            itabItems  = root.Q<Button>("itab-items");
+            charGrid   = root.Q<ScrollView>("char-grid");
+            ipageSkins = root.Q<VisualElement>("ipage-skins");
+            ipageItems = root.Q<VisualElement>("ipage-items");
+
+            itabChars.clicked += () => SwitchInventoryTab(0);
+            itabSkins.clicked += () => SwitchInventoryTab(1);
+            itabItems.clicked += () => SwitchInventoryTab(2);
+
             BuildFriendList(root.Q<ScrollView>("friend-list"));
+            BuildCharacterGrid();
             SwitchTab(0);
         }
 
@@ -115,6 +135,82 @@ namespace Enigma.UI
                 bool active = i == index;
                 SetClass(pages[i], "page--active", active);
                 SetClass(tabs[i],  "nav-tab--active", active);
+            }
+        }
+
+        // ── 所持品サブタブ切り替え ─────────────────────
+        void SwitchInventoryTab(int index)
+        {
+            Button[]        tabs  = { itabChars, itabSkins, itabItems };
+            // ipage-chars は ScrollView (charGrid) なので VisualElement[] に合わせて扱う
+            VisualElement[] pages = { charGrid, ipageSkins, ipageItems };
+            for (int i = 0; i < pages.Length; i++)
+            {
+                bool active = i == index;
+                pages[i].style.display = active ? DisplayStyle.Flex : DisplayStyle.None;
+                SetClass(tabs[i], "inventory-tab--active", active);
+            }
+        }
+
+        // ── キャラクターグリッド構築 ───────────────────
+        void BuildCharacterGrid()
+        {
+            if (charGrid == null) return;
+            charGrid.Clear();
+
+            if (characterDatabase == null)
+            {
+                Debug.LogWarning("[HomeScreen] CharacterDatabase が設定されていません");
+                return;
+            }
+
+            var chars = characterDatabase.GetSorted();
+            foreach (var chara in chars)
+            {
+                var card = new VisualElement();
+                card.AddToClassList("char-card");
+                if (!chara.ownedByDefault)
+                    card.AddToClassList("char-card--locked");
+
+                // アイコン領域
+                var iconEl = new VisualElement();
+                iconEl.AddToClassList("char-card__icon");
+
+                if (chara.icon != null)
+                {
+                    iconEl.style.backgroundImage = Background.FromTexture2D(chara.icon);
+                }
+                else
+                {
+                    // icon が null → themeColor 背景 + 頭文字
+                    iconEl.style.backgroundColor = new StyleColor(chara.themeColor);
+                    var initial = new Label(chara.displayName.Length > 0
+                        ? chara.displayName[..1]
+                        : "?");
+                    initial.AddToClassList("char-card__initial");
+                    iconEl.Add(initial);
+                }
+
+                // 未所持ラベル（カード右上）
+                if (!chara.ownedByDefault)
+                {
+                    var lockedLabel = new Label("未所持");
+                    lockedLabel.AddToClassList("char-card__locked-label");
+                    iconEl.Add(lockedLabel);
+                }
+
+                // 名前
+                var nameLabel = new Label(chara.displayName);
+                nameLabel.AddToClassList("char-card__name");
+
+                // ロール
+                var roleLabel = new Label(chara.RoleLabel);
+                roleLabel.AddToClassList("char-card__role");
+
+                card.Add(iconEl);
+                card.Add(nameLabel);
+                card.Add(roleLabel);
+                charGrid.Add(card);
             }
         }
 

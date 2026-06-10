@@ -563,6 +563,7 @@ MonoBehaviour:
   uiDocument: {fileID: 2082311378}
   playerIcon: {fileID: 0}
   friendDatabase: {fileID: 11400000, guid: 37384c16848baf24392ce36cdcc54a2a, type: 2}
+  characterDatabase: {fileID: 11400000, guid: d07f653c0a917cc43bfeefa1928910f1, type: 2}
 --- !u!114 &2082311378
 MonoBehaviour:
   m_ObjectHideFlags: 0

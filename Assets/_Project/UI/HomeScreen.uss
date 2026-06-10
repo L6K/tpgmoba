@@ -622,3 +622,153 @@
 .settings-apply-btn:active {
     background-color: rgb(30, 80, 200);
 }
+
+/* ══ 所持品ページ ════════════════════════════════════════ */
+
+/* page は position:absolute + align/justify:center なので、
+   page--flow で上から縦に流れるレイアウトに上書きする */
+.page--flow {
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-direction: column;
+}
+
+/* サブタブ行 */
+.inventory-header {
+    flex-direction: row;
+    flex-shrink: 0;
+    padding-left: 40px;
+    padding-top: 8px;
+}
+
+/* サブタブボタン（設定画面の .settings-tab と同系） */
+.inventory-tab {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-radius: 0;
+    color: var(--color-text-muted);
+    font-size: 15px;
+    height: 44px;
+    padding: 0 20px;
+    -unity-text-align: middle-center;
+    cursor: link;
+    border-bottom-width: 0;
+    border-bottom-color: var(--color-accent);
+    transition: color 0.1s ease;
+}
+
+.inventory-tab:hover {
+    color: var(--color-text);
+}
+
+.inventory-tab--active {
+    color: var(--color-text);
+    border-bottom-width: 2px;
+    border-bottom-color: var(--color-accent);
+}
+
+/* タブ下の 1px 区切り線 */
+.inventory-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+/* キャラクターグリッド（ScrollView ルート） */
+.char-grid {
+    flex-grow: 1;
+    align-self: stretch;
+}
+
+/* ScrollView の content-container は viewport を挟んだ孫要素のため子孫セレクタで指定 */
+.char-grid #unity-content-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 20px;
+    align-content: flex-start;
+}
+
+/* 準備中プレースホルダー領域 */
+.page-placeholder-area {
+    flex-grow: 1;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── キャラクターカード ──────────────────────────────── */
+.char-card {
+    width: 160px;
+    height: 210px;
+    background-color: rgb(16, 19, 32);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    margin: 6px;
+    flex-direction: column;
+    overflow: hidden;
+    cursor: link;
+    transition: border-color 0.15s ease, translate 0.15s ease;
+}
+
+.char-card:hover {
+    border-color: var(--color-accent);
+    translate: 0 -3px;
+}
+
+/* アイコン領域（上部 160×140） */
+.char-card__icon {
+    width: 160px;
+    height: 140px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    /* themeColor はコントローラーがインラインで設定。
+       icon がある場合も同様に backgroundImage をコントローラーで設定 */
+    background-size: cover;
+    background-position: center;
+}
+
+/* 頭文字表示（icon が null の場合） */
+.char-card__initial {
+    font-size: 48px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.85);
+    -unity-text-align: middle-center;
+}
+
+/* カード下部テキスト領域 */
+.char-card__name {
+    font-size: 15px;
+    color: var(--color-text);
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 8px;
+    -unity-text-align: upper-left;
+}
+
+.char-card__role {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 2px;
+}
+
+/* 未所持カード：彩度・透明度を落とす */
+.char-card--locked {
+    opacity: 0.45;
+}
+
+/* 「未所持」ラベル（カード右上に重ねて表示） */
+.char-card__locked-label {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 2px;
+    padding: 1px 5px;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+}

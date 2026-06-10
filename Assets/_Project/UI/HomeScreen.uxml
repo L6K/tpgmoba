@@ -72,8 +72,31 @@
                 </ui:VisualElement>
 
                 <!-- Tab: 所持品 -->
-                <ui:VisualElement name="page-inventory" class="page">
-                    <ui:Label text="所持品" class="page-placeholder" />
+                <ui:VisualElement name="page-inventory" class="page page--flow">
+
+                    <!-- サブタブ行 -->
+                    <ui:VisualElement name="inventory-header" class="inventory-header">
+                        <ui:Button name="itab-chars" text="キャラクター" class="inventory-tab inventory-tab--active" />
+                        <ui:Button name="itab-skins" text="スキン"       class="inventory-tab" />
+                        <ui:Button name="itab-items" text="アイテム"     class="inventory-tab" />
+                    </ui:VisualElement>
+
+                    <!-- タブ下区切り線 -->
+                    <ui:VisualElement class="inventory-divider" />
+
+                    <!-- キャラクターグリッド -->
+                    <ui:ScrollView name="char-grid" class="char-grid" />
+
+                    <!-- スキン（準備中） -->
+                    <ui:VisualElement name="ipage-skins" class="page-placeholder-area" style="display: none;">
+                        <ui:Label text="準備中" class="page-placeholder" />
+                    </ui:VisualElement>
+
+                    <!-- アイテム（準備中） -->
+                    <ui:VisualElement name="ipage-items" class="page-placeholder-area" style="display: none;">
+                        <ui:Label text="準備中" class="page-placeholder" />
+                    </ui:VisualElement>
+
                 </ui:VisualElement>
 
                 <!-- Tab: ガチャ -->
