@@ -868,12 +868,96 @@ public static class BuildAetherRiftMap
         soShopCtrlLate.FindProperty("_catalog").objectReferenceValue = catalog;
         soShopCtrlLate.ApplyModifiedPropertiesWithoutUndo();
 
-        // 16. シーン保存
+        // 16. 境界壁
+        CreateOuterBoundary();
+
+        // 17. シーン保存
         EditorSceneManager.SaveScene(scene, ScenePath);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
         Debug.Log("[BuildAetherRiftMap] AetherRift_Map.unity を保存しました。");
+    }
+
+    // ---- 境界壁 ----
+
+    /// <summary>
+    /// レーン外縁リング壁 + 各ベースポケット壁を生成し "OuterBoundary" 親 GO にまとめる。
+    /// BoxCollider はプリミティブ既定のものを使用（追加設定不要）。
+    /// </summary>
+    private static void CreateOuterBoundary()
+    {
+        var matBoundary = GetOrCreateMat("BoundaryWall", new Color(0.58f, 0.55f, 0.50f));
+        ApplyWutheringRamp(matBoundary);
+
+        var parent = new GameObject("OuterBoundary");
+        SetStatic(parent);
+
+        // --- 1. レーン外縁リング壁 (半径 51、96 セグメント) ---
+        const int   LaneSegments   = 96;
+        const float LaneRadius     = 51.0f;
+        const float LaneWallH      = 1.5f;
+        const float LaneWallDepth  = 1.2f;
+        // 開口: ベース接続部 0°±12° および 180°±12°
+        const float GapHalfAngle   = 12f;
+
+        float laneStepDeg  = 360f / LaneSegments;
+        float laneChordLen = 2f * LaneRadius * Mathf.Sin(laneStepDeg * 0.5f * Mathf.Deg2Rad);
+        float laneSegW     = laneChordLen + 0.15f;
+
+        for (int i = 0; i < LaneSegments; i++)
+        {
+            float angleDeg = i * laneStepDeg;
+
+            // ベース接続開口をスキップ
+            float normAngle = ((angleDeg % 360f) + 360f) % 360f;
+            float diff0     = Mathf.Abs(Mathf.DeltaAngle(normAngle, 0f));
+            float diff180   = Mathf.Abs(Mathf.DeltaAngle(normAngle, 180f));
+            if (diff0 <= GapHalfAngle || diff180 <= GapHalfAngle) continue;
+
+            float rad = angleDeg * Mathf.Deg2Rad;
+            var   pos = new Vector3(LaneRadius * Mathf.Cos(rad), LaneWallH * 0.5f, LaneRadius * Mathf.Sin(rad));
+
+            var seg = PlaceCube($"LaneWall_{i:D3}", pos, new Vector3(laneSegW, LaneWallH, LaneWallDepth), matBoundary);
+            // 円周接線方向に回転（法線が中心を向くように +90°）
+            seg.transform.rotation = Quaternion.Euler(0f, -(angleDeg + 90f), 0f);
+            seg.transform.SetParent(parent.transform, true);
+        }
+
+        // --- 2. ベースポケット壁 (各ベース中心 ±56、半径 12、32 セグメント) ---
+        const int   BaseSegments  = 32;
+        const float BaseRadius    = 12.0f;
+        const float BaseWallH     = 1.5f;
+        const float BaseWallDepth = 1.0f;
+
+        float baseStepDeg  = 360f / BaseSegments;
+        float baseChordLen = 2f * BaseRadius * Mathf.Sin(baseStepDeg * 0.5f * Mathf.Deg2Rad);
+        float baseSegW     = baseChordLen + 0.15f;
+
+        var baseCenters = new (Vector3 center, string label)[]
+        {
+            (new Vector3(-56f, 0f, 0f), "Blue"),
+            (new Vector3( 56f, 0f, 0f), "Red"),
+        };
+
+        foreach (var (center, label) in baseCenters)
+        {
+            for (int i = 0; i < BaseSegments; i++)
+            {
+                float angleDeg = i * baseStepDeg;
+                float rad      = angleDeg * Mathf.Deg2Rad;
+                var   segWorld = center + new Vector3(BaseRadius * Mathf.Cos(rad), 0f, BaseRadius * Mathf.Sin(rad));
+
+                // マップ中心からの距離 < 51 はレーン側開口 → スキップ
+                if (segWorld.magnitude < LaneRadius) continue;
+
+                var pos = new Vector3(segWorld.x, BaseWallH * 0.5f, segWorld.z);
+                var seg = PlaceCube($"BaseWall_{label}_{i:D2}", pos,
+                    new Vector3(baseSegW, BaseWallH, BaseWallDepth), matBoundary);
+                seg.transform.rotation = Quaternion.Euler(0f, -(angleDeg + 90f), 0f);
+                seg.transform.SetParent(parent.transform, true);
+            }
+        }
     }
 
     // ---- ヘルパー ----
