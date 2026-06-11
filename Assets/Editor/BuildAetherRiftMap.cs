@@ -10,6 +10,7 @@ using Enigma.Ability;
 using Enigma.Objective;
 using Enigma.UI;
 using Enigma.Minion;
+using Enigma.Core;
 
 public static class BuildAetherRiftMap
 {
@@ -85,20 +86,21 @@ public static class BuildAetherRiftMap
         PlaceCube("PitWallEastN",  new Vector3( 10f, 2f,  10f),  new Vector3(2f, 4f, 12f), matJungle);
         PlaceCube("PitWallEastS",  new Vector3( 10f, 2f, -10f),  new Vector3(2f, 4f, 12f), matJungle);
 
-        PlaceTower("Tower_BTop",    new Vector3(-55f, 4f,  50f), matBlue);
-        PlaceTower("Tower_BBot",    new Vector3(-55f, 4f, -50f), matBlue);
-        PlaceTower("Tower_BMidTop", new Vector3(-80f, 4f,  50f), matBlue);
-        PlaceTower("Tower_BMidBot", new Vector3(-80f, 4f, -50f), matBlue);
-        PlaceTower("Tower_RTop",    new Vector3( 55f, 4f,  50f), matRed);
-        PlaceTower("Tower_RBot",    new Vector3( 55f, 4f, -50f), matRed);
-        PlaceTower("Tower_RMidTop", new Vector3( 80f, 4f,  50f), matRed);
-        PlaceTower("Tower_RMidBot", new Vector3( 80f, 4f, -50f), matRed);
+        // projPrefab はこの時点では未生成なので後回し（後段で結線）
+        PlaceTower("Tower_BTop",    new Vector3(-55f, 4f,  50f), matBlue, null);
+        PlaceTower("Tower_BBot",    new Vector3(-55f, 4f, -50f), matBlue, null);
+        PlaceTower("Tower_BMidTop", new Vector3(-80f, 4f,  50f), matBlue, null);
+        PlaceTower("Tower_BMidBot", new Vector3(-80f, 4f, -50f), matBlue, null);
+        PlaceTower("Tower_RTop",    new Vector3( 55f, 4f,  50f), matRed,  null);
+        PlaceTower("Tower_RBot",    new Vector3( 55f, 4f, -50f), matRed,  null);
+        PlaceTower("Tower_RMidTop", new Vector3( 80f, 4f,  50f), matRed,  null);
+        PlaceTower("Tower_RMidBot", new Vector3( 80f, 4f, -50f), matRed,  null);
 
         PlaceCube("Base_Blue", new Vector3(-95f, 0.5f, 0f), new Vector3(20f, 1f, 30f), matBlue);
         PlaceCube("Base_Red",  new Vector3( 95f, 0.5f, 0f), new Vector3(20f, 1f, 30f), matRed);
 
-        PlaceTitan("Titan_Blue", new Vector3(-95f, 4f, 0f), matBlue);
-        PlaceTitan("Titan_Red",  new Vector3( 95f, 4f, 0f), matRed);
+        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-95f, 4f, 0f), matBlue);
+        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 95f, 4f, 0f), matRed);
 
         // 4. ライティング
         var dirLight = new GameObject("Directional Light");
@@ -156,13 +158,55 @@ public static class BuildAetherRiftMap
         var telegraphPrefab     = PrefabUtility.SaveAsPrefabAsset(telegraphGo, telegraphPrefabPath);
         Object.DestroyImmediate(telegraphGo);
 
-        // 8. SkillDefinition アセット生成
+        // 5b. Projectile プレハブをタワーの TowerAttack に結線（プレハブ生成後に実施）
+        WireProjPrefabToTowers(projPrefab.GetComponent<Projectile>());
+
+        // 8. SkillDefinition アセット生成（zeph: 既存流用、他4キャラは新規 or 既存）
         var skillSlash = GetOrCreateSkillDefinition("Skill_MagicSlash",
             "魔導斬撃", SkillTargeting.Directional, 25f, 25f, 0f, 4f, 30f);
         var skillAoe = GetOrCreateSkillDefinition("Skill_ExplosionCircle",
             "爆裂魔法陣", SkillTargeting.GroundAoe, 40f, 20f, 4f, 8f, 0f);
         var skillChase = GetOrCreateSkillDefinition("Skill_Chase",
             "追撃", SkillTargeting.Targeted, 30f, 15f, 0f, 6f, 0f);
+
+        // garon
+        var garonQ = GetOrCreateSkillDefinition("Skill_garon_Q",
+            "シールドバッシュ", SkillTargeting.Directional, 15f, 15f, 0f, 5f, 25f);
+        var garonW = GetOrCreateSkillDefinition("Skill_garon_W",
+            "グランドスラム", SkillTargeting.GroundAoe, 30f, 12f, 5f, 9f, 0f);
+        var garonE = GetOrCreateSkillDefinition("Skill_garon_E",
+            "チェーンフック", SkillTargeting.Targeted, 20f, 12f, 0f, 7f, 0f);
+
+        // veil
+        var veilQ = GetOrCreateSkillDefinition("Skill_veil_Q",
+            "アーケインボルト", SkillTargeting.Directional, 30f, 30f, 0f, 4f, 35f);
+        var veilW = GetOrCreateSkillDefinition("Skill_veil_W",
+            "量子爆発", SkillTargeting.GroundAoe, 50f, 22f, 5f, 10f, 0f);
+        var veilE = GetOrCreateSkillDefinition("Skill_veil_E",
+            "ヘックス", SkillTargeting.Targeted, 35f, 18f, 0f, 8f, 0f);
+
+        // rin
+        var rinQ = GetOrCreateSkillDefinition("Skill_rin_Q",
+            "貫通矢", SkillTargeting.Directional, 28f, 35f, 0f, 3.5f, 45f);
+        var rinW = GetOrCreateSkillDefinition("Skill_rin_W",
+            "矢の雨", SkillTargeting.GroundAoe, 35f, 25f, 4.5f, 9f, 0f);
+        var rinE = GetOrCreateSkillDefinition("Skill_rin_E",
+            "狙撃", SkillTargeting.Targeted, 40f, 20f, 0f, 9f, 0f);
+
+        // nova
+        var novaQ = GetOrCreateSkillDefinition("Skill_nova_Q",
+            "パルスウェーブ", SkillTargeting.Directional, 18f, 20f, 0f, 4f, 28f);
+        var novaW = GetOrCreateSkillDefinition("Skill_nova_W",
+            "リペアフィールド", SkillTargeting.GroundAoe, 20f, 18f, 5f, 8f, 0f);
+        var novaE = GetOrCreateSkillDefinition("Skill_nova_E",
+            "スタンボルト", SkillTargeting.Targeted, 15f, 15f, 0f, 6f, 0f);
+
+        // CharacterData アセットへのスキル結線
+        WireCharacterSkills("Char_zeph",  new[] { skillSlash, skillAoe, skillChase, null });
+        WireCharacterSkills("Char_garon", new[] { garonQ, garonW, garonE, (SkillDefinition)null });
+        WireCharacterSkills("Char_veil",  new[] { veilQ, veilW, veilE, (SkillDefinition)null });
+        WireCharacterSkills("Char_rin",   new[] { rinQ, rinW, rinE, (SkillDefinition)null });
+        WireCharacterSkills("Char_nova",  new[] { novaQ, novaW, novaE, (SkillDefinition)null });
 
         // 9. プレイヤー
         var playerSpawnPos = new Vector3(-90f, 1.1f, 50f);
@@ -252,6 +296,20 @@ public static class BuildAetherRiftMap
         soSkillCaster.FindProperty("_targeting").objectReferenceValue          = targeting;
         soSkillCaster.FindProperty("_muzzle").objectReferenceValue             = muzzle.transform;
         soSkillCaster.ApplyModifiedPropertiesWithoutUndo();
+
+        // MatchBootstrap: ピック済みキャラのスキルを Start 時に注入する
+        var bootstrap    = player.AddComponent<MatchBootstrap>();
+        var soBootstrap  = new SerializedObject(bootstrap);
+        soBootstrap.FindProperty("_skillCaster").objectReferenceValue = skillCaster;
+        soBootstrap.ApplyModifiedPropertiesWithoutUndo();
+
+        // MatchFlowController: タイタン死亡を監視して試合終了フローを起動する
+        var matchFlowGo   = new GameObject("MatchFlow");
+        var matchFlow     = matchFlowGo.AddComponent<Enigma.Core.MatchFlowController>();
+        var soMatchFlow   = new SerializedObject(matchFlow);
+        soMatchFlow.FindProperty("_blueTitan").objectReferenceValue = blueTitanHc;
+        soMatchFlow.FindProperty("_redTitan").objectReferenceValue  = redTitanHc;
+        soMatchFlow.ApplyModifiedPropertiesWithoutUndo();
 
         // PlayerController のカメラ参照は後で設定
 
@@ -546,7 +604,7 @@ public static class BuildAetherRiftMap
         return go;
     }
 
-    private static void PlaceTower(string name, Vector3 pos, Material mat)
+    private static void PlaceTower(string name, Vector3 pos, Material mat, Projectile projPrefab)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         go.name              = name;
@@ -566,9 +624,61 @@ public static class BuildAetherRiftMap
         // x < 0 = Blue, x > 0 = Red
         soTt.FindProperty("_team").enumValueIndex = pos.x < 0f ? (int)TeamId.Blue : (int)TeamId.Red;
         soTt.ApplyModifiedPropertiesWithoutUndo();
+
+        // TowerAttack: 射程内の敵を自動攻撃する
+        var ta   = go.AddComponent<TowerAttack>();
+        var muzzleGo = new GameObject("Muzzle");
+        muzzleGo.transform.SetParent(go.transform, false);
+        // タワーの localScale が 4 なので worldspace で頂部に来るよう localY+1 = world+4
+        muzzleGo.transform.localPosition = new Vector3(0f, 1f, 0f);
+
+        var soTa = new SerializedObject(ta);
+        soTa.FindProperty("_projectilePrefab").objectReferenceValue = projPrefab;
+        soTa.FindProperty("_muzzle").objectReferenceValue           = muzzleGo.transform;
+        soTa.ApplyModifiedPropertiesWithoutUndo();
     }
 
-    private static void PlaceTitan(string name, Vector3 pos, Material mat)
+    /// <summary>Projectile プレハブ生成後に全タワーの TowerAttack へ結線する。</summary>
+    private static void WireProjPrefabToTowers(Projectile projPrefab)
+    {
+        var allTowerAttacks = Object.FindObjectsByType<TowerAttack>(FindObjectsSortMode.None);
+        foreach (var ta in allTowerAttacks)
+        {
+            var so = new SerializedObject(ta);
+            so.FindProperty("_projectilePrefab").objectReferenceValue = projPrefab;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+    }
+
+    /// <summary>
+    /// CharacterData アセット（Assets/_Project/Data/Characters/&lt;assetName&gt;.asset）の
+    /// Skills[0..3] を SerializedObject 経由で結線する。アセットが存在しない場合はスキップ。
+    /// </summary>
+    private static void WireCharacterSkills(string assetName, SkillDefinition[] skills)
+    {
+        const string charDir = "Assets/_Project/Data/Characters";
+        var path = $"{charDir}/{assetName}.asset";
+        var cd   = AssetDatabase.LoadAssetAtPath<CharacterData>(path);
+        if (cd == null)
+        {
+            Debug.LogWarning($"[BuildAetherRiftMap] CharacterData が見つかりません: {path}");
+            return;
+        }
+
+        var so         = new SerializedObject(cd);
+        var skillsProp = so.FindProperty("Skills");
+        skillsProp.arraySize = 4;
+        for (int i = 0; i < 4; i++)
+        {
+            skillsProp.GetArrayElementAtIndex(i).objectReferenceValue =
+                (skills != null && i < skills.Length) ? skills[i] : null;
+        }
+        so.ApplyModifiedPropertiesWithoutUndo();
+        EditorUtility.SetDirty(cd);
+    }
+
+    // HealthComponent を返すことで MatchFlowController の結線に利用する
+    private static HealthComponent PlaceTitan(string name, Vector3 pos, Material mat)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         go.name              = name;
@@ -586,6 +696,8 @@ public static class BuildAetherRiftMap
         var soTt = new SerializedObject(tt);
         soTt.FindProperty("_team").enumValueIndex = pos.x < 0f ? (int)TeamId.Blue : (int)TeamId.Red;
         soTt.ApplyModifiedPropertiesWithoutUndo();
+
+        return hc;
     }
 
     private static void SetStatic(GameObject go)

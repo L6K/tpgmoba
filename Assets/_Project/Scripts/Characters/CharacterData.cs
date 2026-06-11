@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.Serialization;
+using Enigma.Ability;
 
 namespace Enigma.Character
 {
@@ -38,6 +39,9 @@ namespace Enigma.Character
         // null の場合は ThemeColor 背景 + 頭文字で代替表示
         [FormerlySerializedAs("icon")]
         public Texture2D Icon;
+
+        [Header("スキル（Q/W/E/R）")]
+        public SkillDefinition[] Skills = new SkillDefinition[4];
 
         [Header("所持状態")]
         // 暫定フラグ。SQLite 導入後は owned_chars テーブルへ移行すること

@@ -12,10 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf35096b832651a4899a6cfbe92645aa, type: 3}
   m_Name: Char_rin
   m_EditorClassIdentifier: Assembly-CSharp::Enigma.Character.CharacterData
-  charId: rin
-  displayName: "\u30EA\u30F3"
-  role: 3
-  description: "\u9B54\u529B\u5F3E\u306E\u72D9\u6483\u624B\u3002"
-  themeColor: {r: 0.86, g: 0.71, b: 0.27, a: 1}
-  icon: {fileID: 0}
-  ownedByDefault: 0
+  CharId: rin
+  DisplayName: "\u30EA\u30F3"
+  Role: 3
+  Description: "\u9B54\u529B\u5F3E\u306E\u72D9\u6483\u624B\u3002"
+  ThemeColor: {r: 0.86, g: 0.71, b: 0.27, a: 1}
+  Icon: {fileID: 0}
+  Skills:
+  - {fileID: 11400000, guid: fe77bf922169ab949a3ece416864a3ae, type: 2}
+  - {fileID: 11400000, guid: 69cbfdcca12f7e040931c0140fe0b56d, type: 2}
+  - {fileID: 11400000, guid: 22868d42dd9fcf848914e1b15ee41ab3, type: 2}
+  - {fileID: 0}
+  OwnedByDefault: 0

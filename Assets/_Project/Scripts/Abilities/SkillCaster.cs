@@ -267,6 +267,26 @@ namespace Enigma.Ability
                 TryCast(slot);
         }
 
+        // ── ピック反映 API ────────────────────────────────────
+
+        /// <summary>
+        /// キャラクターピック時に呼び出し、スキルセットを差し替える。
+        /// アーム状態とインジケーターをリセットしてから CD を再構成する。
+        /// </summary>
+        public void SetSkills(SkillDefinition[] skills)
+        {
+            // アーム中の状態を先にクリアしてインジケーターを隠す
+            _castLogic.HandleCancel();
+            SetIndicatorActive(null);
+
+            for (int i = 0; i < 4; i++)
+            {
+                _skills[i] = (skills != null && i < skills.Length) ? skills[i] : null;
+                float cd = _skills[i] != null ? _skills[i].CooldownSeconds : 1f;
+                _cooldowns[i] = new AttackCooldown(cd);
+            }
+        }
+
         // ── HUD 公開 API ──────────────────────────────────────
 
         /// <summary>スロット番号に対応する SkillDefinition を返す。未設定は null。</summary>

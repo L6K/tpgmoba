@@ -12,10 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf35096b832651a4899a6cfbe92645aa, type: 3}
   m_Name: Char_nova
   m_EditorClassIdentifier: Assembly-CSharp::Enigma.Character.CharacterData
-  charId: nova
-  displayName: "\u30CE\u30F4\u30A1"
-  role: 4
-  description: "\u4FEE\u5FA9\u30C9\u30ED\u30FC\u30F3\u4F7F\u3044\u306E\u885B\u751F\u5175\u3002"
-  themeColor: {r: 0.31, g: 0.78, b: 0.55, a: 1}
-  icon: {fileID: 0}
-  ownedByDefault: 0
+  CharId: nova
+  DisplayName: "\u30CE\u30F4\u30A1"
+  Role: 4
+  Description: "\u4FEE\u5FA9\u30C9\u30ED\u30FC\u30F3\u4F7F\u3044\u306E\u885B\u751F\u5175\u3002"
+  ThemeColor: {r: 0.31, g: 0.78, b: 0.55, a: 1}
+  Icon: {fileID: 0}
+  Skills:
+  - {fileID: 11400000, guid: 600ff7c3b5a994f469d493ae51a96256, type: 2}
+  - {fileID: 11400000, guid: f476af180631dd34d9ff30b0ec5ce327, type: 2}
+  - {fileID: 11400000, guid: 93ccb4249d813844f918d4da9d54a05c, type: 2}
+  - {fileID: 0}
+  OwnedByDefault: 0

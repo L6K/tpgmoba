@@ -1,0 +1,138 @@
+/* ── Variables ────────────────────────────────────────────────────────── */
+:root {
+    --color-bg:       rgb(10, 12, 22);
+    --color-panel:    rgb(16, 19, 32);
+    --color-accent:   rgb(46, 107, 242);
+    --color-text:     rgb(255, 255, 255);
+    --color-text-dim: rgb(170, 180, 205);
+    --color-divider:  rgba(255, 255, 255, 0.08);
+    --color-defeat:   rgb(220, 80, 80);
+}
+
+/* ── ルート: 全画面縦積み・中央揃え ────────────────────────────────────── */
+.result-root {
+    width: 100%;
+    height: 100%;
+    background-color: var(--color-bg);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── 結果タイトル ─────────────────────────────────────────────────────── */
+#result-title {
+    font-size: 64px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    letter-spacing: 6px;
+    -unity-text-align: middle-center;
+    margin-bottom: 8px;
+}
+
+/* コントローラーが付与するバリアントクラス */
+.result-title--victory {
+    color: var(--color-accent);
+}
+
+.result-title--defeat {
+    color: var(--color-defeat);
+}
+
+/* ── サブテキスト ─────────────────────────────────────────────────────── */
+#result-sub {
+    font-size: 16px;
+    color: var(--color-text-dim);
+    letter-spacing: 2px;
+    -unity-text-align: middle-center;
+    margin-bottom: 32px;
+}
+
+/* ── 区切り線 ─────────────────────────────────────────────────────────── */
+.result-divider {
+    align-self: stretch;
+    height: 1px;
+    background-color: var(--color-divider);
+    margin-left: 80px;
+    margin-right: 80px;
+    margin-bottom: 24px;
+}
+
+/* ── 情報行（ラベル + 値） ────────────────────────────────────────────── */
+.result-info-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.result-info-label {
+    font-size: 14px;
+    color: var(--color-text-dim);
+    letter-spacing: 1px;
+    margin-right: 12px;
+    min-width: 120px;
+    -unity-text-align: middle-right;
+}
+
+#result-char,
+#result-duration {
+    font-size: 16px;
+    color: var(--color-text);
+    letter-spacing: 1px;
+}
+
+/* ── ボタン行 ─────────────────────────────────────────────────────────── */
+.result-btn-row {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 40px;
+    margin-bottom: 0;
+}
+
+/* 枠線スタイル（ホームへ戻る） */
+#result-home {
+    width: 180px;
+    height: 52px;
+    background-color: transparent;
+    border-width: 1px;
+    border-color: var(--color-accent);
+    border-radius: 4px;
+    color: var(--color-accent);
+    font-size: 16px;
+    letter-spacing: 1px;
+    margin-right: 16px;
+    cursor: link;
+    transition: background-color 0.15s ease;
+}
+
+#result-home:hover {
+    background-color: rgba(46, 107, 242, 0.15);
+}
+
+#result-home:active {
+    background-color: rgba(46, 107, 242, 0.3);
+}
+
+/* アクセント塗り（もう一度プレイ） */
+#result-replay {
+    width: 200px;
+    height: 52px;
+    background-color: var(--color-accent);
+    border-width: 0;
+    border-radius: 4px;
+    color: var(--color-text);
+    font-size: 16px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    cursor: link;
+    transition: background-color 0.15s ease, scale 0.1s ease;
+}
+
+#result-replay:hover {
+    background-color: rgb(70, 130, 255);
+    scale: 1.03 1.03;
+}
+
+#result-replay:active {
+    background-color: rgb(30, 80, 200);
+    scale: 0.97 0.97;
+}

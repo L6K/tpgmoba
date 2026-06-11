@@ -12,10 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf35096b832651a4899a6cfbe92645aa, type: 3}
   m_Name: Char_veil
   m_EditorClassIdentifier: Assembly-CSharp::Enigma.Character.CharacterData
-  charId: veil
-  displayName: "\u30F4\u30A7\u30A4\u30EB"
-  role: 2
-  description: "\u91CF\u5B50\u9B54\u6CD5\u306E\u7814\u7A76\u8005\u3002"
-  themeColor: {r: 0.59, g: 0.35, b: 0.86, a: 1}
-  icon: {fileID: 0}
-  ownedByDefault: 1
+  CharId: veil
+  DisplayName: "\u30F4\u30A7\u30A4\u30EB"
+  Role: 2
+  Description: "\u91CF\u5B50\u9B54\u6CD5\u306E\u7814\u7A76\u8005\u3002"
+  ThemeColor: {r: 0.59, g: 0.35, b: 0.86, a: 1}
+  Icon: {fileID: 0}
+  Skills:
+  - {fileID: 11400000, guid: ec55050f51019ec4e9fc049ed503f10e, type: 2}
+  - {fileID: 11400000, guid: c47f99bbae872514ebb6ab4d492cf5e1, type: 2}
+  - {fileID: 11400000, guid: da30c162aa9abe94e842eb2db17c1166, type: 2}
+  - {fileID: 0}
+  OwnedByDefault: 1

@@ -12,10 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bf35096b832651a4899a6cfbe92645aa, type: 3}
   m_Name: Char_zeph
   m_EditorClassIdentifier: Assembly-CSharp::Enigma.Character.CharacterData
-  charId: zeph
-  displayName: "\u30BC\u30D5"
-  role: 1
-  description: "\u9B54\u5C0E\u30D6\u30EC\u30FC\u30C9\u3092\u64CD\u308B\u50AD\u5175\u3002"
-  themeColor: {r: 0.82, g: 0.31, b: 0.31, a: 1}
-  icon: {fileID: 0}
-  ownedByDefault: 1
+  CharId: zeph
+  DisplayName: "\u30BC\u30D5"
+  Role: 1
+  Description: "\u9B54\u5C0E\u30D6\u30EC\u30FC\u30C9\u3092\u64CD\u308B\u50AD\u5175\u3002"
+  ThemeColor: {r: 0.82, g: 0.31, b: 0.31, a: 1}
+  Icon: {fileID: 0}
+  Skills:
+  - {fileID: 11400000, guid: cb95fe916798a0642ad3875db3d13866, type: 2}
+  - {fileID: 11400000, guid: 63c230bdf575bde4696709de0b08e815, type: 2}
+  - {fileID: 11400000, guid: 911431c6071ff5f4eb2563caa534ec35, type: 2}
+  - {fileID: 0}
+  OwnedByDefault: 1

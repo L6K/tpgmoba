@@ -1,0 +1,31 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="Result.uss" />
+    <ui:VisualElement class="result-root">
+        <!-- 勝敗タイトル -->
+        <ui:Label name="result-title" text="VICTORY" />
+
+        <!-- サブテキスト -->
+        <ui:Label name="result-sub" text="タイタン撃破!" />
+
+        <!-- 区切り線 -->
+        <ui:VisualElement class="result-divider" />
+
+        <!-- 使用キャラクター行 -->
+        <ui:VisualElement class="result-info-row">
+            <ui:Label text="使用キャラクター" class="result-info-label" />
+            <ui:Label name="result-char" text="---" />
+        </ui:VisualElement>
+
+        <!-- 試合時間行 -->
+        <ui:VisualElement class="result-info-row">
+            <ui:Label text="試合時間" class="result-info-label" />
+            <ui:Label name="result-duration" text="0:00" />
+        </ui:VisualElement>
+
+        <!-- ボタン行 -->
+        <ui:VisualElement class="result-btn-row">
+            <ui:Button name="result-home" text="ホームへ戻る" />
+            <ui:Button name="result-replay" text="もう一度プレイ" />
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>
