@@ -1143,7 +1143,8 @@ public static class BuildAetherRiftMap
         const string dir = "Assets/_Project/Materials/UnityChan";
         if (!AssetDatabase.IsValidFolder(dir))
             AssetDatabase.CreateFolder("Assets/_Project/Materials", "UnityChan");
-        var toon = Shader.Find("Enigma/Toon");
+        var toon     = Shader.Find("Enigma/Toon");
+        var toonFace = Shader.Find("Enigma/ToonFace");
         if (toon == null) return;
 
         foreach (var r in model.GetComponentsInChildren<Renderer>(true))
@@ -1158,7 +1159,9 @@ public static class BuildAetherRiftMap
                 var dst = AssetDatabase.LoadAssetAtPath<Material>(path);
                 if (dst == null)
                 {
-                    dst = new Material(toon);
+                    // 顔・目はソフトシャドウが汚く落ちるため顔専用シェーダーで面受けさせる
+                    bool useFace = toonFace != null && IsFaceLikeMaterial(src.name);
+                    dst = new Material(useFace ? toonFace : toon);
                     // 元マテリアルは Unity Toon Shader 前提でプロパティが読めないため、
                     // テクスチャはマテリアル名から直接対応付ける
                     var tex = FindUnityChanTexture(src.name)
@@ -1170,9 +1173,66 @@ public static class BuildAetherRiftMap
                     dst.SetFloat("_OutlineWidth", 0.0025f);  // キャラは細めの輪郭線
                     AssetDatabase.CreateAsset(dst, path);
                 }
+                // マテリアル名で部位別の見た目を調整（_Cutoff は維持）。既存アセットも毎回上書き（冪等）
+                TuneUnityChanMaterial(dst, src.name);
                 mats[i] = dst;
             }
             r.sharedMaterials = mats;
+        }
+    }
+
+    // 顔系・目系は Enigma/ToonFace を使う（小文字部分一致）
+    private static bool IsFaceLikeMaterial(string materialName)
+    {
+        string n = materialName.ToLowerInvariant();
+        return n.Contains("face") || n.Contains("cheek")
+            || n.Contains("eye") || n.Contains("eyebrow")
+            || n.Contains("eyelash") || n.Contains("eyeline")
+            || n.Contains("mat_eye");
+    }
+
+    // マテリアル名（小文字部分一致）で部位ごとのトゥーン設定を上書きする。
+    // _Cutoff / _BaseMap には触れない（スペキュラマスク・カットアウトの既存対処を保護）
+    private static void TuneUnityChanMaterial(Material m, string materialName)
+    {
+        string n = materialName.ToLowerInvariant();
+
+        // 目・眉・まつ毛・アイライン・まつ毛左右: 常時フルライト（影・ランプ・輪郭を排除）
+        bool isEye = n.Contains("eye") || n.Contains("eyebrow")
+                  || n.Contains("eyelash") || n.Contains("eyeline")
+                  || n.Contains("mat_eye")
+                  || n == "left" || n == "right";
+        if (isEye)
+        {
+            m.SetFloat("_RampThreshold", 0f);
+            m.SetFloat("_RampSmoothing", 0.001f);
+            m.SetFloat("_SelfShadowStrength", 0f);
+            m.SetFloat("_OutlineWidth", 0f);
+            return;
+        }
+
+        // 顔・頬: 暖ピンクの陰、細い肌色アウトライン
+        if (n.Contains("face") || n.Contains("cheek"))
+        {
+            m.SetColor("_ShadeColor", new Color(0.96f, 0.80f, 0.78f));
+            m.SetFloat("_OutlineWidth", 0.0015f);
+            m.SetColor("_OutlineColor", new Color(0.55f, 0.36f, 0.32f));
+            return;
+        }
+
+        // 肌: 暖色寄りの陰
+        if (n.Contains("skin"))
+        {
+            m.SetColor("_ShadeColor", new Color(0.95f, 0.74f, 0.72f));
+            return;
+        }
+
+        // 髪: 紫寄りの陰 + 明るいリム
+        if (n.Contains("hair"))
+        {
+            m.SetColor("_ShadeColor", new Color(0.62f, 0.60f, 0.82f));
+            m.SetColor("_RimColor", new Color(1.0f, 0.95f, 0.85f, 0.55f));
+            m.SetFloat("_RimPower", 2.8f);
         }
     }
 

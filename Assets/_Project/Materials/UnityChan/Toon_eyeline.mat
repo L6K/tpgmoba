@@ -30,9 +30,9 @@ Material:
     m_Ints: []
     m_Floats:
     - _Cutoff: 0.4
-    - _OutlineWidth: 0.0025
-    - _RampSmoothing: 0.04
-    - _RampThreshold: 0.5
+    - _OutlineWidth: 0
+    - _RampSmoothing: 0.001
+    - _RampThreshold: 0
     - _RimPower: 3.5
     m_Colors:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
