@@ -15,8 +15,11 @@ namespace Enigma.Minion
         [SerializeField] private float _attackDamage = 5f;
         [SerializeField] private float _attackInterval = 1.2f;
 
-        // HPバー Fill Transform（スポーナーが結線）
+        // HPバー FillWrapper Transform（ビルダーが結線）
         [SerializeField] private Transform _barFill;
+
+        // Blue チーム（味方）のときに Fill に適用するマテリアル（ビルダーが BarGreen を結線）
+        [SerializeField] private Material _allyBarMat;
 
         private HealthComponent   _health;
         private TeamTag           _teamTag;
@@ -44,6 +47,14 @@ namespace Enigma.Minion
             _fixedY = transform.position.y;
             _health.Model.Changed += OnHealthChanged;
             _health.Model.Died    += OnDied;
+
+            // 満タン表示にリセット（Initialize が呼ばれた後でも上書きして統一）
+            if (_barFill != null)
+            {
+                var s = _barFill.localScale;
+                s.x = 1f;
+                _barFill.localScale = s;
+            }
         }
 
         private void OnDestroy()
@@ -64,6 +75,21 @@ namespace Enigma.Minion
             {
                 var rend = GetComponent<Renderer>();
                 if (rend != null) rend.sharedMaterial = teamMaterial;
+            }
+
+            // Blue チーム（味方）のときは Fill Renderer を BarGreen に差し替える
+            if (team == TeamId.Blue && _allyBarMat != null && _barFill != null)
+            {
+                var fillRend = _barFill.GetComponentInChildren<Renderer>();
+                if (fillRend != null) fillRend.sharedMaterial = _allyBarMat;
+            }
+
+            // 満タン表示にリセット
+            if (_barFill != null)
+            {
+                var s = _barFill.localScale;
+                s.x = 1f;
+                _barFill.localScale = s;
             }
         }
 

@@ -508,44 +508,45 @@ public static class BuildAetherRiftMap
         WireProjPrefabToTowers(projPrefab.GetComponent<Projectile>());
 
         // 8. SkillDefinition アセット生成（zeph: 既存流用、他4キャラは新規 or 既存）
+        // Directional=0.2/0.3、GroundAoe=0.35/0.45、Targeted=0.15/0.3
         var skillSlash = GetOrCreateSkillDefinition("Skill_MagicSlash",
-            "魔導斬撃", SkillTargeting.Directional, 25f, 25f, 0f, 4f, 30f);
+            "魔導斬撃", SkillTargeting.Directional, 25f, 25f, 0f, 4f, 30f, 0.2f, 0.3f);
         var skillAoe = GetOrCreateSkillDefinition("Skill_ExplosionCircle",
-            "爆裂魔法陣", SkillTargeting.GroundAoe, 40f, 20f, 4f, 8f, 0f);
+            "爆裂魔法陣", SkillTargeting.GroundAoe, 40f, 20f, 4f, 8f, 0f, 0.35f, 0.45f);
         var skillChase = GetOrCreateSkillDefinition("Skill_Chase",
-            "追撃", SkillTargeting.Targeted, 30f, 15f, 0f, 6f, 0f);
+            "追撃", SkillTargeting.Targeted, 30f, 15f, 0f, 6f, 0f, 0.15f, 0.3f);
 
         // garon
         var garonQ = GetOrCreateSkillDefinition("Skill_garon_Q",
-            "シールドバッシュ", SkillTargeting.Directional, 15f, 15f, 0f, 5f, 25f);
+            "シールドバッシュ", SkillTargeting.Directional, 15f, 15f, 0f, 5f, 25f, 0.2f, 0.3f);
         var garonW = GetOrCreateSkillDefinition("Skill_garon_W",
-            "グランドスラム", SkillTargeting.GroundAoe, 30f, 12f, 5f, 9f, 0f);
+            "グランドスラム", SkillTargeting.GroundAoe, 30f, 12f, 5f, 9f, 0f, 0.35f, 0.45f);
         var garonE = GetOrCreateSkillDefinition("Skill_garon_E",
-            "チェーンフック", SkillTargeting.Targeted, 20f, 12f, 0f, 7f, 0f);
+            "チェーンフック", SkillTargeting.Targeted, 20f, 12f, 0f, 7f, 0f, 0.15f, 0.3f);
 
         // veil
         var veilQ = GetOrCreateSkillDefinition("Skill_veil_Q",
-            "アーケインボルト", SkillTargeting.Directional, 30f, 30f, 0f, 4f, 35f);
+            "アーケインボルト", SkillTargeting.Directional, 30f, 30f, 0f, 4f, 35f, 0.2f, 0.3f);
         var veilW = GetOrCreateSkillDefinition("Skill_veil_W",
-            "量子爆発", SkillTargeting.GroundAoe, 50f, 22f, 5f, 10f, 0f);
+            "量子爆発", SkillTargeting.GroundAoe, 50f, 22f, 5f, 10f, 0f, 0.35f, 0.45f);
         var veilE = GetOrCreateSkillDefinition("Skill_veil_E",
-            "ヘックス", SkillTargeting.Targeted, 35f, 18f, 0f, 8f, 0f);
+            "ヘックス", SkillTargeting.Targeted, 35f, 18f, 0f, 8f, 0f, 0.15f, 0.3f);
 
         // rin
         var rinQ = GetOrCreateSkillDefinition("Skill_rin_Q",
-            "貫通矢", SkillTargeting.Directional, 28f, 35f, 0f, 3.5f, 45f);
+            "貫通矢", SkillTargeting.Directional, 28f, 35f, 0f, 3.5f, 45f, 0.2f, 0.3f);
         var rinW = GetOrCreateSkillDefinition("Skill_rin_W",
-            "矢の雨", SkillTargeting.GroundAoe, 35f, 25f, 4.5f, 9f, 0f);
+            "矢の雨", SkillTargeting.GroundAoe, 35f, 25f, 4.5f, 9f, 0f, 0.35f, 0.45f);
         var rinE = GetOrCreateSkillDefinition("Skill_rin_E",
-            "狙撃", SkillTargeting.Targeted, 40f, 20f, 0f, 9f, 0f);
+            "狙撃", SkillTargeting.Targeted, 40f, 20f, 0f, 9f, 0f, 0.15f, 0.3f);
 
         // nova
         var novaQ = GetOrCreateSkillDefinition("Skill_nova_Q",
-            "パルスウェーブ", SkillTargeting.Directional, 18f, 20f, 0f, 4f, 28f);
+            "パルスウェーブ", SkillTargeting.Directional, 18f, 20f, 0f, 4f, 28f, 0.2f, 0.3f);
         var novaW = GetOrCreateSkillDefinition("Skill_nova_W",
-            "リペアフィールド", SkillTargeting.GroundAoe, 20f, 18f, 5f, 8f, 0f);
+            "リペアフィールド", SkillTargeting.GroundAoe, 20f, 18f, 5f, 8f, 0f, 0.35f, 0.45f);
         var novaE = GetOrCreateSkillDefinition("Skill_nova_E",
-            "スタンボルト", SkillTargeting.Targeted, 15f, 15f, 0f, 6f, 0f);
+            "スタンボルト", SkillTargeting.Targeted, 15f, 15f, 0f, 6f, 0f, 0.15f, 0.3f);
 
         // CharacterData アセットへのスキル結線
         WireCharacterSkills("Char_zeph",  new[] { skillSlash, skillAoe, skillChase, null });
@@ -683,6 +684,29 @@ public static class BuildAetherRiftMap
 
         // プレイヤーの見た目: UnityChan モデル（© Unity Technologies Japan/UCL）
         AttachUnityChanModel(player);
+
+        // PlayerAttackMotor を追加し、UnityChanModel の Transform を _modelRoot に結線
+        var attackMotor = player.AddComponent<PlayerAttackMotor>();
+        var soMotor = new SerializedObject(attackMotor);
+        var unityChanModel = player.transform.Find("UnityChanModel");
+        if (unityChanModel != null)
+            soMotor.FindProperty("_modelRoot").objectReferenceValue = unityChanModel;
+        soMotor.ApplyModifiedPropertiesWithoutUndo();
+
+        // SkillCaster/_motor 結線
+        var soSkillCasterMotor = new SerializedObject(skillCaster);
+        soSkillCasterMotor.FindProperty("_motor").objectReferenceValue = attackMotor;
+        soSkillCasterMotor.ApplyModifiedPropertiesWithoutUndo();
+
+        // AutoAttack/_motor 結線
+        var soAutoAttackMotor = new SerializedObject(autoAttack);
+        soAutoAttackMotor.FindProperty("_motor").objectReferenceValue = attackMotor;
+        soAutoAttackMotor.ApplyModifiedPropertiesWithoutUndo();
+
+        // PlayerController/_motor 結線
+        var soPlayerMotor = new SerializedObject(player.GetComponent<PlayerController>());
+        soPlayerMotor.FindProperty("_motor").objectReferenceValue = attackMotor;
+        soPlayerMotor.ApplyModifiedPropertiesWithoutUndo();
 
         // OrbitCamera
         var soCam = new SerializedObject(orbitCam);
@@ -839,13 +863,92 @@ public static class BuildAetherRiftMap
         return mat;
     }
 
+    /// <summary>
+    /// 不透明 URP/Unlit バー用マテリアルを GetOrCreate する。
+    /// 既存アセットがあれば色を更新して返す。
+    /// </summary>
+    private static Material GetOrCreateBarMat(string name, Color color)
+    {
+        var path     = $"{MatDir}/{name}.mat";
+        var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (existing != null)
+        {
+            existing.SetColor("_BaseColor", color);
+            return existing;
+        }
+
+        var shader = Shader.Find("Universal Render Pipeline/Unlit");
+        var mat    = new Material(shader);
+        mat.SetColor("_BaseColor", color);
+        AssetDatabase.CreateAsset(mat, path);
+        return mat;
+    }
+
+    /// <summary>
+    /// 左端アンカー型ワールド HP バーを生成し、FillWrapper の Transform を返す。
+    /// 呼び出し側は FillWrapper を _barFill に結線する。
+    /// FillWrapper.localScale.x = ratio (0〜1) で左詰め表示になる。
+    /// </summary>
+    /// <param name="parent">バーを親付けする Transform（エンティティ本体）</param>
+    /// <param name="width">バーの全幅</param>
+    /// <param name="yOffset">頭上オフセット（localPosition.y）</param>
+    /// <param name="fillMat">Fill Quad に設定するマテリアル</param>
+    private static Transform CreateWorldHealthBar(
+        Transform parent, float width, float yOffset, Material fillMat)
+    {
+        var matBack = GetOrCreateBarMat("BarBack", new Color(0.08f, 0.08f, 0.10f));
+
+        // HealthBar GO（Billboard 付き）
+        var hpBar = new GameObject("HealthBar");
+        hpBar.transform.SetParent(parent, false);
+        hpBar.transform.localPosition = new Vector3(0f, yOffset, 0f);
+        hpBar.AddComponent<HealthBarBillboard>();
+
+        // Background Quad（中央ピボット）
+        var bg = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        bg.name = "Background";
+        bg.transform.SetParent(hpBar.transform, false);
+        bg.transform.localScale = new Vector3(width, 0.18f, 1f);
+        bg.GetComponent<Renderer>().sharedMaterial = matBack;
+        Object.DestroyImmediate(bg.GetComponent<MeshCollider>());
+
+        // FillWrapper: 左端をアンカーとして配置
+        // localPosition.x = -width/2 なので scale.x=1 で右端が中央まで伸び、
+        // scale.x=ratio で左端から ratio 分の幅になる
+        var fillWrapper = new GameObject("FillWrapper");
+        fillWrapper.transform.SetParent(hpBar.transform, false);
+        fillWrapper.transform.localPosition = new Vector3(-width / 2f, 0f, -0.001f);
+        fillWrapper.transform.localScale    = Vector3.one;
+
+        // Fill Quad: FillWrapper 内で右端中心（localPosition.x = width/2）に配置
+        // FillWrapper.scale.x が変化しても Fill 自体の localPosition.x は変わらないため
+        // 常に左端から伸長する外見になる
+        var fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        fill.name = "Fill";
+        fill.transform.SetParent(fillWrapper.transform, false);
+        fill.transform.localPosition = new Vector3(width / 2f, 0f, 0f);
+        fill.transform.localScale    = new Vector3(width, 0.14f, 1f);
+        fill.GetComponent<Renderer>().sharedMaterial = fillMat;
+        Object.DestroyImmediate(fill.GetComponent<MeshCollider>());
+
+        return fillWrapper.transform;
+    }
+
     private static SkillDefinition GetOrCreateSkillDefinition(
         string assetName, string skillName, SkillTargeting targeting,
-        float damage, float range, float radius, float cd, float projSpeed)
+        float damage, float range, float radius, float cd, float projSpeed,
+        float windup = 0.2f, float recovery = 0.35f)
     {
         var path     = $"{SkillDir}/{assetName}.asset";
         var existing = AssetDatabase.LoadAssetAtPath<SkillDefinition>(path);
-        if (existing != null) return existing;
+        if (existing != null)
+        {
+            // 既存アセットも windup/recovery を上書き更新
+            existing.WindupSeconds   = windup;
+            existing.RecoverySeconds = recovery;
+            EditorUtility.SetDirty(existing);
+            return existing;
+        }
 
         var so = ScriptableObject.CreateInstance<SkillDefinition>();
         so.SkillName       = skillName;
@@ -855,6 +958,8 @@ public static class BuildAetherRiftMap
         so.Radius          = radius;
         so.CooldownSeconds = cd;
         so.ProjectileSpeed = projSpeed;
+        so.WindupSeconds   = windup;
+        so.RecoverySeconds = recovery;
         AssetDatabase.CreateAsset(so, path);
         return so;
     }
@@ -1162,43 +1267,19 @@ public static class BuildAetherRiftMap
 
         var td = dummy.AddComponent<TargetDummy>();
 
-        var hpBar = new GameObject("HealthBar");
-        hpBar.transform.SetParent(dummy.transform, false);
-        hpBar.transform.localPosition = new Vector3(0f, 1.6f, 0f);
-        hpBar.AddComponent<HealthBarBillboard>();
-
-        var bg = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        bg.name = "Background";
-        bg.transform.SetParent(hpBar.transform, false);
-        bg.transform.localScale = new Vector3(1.2f, 0.18f, 1f);
-        var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        bgMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f));
-        bg.GetComponent<Renderer>().sharedMaterial = bgMat;
-        Object.DestroyImmediate(bg.GetComponent<MeshCollider>());
-
-        var fillWrapper = new GameObject("FillWrapper");
-        fillWrapper.transform.SetParent(hpBar.transform, false);
-        fillWrapper.transform.localPosition = new Vector3(0f, 0f, -0.001f);
-
-        var fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        fill.name = "Fill";
-        fill.transform.SetParent(fillWrapper.transform, false);
-        fill.transform.localScale = new Vector3(1.16f, 0.14f, 1f);
-        var fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        fillMat.SetColor("_BaseColor", Color.green);
-        fill.GetComponent<Renderer>().sharedMaterial = fillMat;
-        Object.DestroyImmediate(fill.GetComponent<MeshCollider>());
+        var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
+        var wrapper   = CreateWorldHealthBar(dummy.transform, 1.2f, 1.6f, matBarRed);
 
         var soTd = new SerializedObject(td);
-        soTd.FindProperty("_barFill").objectReferenceValue = fill.transform;
+        soTd.FindProperty("_barFill").objectReferenceValue = wrapper;
         soTd.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private static MinionAI CreateMinionPrefab()
     {
+        // 既存プレハブの再利用は旧構造・一時マテリアル参照を残すため毎回作り直す
         var prefabPath = PrefabDir + "/Minion.prefab";
-        var existing   = AssetDatabase.LoadAssetAtPath<GameObject>(prefabPath);
-        if (existing != null) return existing.GetComponent<MinionAI>();
+        AssetDatabase.DeleteAsset(prefabPath);
 
         // 小さめカプセル
         var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -1209,42 +1290,20 @@ public static class BuildAetherRiftMap
         go.AddComponent<TeamTag>();
         var ai = go.AddComponent<MinionAI>();
 
-        // 頭上 HP バー（TargetDummy と同じ構成）
-        var hpBar = new GameObject("HealthBar");
-        hpBar.transform.SetParent(go.transform, false);
-        hpBar.transform.localPosition = new Vector3(0f, 1.6f, 0f);
-        hpBar.AddComponent<HealthBarBillboard>();
-
-        var bg = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        bg.name = "Background";
-        bg.transform.SetParent(hpBar.transform, false);
-        bg.transform.localScale = new Vector3(1.2f, 0.18f, 1f);
-        var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        bgMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f));
-        bg.GetComponent<Renderer>().sharedMaterial = bgMat;
-        Object.DestroyImmediate(bg.GetComponent<MeshCollider>());
-
-        var fillWrapper = new GameObject("FillWrapper");
-        fillWrapper.transform.SetParent(hpBar.transform, false);
-        fillWrapper.transform.localPosition = new Vector3(0f, 0f, -0.001f);
-
-        var fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        fill.name = "Fill";
-        fill.transform.SetParent(fillWrapper.transform, false);
-        fill.transform.localScale = new Vector3(1.16f, 0.14f, 1f);
-        var fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        fillMat.SetColor("_BaseColor", Color.green);
-        fill.GetComponent<Renderer>().sharedMaterial = fillMat;
-        Object.DestroyImmediate(fill.GetComponent<MeshCollider>());
+        // プレハブのデフォルト色は BarRed（敵チーム）。Blue のときは MinionAI.Initialize で差し替える
+        var matBarRed   = GetOrCreateBarMat("BarRed",   new Color(0.92f, 0.30f, 0.25f));
+        var matBarGreen = GetOrCreateBarMat("BarGreen",  new Color(0.30f, 0.85f, 0.35f));
+        var wrapper     = CreateWorldHealthBar(go.transform, 1.2f, 1.6f, matBarRed);
 
         // HealthComponent の maxHp を 50 に設定
         var soHc = new SerializedObject(go.GetComponent<HealthComponent>());
         soHc.FindProperty("_maxHp").floatValue = 50f;
         soHc.ApplyModifiedPropertiesWithoutUndo();
 
-        // MinionAI に Fill を結線
+        // MinionAI に FillWrapper と ally マテリアルを結線
         var soAi = new SerializedObject(ai);
-        soAi.FindProperty("_barFill").objectReferenceValue = fill.transform;
+        soAi.FindProperty("_barFill").objectReferenceValue    = wrapper;
+        soAi.FindProperty("_allyBarMat").objectReferenceValue = matBarGreen;
         soAi.ApplyModifiedPropertiesWithoutUndo();
 
         // ミニオン撃破で20XP付与
@@ -1372,38 +1431,14 @@ public static class BuildAetherRiftMap
         soBossCtrl.FindProperty("_stackMarkerPrefab").objectReferenceValue = smPrefab.GetComponent<StackMarker>();
         soBossCtrl.ApplyModifiedPropertiesWithoutUndo();
 
-        // ボスの頭上 HP バー（ダミーと同じ構成）
-        var hpBar = new GameObject("HealthBar");
-        hpBar.transform.SetParent(boss.transform, false);
-        hpBar.transform.localPosition = new Vector3(0f, 1.6f, 0f);
-        hpBar.AddComponent<HealthBarBillboard>();
-
-        var bg = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        bg.name = "Background";
-        bg.transform.SetParent(hpBar.transform, false);
-        bg.transform.localScale = new Vector3(1.2f, 0.18f, 1f);
-        var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        bgMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f));
-        bg.GetComponent<Renderer>().sharedMaterial = bgMat;
-        Object.DestroyImmediate(bg.GetComponent<MeshCollider>());
-
-        var fillWrapper = new GameObject("FillWrapper");
-        fillWrapper.transform.SetParent(hpBar.transform, false);
-        fillWrapper.transform.localPosition = new Vector3(0f, 0f, -0.001f);
-
-        var fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        fill.name = "Fill";
-        fill.transform.SetParent(fillWrapper.transform, false);
-        fill.transform.localScale = new Vector3(1.16f, 0.14f, 1f);
-        var fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        fillMat.SetColor("_BaseColor", Color.red);
-        fill.GetComponent<Renderer>().sharedMaterial = fillMat;
-        Object.DestroyImmediate(fill.GetComponent<MeshCollider>());
+        // ボスの頭上 HP バー（中立ボスは BarRed、幅は大きめ 2.4）
+        var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
+        var wrapper   = CreateWorldHealthBar(boss.transform, 2.4f, 1.6f, matBarRed);
 
         // TargetDummy を流用してボスのバー更新（リスポーンなし）
         var td = boss.AddComponent<TargetDummy>();
         var soTd = new SerializedObject(td);
-        soTd.FindProperty("_barFill").objectReferenceValue = fill.transform;
+        soTd.FindProperty("_barFill").objectReferenceValue = wrapper;
         soTd.ApplyModifiedPropertiesWithoutUndo();
 
         // ボス撃破で250XP付与
@@ -1541,37 +1576,13 @@ public static class BuildAetherRiftMap
         soSlimeGold.FindProperty("_amount").intValue = 35;
         soSlimeGold.ApplyModifiedPropertiesWithoutUndo();
 
-        // 頭上 HP バー（ミニオンと同じ構成）
-        var hpBar = new GameObject("HealthBar");
-        hpBar.transform.SetParent(parent.transform, false);
-        hpBar.transform.localPosition = new Vector3(0f, 1.6f, 0f);
-        hpBar.AddComponent<HealthBarBillboard>();
+        // 頭上 HP バー（中立モンスターは BarRed）
+        var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
+        var wrapper   = CreateWorldHealthBar(parent.transform, 1.2f, 1.6f, matBarRed);
 
-        var bg = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        bg.name = "Background";
-        bg.transform.SetParent(hpBar.transform, false);
-        bg.transform.localScale = new Vector3(1.2f, 0.18f, 1f);
-        var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        bgMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f));
-        bg.GetComponent<Renderer>().sharedMaterial = bgMat;
-        Object.DestroyImmediate(bg.GetComponent<MeshCollider>());
-
-        var fillWrapper = new GameObject("FillWrapper");
-        fillWrapper.transform.SetParent(hpBar.transform, false);
-        fillWrapper.transform.localPosition = new Vector3(0f, 0f, -0.001f);
-
-        var fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
-        fill.name = "Fill";
-        fill.transform.SetParent(fillWrapper.transform, false);
-        fill.transform.localScale = new Vector3(1.16f, 0.14f, 1f);
-        var fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
-        fillMat.SetColor("_BaseColor", Color.green);
-        fill.GetComponent<Renderer>().sharedMaterial = fillMat;
-        Object.DestroyImmediate(fill.GetComponent<MeshCollider>());
-
-        // JungleMonster コンポーネント: Initialize で campCenter と barFill を渡す
+        // JungleMonster コンポーネント: Initialize で campCenter と barFill（FillWrapper）を渡す
         var jm = parent.AddComponent<JungleMonster>();
-        jm.Initialize(campCenter, fill.transform);
+        jm.Initialize(campCenter, wrapper);
     }
 
     // ---- ジャングルパス/キャンプ判定ヘルパー ----

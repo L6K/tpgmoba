@@ -50,6 +50,9 @@ namespace Enigma.Minion
             // 被弾検知: HP が減ったら攻撃者をターゲット化する
             _health.Model.Changed += OnHealthChanged;
             _health.Model.Died    += OnDied;
+
+            // 満タン表示にリセット
+            UpdateBar(1f);
         }
 
         private void OnDestroy()

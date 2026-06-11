@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
@@ -11,13 +12,14 @@ namespace Enigma.Ability
     // スキル入力受付・インジケーター表示・発動を担うハンブルオブジェクト
     public sealed class SkillCaster : MonoBehaviour
     {
-        [SerializeField] private SkillDefinition[] _skills = new SkillDefinition[4];
-        [SerializeField] private Projectile        _projectilePrefab;
-        [SerializeField] private TelegraphCircle   _telegraphPrefab;
-        [SerializeField] private GameObject        _directionIndicator;  // 子。カーソル方向に向ける矢印
-        [SerializeField] private GameObject        _aoeIndicator;        // 子。AoE 地点の円
-        [SerializeField] private TargetingSystem   _targeting;
-        [SerializeField] private Transform         _muzzle;
+        [SerializeField] private SkillDefinition[]  _skills = new SkillDefinition[4];
+        [SerializeField] private Projectile         _projectilePrefab;
+        [SerializeField] private TelegraphCircle    _telegraphPrefab;
+        [SerializeField] private GameObject         _directionIndicator;  // 子。カーソル方向に向ける矢印
+        [SerializeField] private GameObject         _aoeIndicator;        // 子。AoE 地点の円
+        [SerializeField] private TargetingSystem    _targeting;
+        [SerializeField] private Transform          _muzzle;
+        [SerializeField] private PlayerAttackMotor  _motor;
 
         // スロットごとのクールダウン
         private readonly AttackCooldown[] _cooldowns = new AttackCooldown[4];
@@ -187,27 +189,53 @@ namespace Enigma.Ability
         {
             var def = (slot >= 0 && slot < 4) ? _skills[slot] : null;
             if (def == null) return;
+
+            // モーターが存在し Windup 中なら新規発動を受け付けない（クールダウンも消費しない）
+            if (_motor != null && _motor.Motion.Phase == AttackPhase.Windup) return;
+
             if (!_cooldowns[slot].TryConsume(Time.time)) return;
 
+            if (_motor != null)
+            {
+                // Strike 時点のカーソル位置/ターゲットを使うため、クロージャで現在値を参照
+                var capturedGroundPos = _groundCursorPos;
+                HealthComponent capturedTarget = _targeting?.CurrentTarget;
+                var capturedDef       = def;
+
+                _motor.RequestAttack(def.WindupSeconds, def.RecoverySeconds, () =>
+                {
+                    _motor.SnapToLunge();
+                    FireSkill(capturedDef, capturedGroundPos, capturedTarget);
+                });
+            }
+            else
+            {
+                // _motor 未設定時は従来どおり即時発動（後方互換）
+                FireSkill(def, _groundCursorPos, _targeting?.CurrentTarget);
+            }
+        }
+
+        private void FireSkill(SkillDefinition def, Vector3 groundCursorPos, HealthComponent target)
+        {
             switch (def.Targeting)
             {
                 case SkillTargeting.Directional:
-                    CastDirectional(def);
+                    CastDirectional(def, groundCursorPos);
                     break;
                 case SkillTargeting.GroundAoe:
-                    CastGroundAoe(def);
+                    CastGroundAoe(def, groundCursorPos);
                     break;
                 case SkillTargeting.Targeted:
-                    CastTargeted(def);
+                    CastTargeted(def, target);
                     break;
             }
         }
 
-        private void CastDirectional(SkillDefinition def)
+        private void CastDirectional(SkillDefinition def, Vector3 groundCursorPos)
         {
             if (_projectilePrefab == null || _muzzle == null) return;
 
-            var dir = (_groundCursorPos - _muzzle.position);
+            var dir = (groundCursorPos - _muzzle.position);
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.001f) dir = transform.forward;
             dir.Normalize();
@@ -219,11 +247,11 @@ namespace Enigma.Ability
             proj.Init(dir, def.ProjectileSpeed, def.Damage, gameObject, lifetime);
         }
 
-        private void CastGroundAoe(SkillDefinition def)
+        private void CastGroundAoe(SkillDefinition def, Vector3 groundCursorPos)
         {
             if (_telegraphPrefab == null) return;
 
-            var dir    = _groundCursorPos - transform.position;
+            var dir    = groundCursorPos - transform.position;
             dir.y      = 0f;
             float dist = Mathf.Min(dir.magnitude, def.Range);
             var   pos  = transform.position + (dir.sqrMagnitude > 0.001f ? dir.normalized * dist : transform.forward * dist);
@@ -233,20 +261,15 @@ namespace Enigma.Ability
             telegraph.Init(def.Radius, 0.8f, def.Damage, gameObject);
         }
 
-        private void CastTargeted(SkillDefinition def)
+        private void CastTargeted(SkillDefinition def, HealthComponent target)
         {
-            if (_targeting == null) return;
-            var target = _targeting.CurrentTarget;
             if (target == null) return;
 
             float dist = Vector3.Distance(transform.position, target.transform.position);
             if (dist > def.Range) return;
 
             float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage, gameObject);
-            if (target is HealthComponent hc)
-                hc.TakeDamage(finalDamage, gameObject);
-            else
-                target.TakeDamage(finalDamage);
+            target.TakeDamage(finalDamage, gameObject);
         }
 
         private void SetIndicatorActive(SkillDefinition armedDef)

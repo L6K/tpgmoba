@@ -23,6 +23,14 @@ namespace Enigma.Character
         {
             _health.Model.Changed += OnChanged;
             _health.Model.Died += OnDied;
+
+            // 満タン表示にリセット
+            if (_barFill != null)
+            {
+                var s = _barFill.localScale;
+                s.x = 1f;
+                _barFill.localScale = s;
+            }
         }
 
         private void OnDestroy()

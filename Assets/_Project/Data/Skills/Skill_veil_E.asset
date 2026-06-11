@@ -19,3 +19,5 @@ MonoBehaviour:
   Radius: 0
   CooldownSeconds: 8
   ProjectileSpeed: 0
+  WindupSeconds: 0.15
+  RecoverySeconds: 0.3

@@ -14,5 +14,7 @@ namespace Enigma.Ability
         public float         Radius;          // GroundAoe のみ使用
         public float         CooldownSeconds;
         public float         ProjectileSpeed; // Directional のみ使用
+        public float         WindupSeconds   = 0.2f;
+        public float         RecoverySeconds = 0.35f;
     }
 }

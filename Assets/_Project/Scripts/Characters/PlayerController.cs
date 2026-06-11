@@ -7,10 +7,11 @@ namespace Enigma.Character
     [RequireComponent(typeof(CharacterController))]
     public sealed class PlayerController : MonoBehaviour
     {
-        [SerializeField] private Transform _cameraTransform;
-        [SerializeField] private float _moveSpeed = 6f;
-        [SerializeField] private float _turnSpeedDegrees = 720f;
-        [SerializeField] private Animator _animator; // 見た目モデルのアニメーター（任意）
+        [SerializeField] private Transform         _cameraTransform;
+        [SerializeField] private float             _moveSpeed = 6f;
+        [SerializeField] private float             _turnSpeedDegrees = 720f;
+        [SerializeField] private Animator          _animator; // 見た目モデルのアニメーター（任意）
+        [SerializeField] private PlayerAttackMotor _motor;
 
         private static readonly int SpeedParam = Animator.StringToHash("Speed");
 
@@ -38,8 +39,21 @@ namespace Enigma.Character
             if (keyboard.aKey.isPressed) input.x -= 1f;
             if (keyboard.dKey.isPressed) input.x += 1f;
 
+            bool hasInput = input != Vector2.zero;
+
+            // Windup 中は移動入力を無視（重力は適用継続）
+            bool movementLocked = _motor != null && _motor.Motion.MovementLocked;
+
+            // 移動入力があり Recovery 中はリカバリをキャンセルしてから移動
+            if (hasInput && _motor != null && _motor.Motion.Phase == AttackPhase.Recovery)
+            {
+                _motor.Motion.CancelRecovery();
+            }
+
             float cameraYaw = _cameraTransform != null ? _cameraTransform.eulerAngles.y : 0f;
-            var moveDir = MovementLogic.CameraRelativeMove(input, cameraYaw);
+            var moveDir = movementLocked
+                ? Vector3.zero
+                : MovementLogic.CameraRelativeMove(input, cameraYaw);
 
             // 重力
             if (_cc.isGrounded && _verticalVelocity < 0f)
