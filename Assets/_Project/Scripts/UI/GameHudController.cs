@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UIElements;
+using Enigma.Abilities;
 using Enigma.Combat;
 using Enigma.Ability;
 using Enigma.Core;
@@ -43,6 +44,26 @@ namespace Enigma.UI
         private readonly VisualElement[] _skillCdOverlay = new VisualElement[4];
         private readonly Label[]         _skillCdText   = new Label[4];
         private readonly VisualElement[] _skillIcons    = new VisualElement[4];
+
+        // ランクピップ行・レベルアップ + ボタン（スロット 0..2）
+        private readonly VisualElement[] _skillPipRows  = new VisualElement[3];
+        private readonly Button[]        _skillLevelUp  = new Button[3];
+
+        // スロットごとの最大ランク（Q/E=5, R=3）
+        private static readonly int[] _maxRanks = { 5, 5, 3 };
+
+        // スキルランク進行（SkillCaster が公開）。Changed で UI を再構築する
+        private SkillProgression _progression;
+
+        // ツールチップパネルとラベル
+        private VisualElement _tooltip;
+        private Label         _tooltipName;
+        private Label         _tooltipRank;
+        private Label         _tooltipStats;
+        private Label         _tooltipDesc;
+
+        // ピップ生成・クリック/ホバー登録の二重実行を防ぐ（OnEnable 再入対策）
+        private bool _skillUiWired;
 
         // 所持金ラベル
         private Label  _goldLabel;
@@ -97,7 +118,82 @@ namespace Enigma.UI
                 _skillCdOverlay[i] = root.Q<VisualElement>($"hud-skill-cd-{i}");
                 _skillCdText[i]    = root.Q<Label>($"hud-skill-cdtext-{i}");
                 _skillIcons[i]     = root.Q<VisualElement>($"hud-skill-icon-{i}");
+                _skillPipRows[i]   = root.Q<VisualElement>($"hud-skill-pips-{i}");
+                _skillLevelUp[i]   = root.Q<Button>($"hud-skill-levelup-{i}");
             }
+
+            // ツールチップパネル
+            _tooltip      = root.Q<VisualElement>("hud-skill-tooltip");
+            _tooltipName  = root.Q<Label>("hud-tooltip-name");
+            _tooltipRank  = root.Q<Label>("hud-tooltip-rank");
+            _tooltipStats = root.Q<Label>("hud-tooltip-stats");
+            _tooltipDesc  = root.Q<Label>("hud-tooltip-desc");
+
+            SetupSkillProgressionUi();
+        }
+
+        private void OnDisable()
+        {
+            if (_progression != null)
+                _progression.Changed -= OnProgressionChanged;
+        }
+
+        // ピップ生成・ボタンクリック登録・ホバー登録を一度だけ行う
+        private void SetupSkillProgressionUi()
+        {
+            _progression = _skillCaster != null ? _skillCaster.Progression : null;
+            if (_progression != null)
+                _progression.Changed += OnProgressionChanged;
+
+            // ピップ・クリック・ホバーの登録は一度だけ（OnEnable 再入で重複させない）
+            if (_skillUiWired) return;
+            _skillUiWired = true;
+
+            for (int i = 0; i < 3; i++)
+            {
+                int slot = i; // クロージャ用にコピー
+
+                // ピップノッチを最大ランク数だけ生成
+                if (_skillPipRows[slot] != null)
+                {
+                    _skillPipRows[slot].Clear();
+                    for (int p = 0; p < _maxRanks[slot]; p++)
+                    {
+                        var pip = new VisualElement();
+                        pip.AddToClassList("hud-skill-pip");
+                        pip.pickingMode = PickingMode.Ignore;
+                        _skillPipRows[slot].Add(pip);
+                    }
+                }
+
+                // + ボタン: クリックで TryLevelUp。picking を明示
+                if (_skillLevelUp[slot] != null)
+                {
+                    _skillLevelUp[slot].pickingMode = PickingMode.Position;
+                    _skillLevelUp[slot].clicked += () => OnLevelUpClicked(slot);
+                }
+
+                // スロットのホバーでツールチップ表示/非表示
+                if (_skillSlots[slot] != null)
+                {
+                    _skillSlots[slot].pickingMode = PickingMode.Position;
+                    _skillSlots[slot].RegisterCallback<MouseEnterEvent>(_ => ShowTooltip(slot));
+                    _skillSlots[slot].RegisterCallback<MouseLeaveEvent>(_ => HideTooltip());
+                }
+            }
+        }
+
+        private void OnProgressionChanged()
+        {
+            // ランク変化を即時 UI に反映（毎フレームの RefreshSkillProgressionUi でも追従するが
+            // クリック直後の即応性のためここでも更新）
+            RefreshSkillProgressionUi();
+        }
+
+        private void OnLevelUpClicked(int slot)
+        {
+            if (_progression == null || _skillCaster == null) return;
+            _progression.TryLevelUp(slot, _skillCaster.ChampionLevel);
         }
 
         private void Update()
@@ -232,21 +328,111 @@ namespace Enigma.UI
                         _skillCdText[i].text = remaining.ToString("F1");
                 }
             }
+
+            // ピップ・+ボタン・ロック表示の更新（変更時のみ）
+            RefreshSkillProgressionUi();
         }
 
-        // Targeting 種別に対応するアイコンクラスのみを残し、他を外す
+        // ランク変化やレベル変動に応じてピップ・ボタン・ロックを更新する。
+        // ボタン位置はスロット座標が解決済みになってから合わせる
+        private void RefreshSkillProgressionUi()
+        {
+            if (_progression == null) return;
+
+            int championLevel = _skillCaster != null ? _skillCaster.ChampionLevel : 1;
+
+            for (int i = 0; i < 3; i++)
+            {
+                int rank = _progression.GetRank(i);
+
+                // ピップ充填
+                var pipRow = _skillPipRows[i];
+                if (pipRow != null)
+                {
+                    int childCount = pipRow.childCount;
+                    for (int p = 0; p < childCount; p++)
+                        pipRow[p].EnableInClassList("hud-skill-pip--filled", p < rank);
+                }
+
+                // + ボタン: CanLevelUp 時のみ表示し、スロット直上に配置
+                var btn = _skillLevelUp[i];
+                if (btn != null)
+                {
+                    bool canLevel = _progression.CanLevelUp(i, championLevel);
+                    btn.style.display = canLevel ? DisplayStyle.Flex : DisplayStyle.None;
+                    if (canLevel)
+                        PositionLevelUpButton(i);
+                }
+            }
+        }
+
+        // + ボタンを対応スロットの上辺中央に重ねる（hud-skills 基準の相対座標）
+        private void PositionLevelUpButton(int slot)
+        {
+            var btn  = _skillLevelUp[slot];
+            var slotEl = _skillSlots[slot];
+            if (btn == null || slotEl == null) return;
+
+            // 親（hud-skills）基準での slot の左端 + 中央寄せ
+            float slotLeft  = slotEl.layout.x;
+            float slotWidth = slotEl.layout.width;
+            if (float.IsNaN(slotLeft) || float.IsNaN(slotWidth)) return; // レイアウト未解決
+            float left = slotLeft + slotWidth * 0.5f - 10f; // ボタン幅 20 の半分
+            btn.style.left = left;
+        }
+
+        // Targeting 種別に対応するアイコンクラスのみを残し、他を外す。
+        // rank0（未習得）のスロットはロックアイコンに差し替え、種別クラスは外す
         private void UpdateSkillIcon(int slot, SkillDefinition def)
         {
             var icon = _skillIcons[slot];
             if (icon == null) return;
 
-            bool directional = def != null && def.Targeting == SkillTargeting.Directional;
-            bool aoe         = def != null && def.Targeting == SkillTargeting.GroundAoe;
-            bool targeted    = def != null && def.Targeting == SkillTargeting.Targeted;
+            bool locked = _progression != null && slot <= 2 && def != null
+                          && _progression.GetRank(slot) <= 0;
 
+            _skillSlots[slot]?.EnableInClassList("hud-skill-slot--locked", locked);
+
+            bool directional = !locked && def != null && def.Targeting == SkillTargeting.Directional;
+            bool aoe         = !locked && def != null && def.Targeting == SkillTargeting.GroundAoe;
+            bool targeted    = !locked && def != null && def.Targeting == SkillTargeting.Targeted;
+
+            icon.EnableInClassList("hud-skill-icon--locked", locked);
             icon.EnableInClassList("hud-skill-icon--directional", directional);
             icon.EnableInClassList("hud-skill-icon--aoe", aoe);
             icon.EnableInClassList("hud-skill-icon--targeted", targeted);
+        }
+
+        // ── ツールチップ ──────────────────────────────────────
+
+        private void ShowTooltip(int slot)
+        {
+            if (_tooltip == null || _skillCaster == null) return;
+            var def = _skillCaster.GetSkill(slot);
+            if (def == null) { HideTooltip(); return; }
+
+            int rank    = _progression != null ? _progression.GetRank(slot) : 0;
+            int maxRank = (slot >= 0 && slot < _maxRanks.Length) ? _maxRanks[slot] : 5;
+            float scale = SkillProgression.DamageMultiplier(rank);
+            float dmg   = def.Damage * scale;
+
+            if (_tooltipName  != null) _tooltipName.text  = def.SkillName;
+            if (_tooltipRank  != null) _tooltipRank.text  = $"ランク {rank}/{maxRank}";
+            if (_tooltipStats != null)
+            {
+                // rank0 はダメージ未発生のため 0 と明示
+                string dmgText = rank > 0 ? Mathf.RoundToInt(dmg).ToString() : "0";
+                _tooltipStats.text = $"ダメージ {dmgText}    CD {def.CooldownSeconds:0.#}秒";
+            }
+            if (_tooltipDesc != null) _tooltipDesc.text = def.Description;
+
+            _tooltip.style.display = DisplayStyle.Flex;
+        }
+
+        private void HideTooltip()
+        {
+            if (_tooltip != null)
+                _tooltip.style.display = DisplayStyle.None;
         }
 
         private void UpdateBuff()

@@ -53,6 +53,8 @@
                         <ui:VisualElement name="hud-skill-cd-0" class="hud-skill-cd" />
                         <ui:Label name="hud-skill-cdtext-0" class="hud-skill-cdtext" text="" />
                         <ui:Label name="hud-skill-key-0" class="hud-skill-key" text="Q" />
+                        <!-- ランクピップ行（Controller が最大数分のノッチを生成） -->
+                        <ui:VisualElement name="hud-skill-pips-0" class="hud-skill-pips" picking-mode="Ignore" />
                     </ui:VisualElement>
 
                     <!-- スロット 1 (E) -->
@@ -62,6 +64,7 @@
                         <ui:VisualElement name="hud-skill-cd-1" class="hud-skill-cd" />
                         <ui:Label name="hud-skill-cdtext-1" class="hud-skill-cdtext" text="" />
                         <ui:Label name="hud-skill-key-1" class="hud-skill-key" text="E" />
+                        <ui:VisualElement name="hud-skill-pips-1" class="hud-skill-pips" picking-mode="Ignore" />
                     </ui:VisualElement>
 
                     <!-- スロット 2 (R) -->
@@ -71,7 +74,14 @@
                         <ui:VisualElement name="hud-skill-cd-2" class="hud-skill-cd" />
                         <ui:Label name="hud-skill-cdtext-2" class="hud-skill-cdtext" text="" />
                         <ui:Label name="hud-skill-key-2" class="hud-skill-key" text="R" />
+                        <ui:VisualElement name="hud-skill-pips-2" class="hud-skill-pips" picking-mode="Ignore" />
                     </ui:VisualElement>
+
+                    <!-- レベルアップ + ボタン（スロット上に absolute オーバーレイ。
+                         slot の overflow:hidden を避けるため hud-skills 直下に置く） -->
+                    <ui:Button name="hud-skill-levelup-0" class="hud-skill-levelup" text="+" />
+                    <ui:Button name="hud-skill-levelup-1" class="hud-skill-levelup" text="+" />
+                    <ui:Button name="hud-skill-levelup-2" class="hud-skill-levelup" text="+" />
 
                 </ui:VisualElement>
 
@@ -131,6 +141,15 @@
 
             </ui:VisualElement>
 
+        </ui:VisualElement>
+
+        <!-- スキルツールチップ（ホバー時に Controller が表示・内容更新） -->
+        <ui:VisualElement name="hud-skill-tooltip" class="hud-skill-tooltip" picking-mode="Ignore"
+                          style="display: none;">
+            <ui:Label name="hud-tooltip-name" class="hud-tooltip-name" text="" />
+            <ui:Label name="hud-tooltip-rank" class="hud-tooltip-rank" text="" />
+            <ui:Label name="hud-tooltip-stats" class="hud-tooltip-stats" text="" />
+            <ui:Label name="hud-tooltip-desc" class="hud-tooltip-desc" text="" />
         </ui:VisualElement>
 
         <!-- ショップ範囲外ヒント -->

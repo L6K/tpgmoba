@@ -457,6 +457,111 @@
     display: none;
 }
 
+/* ロック中スロット（rank0）: アイコンを暗く落とす（Controller が付与） */
+.hud-skill-slot--locked .hud-skill-icon {
+    opacity: 0.35;
+}
+
+/* ロックアイコン: 種別アイコンに優先して錠前画像を敷く */
+.hud-skill-icon--locked {
+    background-image: url("Icons/skill_locked.png");
+}
+
+/* ── ランクピップ（スロット下端の横並びノッチ） ──────── */
+/* 下端中央に absolute 行で並べる。picking は不要 */
+.hud-skill-pips {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 空ピップ（6x3）: 暗金枠の中抜き */
+.hud-skill-pip {
+    width: 6px;
+    height: 3px;
+    margin-left: 1px;
+    margin-right: 1px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-width: 1px;
+    border-color: var(--color-gold-dark);
+}
+
+/* 充填ピップ: 金で塗る */
+.hud-skill-pip--filled {
+    background-color: var(--color-gold-bright);
+    border-color: var(--color-gold);
+}
+
+/* ── レベルアップ + ボタン（スロット真上・金色） ──────── */
+/* left/top は Controller がスロット座標に合わせて設定する */
+.hud-skill-levelup {
+    position: absolute;
+    top: -19px;
+    width: 20px;
+    height: 16px;
+    font-size: 13px;
+    color: rgb(20, 24, 40);
+    -unity-font-definition: url("Fonts/Marcellus-Regular.ttf");
+    -unity-text-align: middle-center;
+    background-color: var(--color-gold-bright);
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: var(--color-gold-dark);
+    padding: 0;
+    display: none;
+}
+
+.hud-skill-levelup:hover {
+    background-color: rgb(255, 230, 150);
+}
+
+/* ── スキルツールチップ（ホバー表示・深紺 + 金縁） ────── */
+.hud-skill-tooltip {
+    position: absolute;
+    bottom: 130px;
+    align-self: center;
+    width: 280px;
+    background-color: rgba(10, 14, 30, 0.96);
+    border-width: 1px;
+    border-color: var(--color-gold);
+    border-radius: 3px;
+    padding: 8px 12px;
+    flex-direction: column;
+}
+
+.hud-tooltip-name {
+    font-size: 15px;
+    color: var(--color-gold-bright);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    -unity-font-style: bold;
+    margin-bottom: 2px;
+}
+
+.hud-tooltip-rank {
+    font-size: 11px;
+    color: var(--color-parchment-dim);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    margin-bottom: 1px;
+}
+
+.hud-tooltip-stats {
+    font-size: 11px;
+    color: var(--color-parchment);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    margin-bottom: 4px;
+}
+
+.hud-tooltip-desc {
+    font-size: 12px;
+    color: var(--color-parchment);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    white-space: normal;
+}
+
 /* ── 右セクション（アイテム 3x2 + 所持金） ──────────── */
 .hud-right-section {
     flex-direction: column;

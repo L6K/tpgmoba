@@ -73,8 +73,9 @@ public static class BuildAetherRiftMap
         }
 
         // 川: 縦帯 Cube (両レーンに届く長さ92)
-        // 同一平面のチラつき防止のため レーン(0.02) < 川(0.05) < ベイスン(0.12) < ピット(0.18) と階段状にする
-        PlaceCube("River", new Vector3(0f, 0.05f, 0f), new Vector3(14f, 0.1f, 92f), matRiver);
+        // 階段順: 地面(0) < 川上面(0.03) < パス(0.045) < レーン(0.06) < ベイスン(0.12) < ピット(0.18)
+        // レーンが川の上を「橋」として通るため、川はレーンより下に置く
+        PlaceCube("River", new Vector3(0f, -0.02f, 0f), new Vector3(14f, 0.1f, 92f), matRiver);
 
         // レーン色を土色に更新
         matLane.SetColor("_BaseColor", new Color(0.62f, 0.55f, 0.42f));
@@ -83,7 +84,7 @@ public static class BuildAetherRiftMap
         const float R = 45f;
         {
             var laneRing = new GameObject("LaneRing");
-            laneRing.transform.position = new Vector3(0f, 0.02f, 0f);
+            laneRing.transform.position = new Vector3(0f, 0.06f, 0f);
             var mf = laneRing.AddComponent<MeshFilter>();
             mf.sharedMesh = CreateRingBandMesh(40f, 50f, 96);
             var mr2 = laneRing.AddComponent<MeshRenderer>();
@@ -510,43 +511,58 @@ public static class BuildAetherRiftMap
         // 8. SkillDefinition アセット生成（zeph: 既存流用、他4キャラは新規 or 既存）
         // Directional=0.2/0.3、GroundAoe=0.35/0.45、Targeted=0.15/0.3
         var skillSlash = GetOrCreateSkillDefinition("Skill_MagicSlash",
-            "魔導斬撃", SkillTargeting.Directional, 25f, 25f, 0f, 4f, 30f, 0.2f, 0.3f);
+            "魔導斬撃", SkillTargeting.Directional, 25f, 25f, 0f, 4f, 30f, 0.2f, 0.3f,
+            "指定方向へ魔力の斬撃を飛ばし、直線上の敵にダメージを与える。");
         var skillAoe = GetOrCreateSkillDefinition("Skill_ExplosionCircle",
-            "爆裂魔法陣", SkillTargeting.GroundAoe, 40f, 20f, 4f, 8f, 0f, 0.35f, 0.45f);
+            "爆裂魔法陣", SkillTargeting.GroundAoe, 40f, 20f, 4f, 8f, 0f, 0.35f, 0.45f,
+            "指定地点に魔法陣を展開し、少し遅れて爆発させ範囲内の敵にダメージを与える。");
         var skillChase = GetOrCreateSkillDefinition("Skill_Chase",
-            "追撃", SkillTargeting.Targeted, 30f, 15f, 0f, 6f, 0f, 0.15f, 0.3f);
+            "追撃", SkillTargeting.Targeted, 30f, 15f, 0f, 6f, 0f, 0.15f, 0.3f,
+            "対象の敵単体へ瞬時に追撃を加え、確定ダメージを与える。");
 
         // garon
         var garonQ = GetOrCreateSkillDefinition("Skill_garon_Q",
-            "シールドバッシュ", SkillTargeting.Directional, 15f, 15f, 0f, 5f, 25f, 0.2f, 0.3f);
+            "シールドバッシュ", SkillTargeting.Directional, 15f, 15f, 0f, 5f, 25f, 0.2f, 0.3f,
+            "盾を構えて前方へ突進し、直線上の敵を打ち据えてダメージを与える。");
         var garonW = GetOrCreateSkillDefinition("Skill_garon_W",
-            "グランドスラム", SkillTargeting.GroundAoe, 30f, 12f, 5f, 9f, 0f, 0.35f, 0.45f);
+            "グランドスラム", SkillTargeting.GroundAoe, 30f, 12f, 5f, 9f, 0f, 0.35f, 0.45f,
+            "指定地点の地面を叩きつけ、範囲内の敵にダメージを与える。");
         var garonE = GetOrCreateSkillDefinition("Skill_garon_E",
-            "チェーンフック", SkillTargeting.Targeted, 20f, 12f, 0f, 7f, 0f, 0.15f, 0.3f);
+            "チェーンフック", SkillTargeting.Targeted, 20f, 12f, 0f, 7f, 0f, 0.15f, 0.3f,
+            "対象の敵単体へ鎖の鉤を打ち込み、ダメージを与える。");
 
         // veil
         var veilQ = GetOrCreateSkillDefinition("Skill_veil_Q",
-            "アーケインボルト", SkillTargeting.Directional, 30f, 30f, 0f, 4f, 35f, 0.2f, 0.3f);
+            "アーケインボルト", SkillTargeting.Directional, 30f, 30f, 0f, 4f, 35f, 0.2f, 0.3f,
+            "指定方向へ魔力弾を放ち、直線上の最初に当たった敵にダメージを与える。");
         var veilW = GetOrCreateSkillDefinition("Skill_veil_W",
-            "量子爆発", SkillTargeting.GroundAoe, 50f, 22f, 5f, 10f, 0f, 0.35f, 0.45f);
+            "量子爆発", SkillTargeting.GroundAoe, 50f, 22f, 5f, 10f, 0f, 0.35f, 0.45f,
+            "指定地点で量子エネルギーを暴走させ、範囲内の敵に大ダメージを与える。");
         var veilE = GetOrCreateSkillDefinition("Skill_veil_E",
-            "ヘックス", SkillTargeting.Targeted, 35f, 18f, 0f, 8f, 0f, 0.15f, 0.3f);
+            "ヘックス", SkillTargeting.Targeted, 35f, 18f, 0f, 8f, 0f, 0.15f, 0.3f,
+            "対象の敵単体に呪詛をかけ、確定ダメージを与える。");
 
         // rin
         var rinQ = GetOrCreateSkillDefinition("Skill_rin_Q",
-            "貫通矢", SkillTargeting.Directional, 28f, 35f, 0f, 3.5f, 45f, 0.2f, 0.3f);
+            "貫通矢", SkillTargeting.Directional, 28f, 35f, 0f, 3.5f, 45f, 0.2f, 0.3f,
+            "指定方向へ高速の矢を放ち、直線上の敵を貫いてダメージを与える。");
         var rinW = GetOrCreateSkillDefinition("Skill_rin_W",
-            "矢の雨", SkillTargeting.GroundAoe, 35f, 25f, 4.5f, 9f, 0f, 0.35f, 0.45f);
+            "矢の雨", SkillTargeting.GroundAoe, 35f, 25f, 4.5f, 9f, 0f, 0.35f, 0.45f,
+            "指定地点へ無数の矢を降らせ、範囲内の敵にダメージを与える。");
         var rinE = GetOrCreateSkillDefinition("Skill_rin_E",
-            "狙撃", SkillTargeting.Targeted, 40f, 20f, 0f, 9f, 0f, 0.15f, 0.3f);
+            "狙撃", SkillTargeting.Targeted, 40f, 20f, 0f, 9f, 0f, 0.15f, 0.3f,
+            "対象の敵単体を遠距離から狙撃し、高い確定ダメージを与える。");
 
         // nova
         var novaQ = GetOrCreateSkillDefinition("Skill_nova_Q",
-            "パルスウェーブ", SkillTargeting.Directional, 18f, 20f, 0f, 4f, 28f, 0.2f, 0.3f);
+            "パルスウェーブ", SkillTargeting.Directional, 18f, 20f, 0f, 4f, 28f, 0.2f, 0.3f,
+            "指定方向へエネルギー波を放ち、直線上の敵にダメージを与える。");
         var novaW = GetOrCreateSkillDefinition("Skill_nova_W",
-            "リペアフィールド", SkillTargeting.GroundAoe, 20f, 18f, 5f, 8f, 0f, 0.35f, 0.45f);
+            "リペアフィールド", SkillTargeting.GroundAoe, 20f, 18f, 5f, 8f, 0f, 0.35f, 0.45f,
+            "指定地点に力場を展開し、範囲内の敵にダメージを与える。");
         var novaE = GetOrCreateSkillDefinition("Skill_nova_E",
-            "スタンボルト", SkillTargeting.Targeted, 15f, 15f, 0f, 6f, 0f, 0.15f, 0.3f);
+            "スタンボルト", SkillTargeting.Targeted, 15f, 15f, 0f, 6f, 0f, 0.15f, 0.3f,
+            "対象の敵単体へ電撃を撃ち込み、ダメージを与える。");
 
         // CharacterData アセットへのスキル結線
         WireCharacterSkills("Char_zeph",  new[] { skillSlash, skillAoe, skillChase, null });
@@ -749,6 +765,11 @@ public static class BuildAetherRiftMap
         // 11. ターゲットダミー 2体
         CreateDummy("Dummy_A", new Vector3(-32f, 1f, 30f), matDummy);
         CreateDummy("Dummy_B", new Vector3(-26f, 1f, 36f), matDummy);
+
+        // 11b. デバッグ用ダミー敵プレイヤー 2体（Red チーム、HP500、リスポーン付き）
+        var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
+        CreateEnemyDummy("EnemyDummy_Lane",  new Vector3(-31.8f, 1.1f, 31.8f), matRed, matBarRed);
+        CreateEnemyDummy("EnemyDummy_River", new Vector3(3.5f,   1.1f, -28f),  matRed, matBarRed);
 
         // 7b. TelegraphSector プレハブ（空 GO + MeshFilter + MeshRenderer + TelegraphSector）
         var sectorGo   = new GameObject("TelegraphSector");
@@ -989,21 +1010,23 @@ public static class BuildAetherRiftMap
     private static SkillDefinition GetOrCreateSkillDefinition(
         string assetName, string skillName, SkillTargeting targeting,
         float damage, float range, float radius, float cd, float projSpeed,
-        float windup = 0.2f, float recovery = 0.35f)
+        float windup = 0.2f, float recovery = 0.35f, string description = "")
     {
         var path     = $"{SkillDir}/{assetName}.asset";
         var existing = AssetDatabase.LoadAssetAtPath<SkillDefinition>(path);
         if (existing != null)
         {
-            // 既存アセットも windup/recovery を上書き更新
+            // 既存アセットも windup/recovery/説明文を上書き更新
             existing.WindupSeconds   = windup;
             existing.RecoverySeconds = recovery;
+            existing.Description     = description;
             EditorUtility.SetDirty(existing);
             return existing;
         }
 
         var so = ScriptableObject.CreateInstance<SkillDefinition>();
         so.SkillName       = skillName;
+        so.Description     = description;
         so.Targeting       = targeting;
         so.Damage          = damage;
         so.Range           = range;
@@ -1327,6 +1350,46 @@ public static class BuildAetherRiftMap
         soTd.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    private static void CreateEnemyDummy(string name, Vector3 pos, Material matCapsule, Material matBarRed)
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        go.name = name;
+        go.transform.position = pos;
+        SetMat(go, matCapsule);
+
+        // クリックしやすいコライダー調整（カプセルのピボットは中心）
+        var cap = go.GetComponent<CapsuleCollider>();
+        if (cap != null)
+        {
+            cap.radius = 0.6f;
+            cap.height = 2.4f;
+            cap.center = new Vector3(0f, 0f, 0f);
+        }
+
+        var hc = go.AddComponent<HealthComponent>();
+        var soHc = new SerializedObject(hc);
+        soHc.FindProperty("_maxHp").floatValue = 500f;
+        soHc.ApplyModifiedPropertiesWithoutUndo();
+
+        var tt = go.AddComponent<TeamTag>();
+        var soTt = new SerializedObject(tt);
+        soTt.FindProperty("_team").enumValueIndex = (int)TeamId.Red;
+        soTt.ApplyModifiedPropertiesWithoutUndo();
+
+        var wrapper = CreateWorldHealthBar(go.transform, 1.05f, 1.0f, matBarRed, 500f);
+
+        var dc = go.AddComponent<DummyChampion>();
+        var soDc = new SerializedObject(dc);
+        soDc.FindProperty("_barFill").objectReferenceValue = wrapper;
+        soDc.ApplyModifiedPropertiesWithoutUndo();
+
+        // 撃破で50XP付与
+        var reward = go.AddComponent<XpReward>();
+        var soReward = new SerializedObject(reward);
+        soReward.FindProperty("_amount").floatValue = 50f;
+        soReward.ApplyModifiedPropertiesWithoutUndo();
+    }
+
     private static MinionAI CreateMinionPrefab()
     {
         // 既存プレハブの再利用は旧構造・一時マテリアル参照を残すため毎回作り直す
@@ -1468,11 +1531,18 @@ public static class BuildAetherRiftMap
         GameObject smPrefab,
         Material matBoss)
     {
-        var boss = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        boss.name             = "NeutralBoss";
-        boss.transform.position   = new Vector3(0f, 3f, 0f);
-        boss.transform.localScale = new Vector3(3f, 3f, 3f); // 大型
-        SetMat(boss, matBoss);
+        // ルートは見た目を持たない空 GO。クリック用コライダーのみ持つ
+        var boss = new GameObject("NeutralBoss");
+        boss.transform.position = new Vector3(0f, 0.18f, 0f); // ボスピット足場の上
+
+        // クリック判定用コライダー（旧プリミティブの代替）。全高 4〜5m を覆う
+        var bossCol    = boss.AddComponent<CapsuleCollider>();
+        bossCol.center = new Vector3(0f, 2.2f, 0f);
+        bossCol.radius = 1.6f;
+        bossCol.height = 5f;
+
+        // 見た目: プロシージャル浮遊クリスタルコア
+        BuildBossCoreVisual(boss.transform, matBoss);
 
         var bossHp = boss.AddComponent<HealthComponent>();
         var soBossHp = new SerializedObject(bossHp);
@@ -1493,8 +1563,9 @@ public static class BuildAetherRiftMap
         soBossCtrl.ApplyModifiedPropertiesWithoutUndo();
 
         // ボスの頭上 HP バー（中立ボスは BarRed、幅は大きめ 2.4）
+        // ルートがピット足場(y=0.18)に下がったため、クリスタル頂部(全高≈4.2m)の上に出すよう yOffset を上げる
         var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
-        var wrapper   = CreateWorldHealthBar(boss.transform, 2.4f, 1.6f, matBarRed, 1000f);
+        var wrapper   = CreateWorldHealthBar(boss.transform, 2.4f, 4.6f, matBarRed, 1000f);
 
         // TargetDummy を流用してボスのバー更新（リスポーンなし）
         var td = boss.AddComponent<TargetDummy>();
@@ -1515,6 +1586,114 @@ public static class BuildAetherRiftMap
         soBossGold.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    /// <summary>
+    /// エニグマ・コアの見た目（浮遊クリスタル＋3リング＋破片）を構築し、
+    /// BossCoreVisual を結線する。コライダーは付けず（クリックはルート）。
+    /// </summary>
+    private static void BuildBossCoreVisual(Transform bossRoot, Material legacyMatBoss)
+    {
+        // legacyMatBoss は不要になったため未使用（参照シグネチャ維持のため受け取るだけ）
+        _ = legacyMatBoss;
+
+        // メッシュ生成（既存があれば作り直す）
+        var crystalMesh = ProceduralBossMeshes.CreateBipyramid("BossCrystal", 1.1f, 3.6f, 6);
+        var shardMesh   = ProceduralBossMeshes.CreateBipyramid("BossShard",   0.18f, 0.6f, 6);
+        var ringMeshA   = ProceduralBossMeshes.CreateTorus("BossRingA", 2.2f, 0.10f);
+        var ringMeshB   = ProceduralBossMeshes.CreateTorus("BossRingB", 2.9f, 0.10f);
+        var ringMeshC   = ProceduralBossMeshes.CreateTorus("BossRingC", 3.6f, 0.10f);
+
+        // マテリアル: 発光クリスタル(URP/Unlit, HDR風) と 暗金属リング(Enigma/Toon)
+        var crystalColor = new Color(0.55f, 0.35f, 1.0f);
+        var matCrystal   = GetOrCreateUnlitEmissiveMat("BossCrystal", crystalColor * 2f);
+        var matRing      = GetOrCreateMat("BossRing", new Color(0.16f, 0.17f, 0.22f));
+
+        // CoreVisual ルート
+        var visualRoot = new GameObject("CoreVisual");
+        visualRoot.transform.SetParent(bossRoot, false);
+        visualRoot.transform.localPosition = Vector3.zero;
+
+        // 中央クリスタル（y≈2.2）
+        var crystal = CreateMeshGo("Crystal", crystalMesh, matCrystal, visualRoot.transform);
+        crystal.transform.localPosition = new Vector3(0f, 2.2f, 0f);
+
+        // リング3本（傾き euler を基準に）
+        var ringA = CreateMeshGo("RingA", ringMeshA, matRing, visualRoot.transform);
+        ringA.transform.localPosition    = new Vector3(0f, 2.2f, 0f);
+        ringA.transform.localEulerAngles = new Vector3(90f, 0f, 0f);
+
+        var ringB = CreateMeshGo("RingB", ringMeshB, matRing, visualRoot.transform);
+        ringB.transform.localPosition    = new Vector3(0f, 2.2f, 0f);
+        ringB.transform.localEulerAngles = new Vector3(60f, 0f, 20f);
+
+        var ringC = CreateMeshGo("RingC", ringMeshC, matRing, visualRoot.transform);
+        ringC.transform.localPosition    = new Vector3(0f, 2.2f, 0f);
+        ringC.transform.localEulerAngles = new Vector3(110f, 0f, -15f);
+
+        // 小クリスタル破片 ×6 を半径2.6の円周上(y 2.2)に配置
+        var shardRoot = new GameObject("Shards");
+        shardRoot.transform.SetParent(visualRoot.transform, false);
+        shardRoot.transform.localPosition = new Vector3(0f, 2.2f, 0f);
+
+        const int shardCount = 6;
+        const float shardRadius = 2.6f;
+        for (int i = 0; i < shardCount; i++)
+        {
+            float ang = (float)i / shardCount * Mathf.PI * 2f;
+            var shard = CreateMeshGo($"Shard_{i}", shardMesh, matCrystal, shardRoot.transform);
+            shard.transform.localPosition = new Vector3(
+                Mathf.Cos(ang) * shardRadius, 0f, Mathf.Sin(ang) * shardRadius);
+        }
+
+        // BossCoreVisual を結線
+        var coreVisual = bossRoot.gameObject.AddComponent<Enigma.Map.BossCoreVisual>();
+        var soCv = new SerializedObject(coreVisual);
+        soCv.FindProperty("_crystal").objectReferenceValue   = crystal.transform;
+        soCv.FindProperty("_ringA").objectReferenceValue     = ringA.transform;
+        soCv.FindProperty("_ringB").objectReferenceValue     = ringB.transform;
+        soCv.FindProperty("_ringC").objectReferenceValue     = ringC.transform;
+        soCv.FindProperty("_shardRoot").objectReferenceValue = shardRoot.transform;
+        soCv.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>
+    /// MeshFilter+MeshRenderer のみを持つ見た目 GO を作る（コライダーなし）。
+    /// </summary>
+    private static GameObject CreateMeshGo(string name, Mesh mesh, Material mat, Transform parent)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.AddComponent<MeshFilter>().sharedMesh         = mesh;
+        go.AddComponent<MeshRenderer>().sharedMaterial   = mat;
+        return go;
+    }
+
+    /// <summary>
+    /// 発光風の不透明 URP/Unlit マテリアルを GetOrCreate する。
+    /// _BaseColor が無いシェーダ向けに _Color へフォールバックする。
+    /// </summary>
+    private static Material GetOrCreateUnlitEmissiveMat(string name, Color color)
+    {
+        var path     = $"{MatDir}/{name}.mat";
+        var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (existing != null)
+        {
+            ApplyUnlitColor(existing, color);
+            return existing;
+        }
+
+        var shader = Shader.Find("Universal Render Pipeline/Unlit");
+        var mat    = new Material(shader);
+        ApplyUnlitColor(mat, color);
+        AssetDatabase.CreateAsset(mat, path);
+        return mat;
+    }
+
+    private static void ApplyUnlitColor(Material mat, Color color)
+    {
+        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+        else if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);
+    }
+
     // ---- ジャングルパスとキャンプ配置 ----
 
     /// <summary>
@@ -1532,7 +1711,7 @@ public static class BuildAetherRiftMap
             var p1 = new Vector3(45f * Mathf.Cos(rad), 0f, 45f * Mathf.Sin(rad));
             var p2 = new Vector3(18f * Mathf.Cos(rad), 0f, 18f * Mathf.Sin(rad));
 
-            // パスを5セグメントの Cube で敷く（y=0.03: レーン0.02と川0.05の中間）
+            // パスを5セグメントの Cube で敷く（y=0.045: 川上面0.03とレーン0.06の中間）
             const int   SegCount = 5;
             float       segLen   = Vector3.Distance(p1, p2) / SegCount;
             var         fwd      = (p2 - p1).normalized;
@@ -1541,7 +1720,7 @@ public static class BuildAetherRiftMap
             {
                 float  t      = (si + 0.5f) / SegCount;
                 var    center = Vector3.Lerp(p1, p2, t);
-                center.y = 0.03f;
+                center.y = 0.045f;
 
                 var seg = PlaceCube(
                     $"JunglePath_{(int)deg}_{si}",

@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
+using Enigma.Abilities;
 using Enigma.Character;
 using Enigma.Combat;
 using Enigma.Core;
@@ -26,6 +27,22 @@ namespace Enigma.Ability
         private CastModeLogic _castLogic;
         private CastMode      _lastSyncedMode = (CastMode)(-1); // 未初期化値
 
+        // スキルランク進行（LoL 式）。HUD/外部から参照する
+        private readonly SkillProgression _progression = new();
+        public SkillProgression Progression => _progression;
+
+        // レベルアップ購読元（同一 GO の PlayerProgression を Awake で解決）
+        private PlayerProgression _playerProgression;
+
+        // スロット色: Q=シアン, E=マゼンタ, R=ゴールド
+        private static readonly Color[] _slotColors =
+        {
+            Color.cyan,
+            Color.magenta,
+            new Color(1f, 0.84f, 0.2f, 1f),
+            Color.white,
+        };
+
         // カーソル→地面の交差点（毎フレーム更新）
         private Vector3 _groundCursorPos;
 
@@ -41,8 +58,32 @@ namespace Enigma.Ability
             // 最初のモード同期は Update で行う（GameServices が未初期化の可能性）
             _castLogic = new CastModeLogic(CastMode.QuickWithIndicator);
 
+            // 同一 GO のレベル進行を解決（チャンピオンレベルとポイント付与に使用）
+            _playerProgression = GetComponent<PlayerProgression>();
+
             SetIndicatorActive(null);
         }
+
+        private void OnEnable()
+        {
+            if (_playerProgression != null)
+                _playerProgression.Experience.LevelChanged += OnChampionLevelChanged;
+        }
+
+        private void OnDisable()
+        {
+            if (_playerProgression != null)
+                _playerProgression.Experience.LevelChanged -= OnChampionLevelChanged;
+        }
+
+        // チャンピオンレベルアップ毎にスキルポイントを 1 付与
+        private void OnChampionLevelChanged(int newLevel)
+        {
+            _progression.OnChampionLevelUp();
+        }
+
+        /// <summary>現在のチャンピオンレベル（1〜）。PlayerProgression 未設定時は 1。</summary>
+        public int ChampionLevel => _playerProgression != null ? _playerProgression.Experience.Level : 1;
 
         private void Update()
         {
@@ -103,6 +144,9 @@ namespace Enigma.Ability
 
                 if (keyControl.wasPressedThisFrame)
                 {
+                    // rank 0（未習得）のスキルは発動不可
+                    if (!IsSlotUnlocked(slot)) continue;
+
                     // CD 中はアーム開始しない
                     if (!_cooldowns[slot].IsReady(Time.time)) continue;
 
@@ -202,36 +246,40 @@ namespace Enigma.Ability
                 HealthComponent capturedTarget = _targeting?.CurrentTarget;
                 var capturedDef       = def;
 
+                int cachedSlot = slot;
                 _motor.RequestAttack(def.WindupSeconds, def.RecoverySeconds, () =>
                 {
                     _motor.SnapToLunge();
-                    FireSkill(capturedDef, capturedGroundPos, capturedTarget);
+                    FireSkill(cachedSlot, capturedDef, capturedGroundPos, capturedTarget);
                 });
             }
             else
             {
                 // _motor 未設定時は従来どおり即時発動（後方互換）
-                FireSkill(def, _groundCursorPos, _targeting?.CurrentTarget);
+                FireSkill(slot, def, _groundCursorPos, _targeting?.CurrentTarget);
             }
         }
 
-        private void FireSkill(SkillDefinition def, Vector3 groundCursorPos, HealthComponent target)
+        private void FireSkill(int slot, SkillDefinition def, Vector3 groundCursorPos, HealthComponent target)
         {
+            // ランクに応じたダメージ倍率（rank0 はここに到達しない想定だが安全に等倍以上）
+            float scale = DamageScale(slot);
+
             switch (def.Targeting)
             {
                 case SkillTargeting.Directional:
-                    CastDirectional(def, groundCursorPos);
+                    CastDirectional(slot, def, groundCursorPos, scale);
                     break;
                 case SkillTargeting.GroundAoe:
-                    CastGroundAoe(def, groundCursorPos);
+                    CastGroundAoe(slot, def, groundCursorPos, scale);
                     break;
                 case SkillTargeting.Targeted:
-                    CastTargeted(def, target);
+                    CastTargeted(slot, def, target, scale);
                     break;
             }
         }
 
-        private void CastDirectional(SkillDefinition def, Vector3 groundCursorPos)
+        private void CastDirectional(int slot, SkillDefinition def, Vector3 groundCursorPos, float scale)
         {
             if (_projectilePrefab == null || _muzzle == null) return;
 
@@ -244,10 +292,15 @@ namespace Enigma.Ability
             float lifetime = def.ProjectileSpeed > 0f ? def.Range / def.ProjectileSpeed : 1.5f;
 
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.identity);
-            proj.Init(dir, def.ProjectileSpeed, def.Damage, gameObject, lifetime);
+            proj.Init(dir, def.ProjectileSpeed, def.Damage * scale, gameObject, lifetime);
+
+            // マズルバースト + 弾にトレイル
+            var color = SlotColor(slot);
+            SkillVfx.SpawnBurst(_muzzle.position, color, 0.3f, 1.2f, 0.25f);
+            SkillVfx.AddTrail(proj.gameObject, color, 0.15f, 0.25f);
         }
 
-        private void CastGroundAoe(SkillDefinition def, Vector3 groundCursorPos)
+        private void CastGroundAoe(int slot, SkillDefinition def, Vector3 groundCursorPos, float scale)
         {
             if (_telegraphPrefab == null) return;
 
@@ -258,18 +311,28 @@ namespace Enigma.Ability
             pos.y      = transform.position.y;
 
             var telegraph = Instantiate(_telegraphPrefab, pos, Quaternion.identity);
-            telegraph.Init(def.Radius, 0.8f, def.Damage, gameObject);
+            telegraph.Init(def.Radius, 0.8f, def.Damage * scale, gameObject);
+
+            // マズルバースト + 着弾地点に大きめバースト
+            var color = SlotColor(slot);
+            SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : transform.position, color, 0.3f, 1.2f, 0.25f);
+            SkillVfx.SpawnBurst(pos, color, 1f, 4f, 0.4f);
         }
 
-        private void CastTargeted(SkillDefinition def, HealthComponent target)
+        private void CastTargeted(int slot, SkillDefinition def, HealthComponent target, float scale)
         {
             if (target == null) return;
 
             float dist = Vector3.Distance(transform.position, target.transform.position);
             if (dist > def.Range) return;
 
-            float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage, gameObject);
+            float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage * scale, gameObject);
             target.TakeDamage(finalDamage, gameObject);
+
+            // マズルバースト + 対象位置にバースト
+            var color = SlotColor(slot);
+            SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : transform.position, color, 0.3f, 1.2f, 0.25f);
+            SkillVfx.SpawnBurst(target.transform.position, color, 0.3f, 1.2f, 0.25f);
         }
 
         private void SetIndicatorActive(SkillDefinition armedDef)
@@ -278,6 +341,25 @@ namespace Enigma.Ability
                 _directionIndicator.SetActive(armedDef != null && armedDef.Targeting == SkillTargeting.Directional);
             if (_aoeIndicator != null)
                 _aoeIndicator.SetActive(armedDef != null && armedDef.Targeting == SkillTargeting.GroundAoe);
+        }
+
+        // スロットが習得済み（rank>=1）か。進行管理外のスロット3は常に習得扱い
+        private bool IsSlotUnlocked(int slot)
+        {
+            if (slot < 0 || slot > 2) return true;
+            return _progression.GetRank(slot) >= 1;
+        }
+
+        // スロットのランク倍率。進行管理外スロットは等倍
+        private float DamageScale(int slot)
+        {
+            if (slot < 0 || slot > 2) return 1f;
+            return SkillProgression.DamageMultiplier(_progression.GetRank(slot));
+        }
+
+        private static Color SlotColor(int slot)
+        {
+            return (slot >= 0 && slot < _slotColors.Length) ? _slotColors[slot] : Color.white;
         }
 
         private static Key GetFallbackKey(int slot)

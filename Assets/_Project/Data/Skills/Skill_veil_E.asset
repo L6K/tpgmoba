@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Skill_veil_E
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u30D8\u30C3\u30AF\u30B9"
+  Description: "\u5BFE\u8C61\u306E\u6575\u5358\u4F53\u306B\u546A\u8A5B\u3092\u304B\u3051\u3001\u78BA\u5B9A\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u308B\u3002"
   Targeting: 2
   Damage: 35
   Range: 18

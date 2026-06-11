@@ -8,6 +8,8 @@ namespace Enigma.Ability
     public sealed class SkillDefinition : ScriptableObject
     {
         public string        SkillName;
+        [TextArea(2, 4)]
+        public string        Description;
         public SkillTargeting Targeting;
         public float         Damage;
         public float         Range;
