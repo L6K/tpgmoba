@@ -22,6 +22,12 @@
             <ui:Label name="result-duration" text="0:00" />
         </ui:VisualElement>
 
+        <!-- K / D 行 -->
+        <ui:VisualElement class="result-info-row">
+            <ui:Label text="K / D" class="result-info-label" />
+            <ui:Label name="result-kd" text="0 / 0" />
+        </ui:VisualElement>
+
         <!-- ボタン行 -->
         <ui:VisualElement class="result-btn-row">
             <ui:Button name="result-home" text="ホームへ戻る" />

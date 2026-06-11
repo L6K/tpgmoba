@@ -1,4 +1,5 @@
 using Enigma.Data;
+using Enigma.Combat;
 
 namespace Enigma.Core
 {
@@ -13,6 +14,7 @@ namespace Enigma.Core
         public static IControlSettingsService ControlSettings { get; private set; }
         public static IMatchmakingService     Matchmaking     { get; private set; }
         public static IMatchContext           Match           { get; private set; }
+        public static ITeamBuffService        TeamBuffs       { get; private set; }
 
         public static bool IsInitialized => Settings != null && Ownership != null && Gacha != null && ControlSettings != null;
 
@@ -27,7 +29,8 @@ namespace Enigma.Core
             var controlSettings = new ControlSettingsService(store);
 
             Initialize(settings, ownership, gacha, controlSettings,
-                new MatchmakingService(new SystemRandomSource()), new MatchContext());
+                new MatchmakingService(new SystemRandomSource()), new MatchContext(),
+                new TeamBuffService());
         }
 
         /// <summary>テスト・差し替え用。任意の実装を注入できる。</summary>
@@ -37,7 +40,8 @@ namespace Enigma.Core
             IGachaService           gacha,
             IControlSettingsService controlSettings = null,
             IMatchmakingService     matchmaking     = null,
-            IMatchContext           match           = null)
+            IMatchContext           match           = null,
+            ITeamBuffService        teamBuffs       = null)
         {
             Settings        = settings;
             Ownership       = ownership;
@@ -45,6 +49,7 @@ namespace Enigma.Core
             ControlSettings = controlSettings;
             Matchmaking     = matchmaking ?? new MatchmakingService(new SystemRandomSource());
             Match           = match       ?? new MatchContext();
+            TeamBuffs       = teamBuffs   ?? new TeamBuffService();
         }
 
         /// <summary>テスト後のクリーンアップ用。</summary>
@@ -56,6 +61,7 @@ namespace Enigma.Core
             ControlSettings = null;
             Matchmaking     = null;
             Match           = null;
+            TeamBuffs       = null;
         }
     }
 }

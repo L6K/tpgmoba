@@ -18,6 +18,10 @@ namespace Enigma.Core
         {
             if (!GameServices.IsInitialized) GameServices.Initialize();
 
+            // 試合開始時に KDA をリセット（リプレイ・再戦対応）
+            GameServices.Match.Kills  = 0;
+            GameServices.Match.Deaths = 0;
+
             _blueTitan.Model.Died += OnBlueTitanDied;
             _redTitan.Model.Died  += OnRedTitanDied;
         }

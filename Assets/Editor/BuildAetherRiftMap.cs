@@ -9,6 +9,7 @@ using Enigma.Combat;
 using Enigma.Ability;
 using Enigma.Objective;
 using Enigma.UI;
+using Enigma.Minimap;
 using Enigma.Minion;
 using Enigma.Core;
 
@@ -311,6 +312,9 @@ public static class BuildAetherRiftMap
         soMatchFlow.FindProperty("_redTitan").objectReferenceValue  = redTitanHc;
         soMatchFlow.ApplyModifiedPropertiesWithoutUndo();
 
+        // KDA 集積: MatchStatsTracker を同じ GO に追加
+        matchFlowGo.AddComponent<Enigma.Core.MatchStatsTracker>();
+
         // PlayerController のカメラ参照は後で設定
 
         // 10. Main Camera
@@ -384,6 +388,12 @@ public static class BuildAetherRiftMap
         soHudCtrl.FindProperty("_playerHealth").objectReferenceValue = healthComp;
         soHudCtrl.FindProperty("_skillCaster").objectReferenceValue  = skillCaster;
         soHudCtrl.ApplyModifiedPropertiesWithoutUndo();
+
+        // MinimapController: ミニマップドットを毎フレーム更新する
+        var minimapCtrl   = hudGo.AddComponent<MinimapController>();
+        var soMinimapCtrl = new SerializedObject(minimapCtrl);
+        soMinimapCtrl.FindProperty("_uiDocument").objectReferenceValue = hudDoc;
+        soMinimapCtrl.ApplyModifiedPropertiesWithoutUndo();
 
         // 14. ミニオンプレハブ + スポーナー
         var minionPrefab = CreateMinionPrefab();

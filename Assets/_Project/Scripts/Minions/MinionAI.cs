@@ -152,7 +152,10 @@ namespace Enigma.Minion
             {
                 // 射程内：攻撃間隔ごとにダメージ
                 if (_attackCooldown.TryConsume(Time.time))
-                    _currentTarget.TakeDamage(_attackDamage);
+                {
+                    float finalDamage = DamageUtility.ApplyTeamBuff(_attackDamage, gameObject);
+                    _currentTarget.TakeDamage(finalDamage, gameObject);
+                }
             }
         }
 

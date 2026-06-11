@@ -239,7 +239,11 @@ namespace Enigma.Ability
             float dist = Vector3.Distance(transform.position, target.transform.position);
             if (dist > def.Range) return;
 
-            target.TakeDamage(def.Damage);
+            float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage, gameObject);
+            if (target is HealthComponent hc)
+                hc.TakeDamage(finalDamage, gameObject);
+            else
+                target.TakeDamage(finalDamage);
         }
 
         private void SetIndicatorActive(SkillDefinition armedDef)

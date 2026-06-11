@@ -161,6 +161,95 @@
     background-color: var(--color-cd-overlay);
 }
 
+/* ── チームバフ残り時間（ミニマップ上 16px） ─────────── */
+.hud-buff {
+    color: rgba(255, 220, 80, 1);
+    font-size: 13px;
+    -unity-font-style: bold;
+    background-color: rgba(0, 0, 0, 0.55);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* ── ミニマップパネル（左下固定・220x154） ─────────── */
+.hud-minimap {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    width: 220px;
+    height: 154px;
+    background-color: rgba(10, 12, 22, 0.78);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    overflow: hidden;
+}
+
+/* レーン帯（横方向の半透明スラブ） */
+.minimap-lane {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 13px;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+/* TOPレーン: z=+50 → パネル y = (70-50)/140*154 ≈ 22px、帯中心がそこに来るよう top=15.5→16 */
+.minimap-lane--top {
+    top: 16px;
+}
+
+/* BOTレーン: z=-50 → パネル y = (70+50)/140*154 ≈ 132px、帯中心がそこに来るよう top=125.5→126 */
+.minimap-lane--bot {
+    top: 126px;
+}
+
+/* 川帯（縦方向・中央） */
+.minimap-river {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 103px;
+    width: 15px;
+    background-color: rgba(46, 107, 242, 0.15);
+}
+
+/* ミニマップドット基本スタイル */
+.minimap-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    border-radius: 3px;
+}
+
+.minimap-dot--blue {
+    background-color: rgb(80, 140, 255);
+}
+
+.minimap-dot--red {
+    background-color: rgb(235, 90, 90);
+}
+
+.minimap-dot--neutral {
+    background-color: rgb(170, 110, 230);
+}
+
+/* 自分（プレイヤー）: 白・8x8・黒枠1px */
+.minimap-dot--self {
+    background-color: rgb(255, 255, 255);
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgb(0, 0, 0);
+}
+
+/* タワー・タイタン: 正方形・8x8 */
+.minimap-dot--square {
+    width: 8px;
+    height: 8px;
+    border-radius: 0;
+}
+
 /* CD 残秒テキスト（スロット中央） */
 .hud-skill-cdtext {
     position: absolute;

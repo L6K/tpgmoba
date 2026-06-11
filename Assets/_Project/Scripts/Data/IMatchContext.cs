@@ -9,5 +9,7 @@ namespace Enigma.Data
         CharacterData PickedCharacter { get; set; }
         MatchResult Result { get; set; }
         float MatchDurationSeconds { get; set; }
+        int Kills  { get; set; }
+        int Deaths { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using UnityEngine.UIElements;
 using Enigma.Combat;
 using Enigma.Ability;
 using Enigma.Core;
+using Enigma.Data;
 
 namespace Enigma.UI
 {
@@ -23,6 +24,9 @@ namespace Enigma.UI
         private VisualElement _hpFill;
         private Label         _hpText;
 
+        // チームバフ残り時間ラベル
+        private Label _buffLabel;
+
         // スキルスロット（4スロット分）
         private readonly VisualElement[] _skillSlots    = new VisualElement[4];
         private readonly Label[]         _skillNames    = new Label[4];
@@ -41,6 +45,7 @@ namespace Enigma.UI
             _timerLabel = root.Q<Label>("hud-timer");
             _hpFill     = root.Q<VisualElement>("hud-hp-fill");
             _hpText     = root.Q<Label>("hud-hp-text");
+            _buffLabel  = root.Q<Label>("hud-buff");
 
             for (int i = 0; i < 4; i++)
             {
@@ -57,6 +62,7 @@ namespace Enigma.UI
             UpdateTimer();
             UpdateHp();
             UpdateSkills();
+            UpdateBuff();
         }
 
         private void UpdateTimer()
@@ -117,6 +123,26 @@ namespace Enigma.UI
                     if (active)
                         _skillCdText[i].text = remaining.ToString("F1");
                 }
+            }
+        }
+
+        private void UpdateBuff()
+        {
+            if (_buffLabel == null) return;
+
+            var buffs = GameServices.TeamBuffs;
+            float remaining = buffs?.GetRemainingSeconds(Enigma.Combat.TeamId.Blue, Time.time) ?? 0f;
+
+            if (remaining > 0f)
+            {
+                int min = (int)(remaining / 60f);
+                int sec = (int)(remaining % 60f);
+                _buffLabel.text = $"エニグマバフ {min}:{sec:D2}";
+                _buffLabel.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                _buffLabel.style.display = DisplayStyle.None;
             }
         }
 

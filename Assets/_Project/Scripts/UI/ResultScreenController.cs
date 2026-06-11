@@ -20,6 +20,7 @@ namespace Enigma.UI
             var subLabel      = root.Q<Label>("result-sub");
             var charLabel     = root.Q<Label>("result-char");
             var durationLabel = root.Q<Label>("result-duration");
+            var kdLabel       = root.Q<Label>("result-kd");
             var homeBtn       = root.Q<Button>("result-home");
             var replayBtn     = root.Q<Button>("result-replay");
 
@@ -46,6 +47,9 @@ namespace Enigma.UI
             int m = totalSec / 60;
             int s = totalSec % 60;
             durationLabel.text = $"{m}:{s:D2}";
+
+            if (kdLabel != null)
+                kdLabel.text = $"{match.Kills} / {match.Deaths}";
 
             homeBtn.clicked   += OnHomeClicked;
             replayBtn.clicked += OnReplayClicked;
