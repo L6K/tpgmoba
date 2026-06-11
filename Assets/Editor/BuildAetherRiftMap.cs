@@ -473,6 +473,11 @@ public static class BuildAetherRiftMap
         SetMat(projGo, matProj);
         var projCol = projGo.GetComponent<SphereCollider>();
         if (projCol != null) projCol.isTrigger = true;
+        // トリガーイベントはペアのどちらかに Rigidbody が必須。
+        // 弾側に持たせることで RB なしの静的コライダー（ミニオン等）にも OnTriggerEnter が発火する
+        var projRb = projGo.AddComponent<Rigidbody>();
+        projRb.isKinematic = true;
+        projRb.useGravity  = false;
         projGo.AddComponent<Projectile>();
         var projPrefabPath = PrefabDir + "/Projectile.prefab";
         var projPrefab     = PrefabUtility.SaveAsPrefabAsset(projGo, projPrefabPath);
