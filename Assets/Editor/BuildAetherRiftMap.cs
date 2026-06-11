@@ -174,66 +174,208 @@ public static class BuildAetherRiftMap
             }
         }
 
-        // ジャングル樹木: System.Random(42) で各象限に約10本（計40本）
+        // ジャングル樹木: System.Random(42) で各象限に26本（計104本）
+        // クラスタ中心3〜4箇所 + 一様散布、木同士最小間隔1.2m
+        // スケール 3.8〜6.2 のランダム、コライダー半径も比例
+        // 追加樹種: tree_pineRoundA/B/C, tree_detailed, tree_tall
         {
-            string[] treeFbxNames = { "tree_pineTallA", "tree_pineTallB", "tree_default", "tree_oak", "tree_fat" };
-            GameObject[] treeModels = new GameObject[treeFbxNames.Length];
-            for (int ti = 0; ti < treeFbxNames.Length; ti++)
-                treeModels[ti] = AssetDatabase.LoadAssetAtPath<GameObject>(
-                    $"Assets/External/Kenney/Nature/{treeFbxNames[ti]}.fbx");
+            string[] treeFbxNames = {
+                "tree_pineTallA", "tree_pineTallB", "tree_default", "tree_oak", "tree_fat",
+                "tree_pineRoundA", "tree_pineRoundB", "tree_pineRoundC", "tree_detailed", "tree_tall"
+            };
+            var treeModelList = new System.Collections.Generic.List<GameObject>();
+            foreach (var fname in treeFbxNames)
+            {
+                var m = AssetDatabase.LoadAssetAtPath<GameObject>(
+                    $"Assets/External/Kenney/Nature/{fname}.fbx");
+                if (m != null) treeModelList.Add(m);
+            }
+            GameObject[] treeModels = treeModelList.ToArray();
+
+            // 岩モデル: FindAssets で検索してフォールバックは Cube
+            string[] rockSearchFilters = { "rock_large", "stone_large" };
+            var rockModelList = new System.Collections.Generic.List<GameObject>();
+            foreach (var filter in rockSearchFilters)
+            {
+                var guids = AssetDatabase.FindAssets($"{filter} t:Model");
+                foreach (var guid in guids)
+                {
+                    var path = AssetDatabase.GUIDToAssetPath(guid);
+                    var rm   = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                    if (rm != null) rockModelList.Add(rm);
+                }
+            }
 
             var rng = new System.Random(42);
+
             // 4象限: Q0=(+x,+z), Q1=(-x,+z), Q2=(-x,-z), Q3=(+x,-z)
-            // 象限 q の角度範囲: [q*90, q*90+90)°
             for (int q = 0; q < 4; q++)
             {
-                int placed = 0;
-                int attempts = 0;
-                while (placed < 10 && attempts < 300)
-                {
-                    attempts++;
-                    float r     = (float)(rng.NextDouble() * 18.0 + 20.0); // [20, 38]
-                    float angle = (float)(rng.NextDouble() * 90.0 + q * 90.0); // 象限内
-                    float rad   = angle * Mathf.Deg2Rad;
-                    float tx    = r * Mathf.Cos(rad);
-                    float tz    = r * Mathf.Sin(rad);
+                // 配置済み木の位置リスト（木同士の最小間隔チェック用）
+                var placedPositions = new System.Collections.Generic.List<Vector2>();
 
-                    // 川回避: |x| < 9
+                // --- クラスタ生成 ---
+                int clusterCount = rng.Next(3, 5); // 3 または 4 クラスタ
+                var clusterCenters = new System.Collections.Generic.List<Vector2>();
+
+                for (int ci = 0; ci < clusterCount; ci++)
+                {
+                    // クラスタ中心候補を最大50回試行（棄却条件は木と同じ）
+                    for (int ca = 0; ca < 50; ca++)
+                    {
+                        float cr    = (float)(rng.NextDouble() * 18.0 + 20.0);
+                        float cang  = (float)(rng.NextDouble() * 90.0 + q * 90.0);
+                        float crad  = cang * Mathf.Deg2Rad;
+                        float cx    = cr * Mathf.Cos(crad);
+                        float cz    = cr * Mathf.Sin(crad);
+                        if (Mathf.Abs(cx) < 9f) continue;
+                        float distFromArcC = Mathf.Abs(Mathf.Sqrt(cx * cx + cz * cz) - R);
+                        if (distFromArcC < 7f) continue;
+                        if (IsNearAnyJunglePath(new Vector3(cx, 0f, cz), 4.5f)) continue;
+                        if (IsNearAnyCamp(new Vector3(cx, 0f, cz), 6f)) continue;
+                        clusterCenters.Add(new Vector2(cx, cz));
+                        break;
+                    }
+                }
+
+                int totalGoal   = 26;
+                int clusterGoal = (int)(totalGoal * 0.65f); // 約17本をクラスタに
+                // 残り(9本)は一様散布で補完
+                int placed = 0;
+
+                // クラスタ内に木を配置
+                foreach (var clusterCenter in clusterCenters)
+                {
+                    if (placed >= clusterGoal) break;
+                    int perCluster = rng.Next(4, 7); // 4〜6本
+                    int cPlaced = 0;
+                    int cAttempts = 0;
+                    while (cPlaced < perCluster && placed < clusterGoal && cAttempts < 80)
+                    {
+                        cAttempts++;
+                        // クラスタ中心から半径5以内にランダム配置
+                        float offsetAngle = (float)(rng.NextDouble() * 360.0) * Mathf.Deg2Rad;
+                        float offsetDist  = (float)(rng.NextDouble() * 5.0);
+                        float tx = clusterCenter.x + offsetDist * Mathf.Cos(offsetAngle);
+                        float tz = clusterCenter.y + offsetDist * Mathf.Sin(offsetAngle);
+
+                        if (Mathf.Abs(tx) < 9f) continue;
+                        float distFromArc = Mathf.Abs(Mathf.Sqrt(tx * tx + tz * tz) - R);
+                        if (distFromArc < 7f) continue;
+                        if (IsNearAnyJunglePath(new Vector3(tx, 0f, tz), 4.5f)) continue;
+                        if (IsNearAnyCamp(new Vector3(tx, 0f, tz), 6f)) continue;
+
+                        // 木同士の最小間隔 1.2m
+                        bool tooClose = false;
+                        foreach (var pp in placedPositions)
+                        {
+                            if (Vector2.Distance(new Vector2(tx, tz), pp) < 1.2f) { tooClose = true; break; }
+                        }
+                        if (tooClose) continue;
+
+                        PlaceOneTree(treeModels, rng, tx, tz, q, placed, matJungle);
+                        placedPositions.Add(new Vector2(tx, tz));
+                        cPlaced++;
+                        placed++;
+                    }
+                }
+
+                // 残りを一様散布
+                int uAttempts = 0;
+                while (placed < totalGoal && uAttempts < 600)
+                {
+                    uAttempts++;
+                    float r     = (float)(rng.NextDouble() * 18.0 + 20.0);
+                    float angle = (float)(rng.NextDouble() * 90.0 + q * 90.0);
+                    float rad2  = angle * Mathf.Deg2Rad;
+                    float tx    = r * Mathf.Cos(rad2);
+                    float tz    = r * Mathf.Sin(rad2);
+
                     if (Mathf.Abs(tx) < 9f) continue;
-                    // レーン回避: |dist from arc| < 7
                     float distFromArc = Mathf.Abs(Mathf.Sqrt(tx * tx + tz * tz) - R);
                     if (distFromArc < 7f) continue;
-                    // ジャングルパス回避: 4本の対角線セグメント（P1→P2）から4.5m以内
                     if (IsNearAnyJunglePath(new Vector3(tx, 0f, tz), 4.5f)) continue;
-                    // ジャングルキャンプ回避: 半径30、θ=45/135/225/315° 中心から6m以内
                     if (IsNearAnyCamp(new Vector3(tx, 0f, tz), 6f)) continue;
 
-                    int modelIdx = rng.Next(0, treeModels.Length);
-                    float yaw    = (float)(rng.NextDouble() * 360.0);
-
-                    GameObject treeGo;
-                    if (treeModels[modelIdx] != null)
+                    bool tooClose = false;
+                    foreach (var pp in placedPositions)
                     {
-                        treeGo = (GameObject)PrefabUtility.InstantiatePrefab(treeModels[modelIdx]);
-                        treeGo.transform.position   = new Vector3(tx, 0f, tz);
-                        treeGo.transform.localScale = Vector3.one * 4.5f;
-                        treeGo.transform.rotation   = Quaternion.Euler(0f, yaw, 0f);
-                        // CapsuleCollider 付与
-                        var cap = treeGo.AddComponent<CapsuleCollider>();
-                        cap.center = new Vector3(0f, 2f, 0f);
-                        cap.radius = 0.6f;
-                        cap.height = 5f;
+                        if (Vector2.Distance(new Vector2(tx, tz), pp) < 1.2f) { tooClose = true; break; }
+                    }
+                    if (tooClose) continue;
+
+                    PlaceOneTree(treeModels, rng, tx, tz, q, placed, matJungle);
+                    placedPositions.Add(new Vector2(tx, tz));
+                    placed++;
+                }
+
+                // --- 岩の配置（各象限4個）---
+                int rocksPlaced = 0;
+                int rockAttempts = 0;
+                while (rocksPlaced < 4 && rockAttempts < 200)
+                {
+                    rockAttempts++;
+                    float rr    = (float)(rng.NextDouble() * 18.0 + 20.0);
+                    float rang  = (float)(rng.NextDouble() * 90.0 + q * 90.0);
+                    float rrad  = rang * Mathf.Deg2Rad;
+                    float rx    = rr * Mathf.Cos(rrad);
+                    float rz    = rr * Mathf.Sin(rrad);
+
+                    if (Mathf.Abs(rx) < 9f) continue;
+                    float distFromArcR = Mathf.Abs(Mathf.Sqrt(rx * rx + rz * rz) - R);
+                    if (distFromArcR < 7f) continue;
+                    if (IsNearAnyJunglePath(new Vector3(rx, 0f, rz), 4.5f)) continue;
+                    if (IsNearAnyCamp(new Vector3(rx, 0f, rz), 6f)) continue;
+
+                    bool tooClose = false;
+                    foreach (var pp in placedPositions)
+                    {
+                        if (Vector2.Distance(new Vector2(rx, rz), pp) < 1.2f) { tooClose = true; break; }
+                    }
+                    if (tooClose) continue;
+
+                    float rockScale = (float)(rng.NextDouble() * 2.0 + 5.0); // 5〜7
+                    float rockYaw   = (float)(rng.NextDouble() * 360.0);
+
+                    GameObject rockGo;
+                    if (rockModelList.Count > 0)
+                    {
+                        var rm = rockModelList[rng.Next(0, rockModelList.Count)];
+                        rockGo = (GameObject)PrefabUtility.InstantiatePrefab(rm);
+                        rockGo.transform.position   = new Vector3(rx, 0f, rz);
+                        rockGo.transform.localScale = Vector3.one * rockScale;
+                        rockGo.transform.rotation   = Quaternion.Euler(0f, rockYaw, 0f);
+                        var bc = rockGo.AddComponent<BoxCollider>();
+                        // 境界ボックスをレンダラーから計算
+                        var bounds = new Bounds(Vector3.zero, Vector3.zero);
+                        bool boundsInit = false;
+                        foreach (var renderer in rockGo.GetComponentsInChildren<Renderer>())
+                        {
+                            if (!boundsInit) { bounds = renderer.bounds; boundsInit = true; }
+                            else bounds.Encapsulate(renderer.bounds);
+                        }
+                        if (boundsInit)
+                        {
+                            bc.center = rockGo.transform.InverseTransformPoint(bounds.center);
+                            bc.size   = Vector3.Scale(bounds.size, new Vector3(
+                                1f / rockGo.transform.lossyScale.x,
+                                1f / rockGo.transform.lossyScale.y,
+                                1f / rockGo.transform.lossyScale.z));
+                        }
                     }
                     else
                     {
-                        treeGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                        treeGo.transform.position   = new Vector3(tx, 2.5f, tz);
-                        treeGo.transform.localScale = new Vector3(0.8f, 2.5f, 0.8f);
-                        SetMat(treeGo, matJungle);
+                        rockGo = PlaceCube($"Rock_Q{q}_{rocksPlaced:D2}",
+                            new Vector3(rx, 0f, rz),
+                            new Vector3(3f, 2f, 3f), matJungle);
+                        rockGo.transform.localScale = new Vector3(3f * rockScale / 6f, 2f * rockScale / 6f, 3f * rockScale / 6f);
+                        rockGo.transform.rotation   = Quaternion.Euler(0f, rockYaw, 0f);
                     }
-                    treeGo.name = $"Tree_Q{q}_{placed:D2}";
-                    SetStatic(treeGo);
-                    placed++;
+                    rockGo.name = $"Rock_Q{q}_{rocksPlaced:D2}";
+                    SetStatic(rockGo);
+
+                    placedPositions.Add(new Vector2(rx, rz));
+                    rocksPlaced++;
                 }
             }
         }
@@ -1459,6 +1601,43 @@ public static class BuildAetherRiftMap
             if (Vector3.Distance(p, center) < radius) return true;
         }
         return false;
+    }
+
+    /// <summary>
+    /// スケール 3.8〜6.2 のランダムな木を1本配置する。
+    /// コライダー半径はスケールに比例（base 0.6 @ scale 4.5）。
+    /// </summary>
+    private static void PlaceOneTree(
+        GameObject[] treeModels, System.Random rng,
+        float tx, float tz, int q, int index, Material matJungle)
+    {
+        float treeScale = (float)(rng.NextDouble() * 2.4 + 3.8); // 3.8〜6.2
+        float yaw       = (float)(rng.NextDouble() * 360.0);
+        int   modelIdx  = treeModels.Length > 0 ? rng.Next(0, treeModels.Length) : -1;
+
+        GameObject treeGo;
+        if (modelIdx >= 0 && treeModels[modelIdx] != null)
+        {
+            treeGo = (GameObject)PrefabUtility.InstantiatePrefab(treeModels[modelIdx]);
+            treeGo.transform.position   = new Vector3(tx, 0f, tz);
+            treeGo.transform.localScale = Vector3.one * treeScale;
+            treeGo.transform.rotation   = Quaternion.Euler(0f, yaw, 0f);
+            // コライダー半径はスケールに比例（base 0.6 @ scale 4.5）
+            float capRadius = 0.6f * (treeScale / 4.5f);
+            var cap = treeGo.AddComponent<CapsuleCollider>();
+            cap.center = new Vector3(0f, 2f, 0f);
+            cap.radius = capRadius;
+            cap.height = 5f;
+        }
+        else
+        {
+            treeGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            treeGo.transform.position   = new Vector3(tx, 2.5f, tz);
+            treeGo.transform.localScale = new Vector3(0.8f * treeScale / 4.5f, 2.5f * treeScale / 4.5f, 0.8f * treeScale / 4.5f);
+            SetMat(treeGo, matJungle);
+        }
+        treeGo.name = $"Tree_Q{q}_{index:D2}";
+        SetStatic(treeGo);
     }
 
     /// <summary>点 p から線分 a-b への最短距離を返す（XZ 平面で評価）。</summary>

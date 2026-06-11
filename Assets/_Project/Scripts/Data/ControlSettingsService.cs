@@ -5,12 +5,14 @@ namespace Enigma.Data
     public sealed class ControlSettingsService : IControlSettingsService
     {
         private const string KeyCastMode    = "control_castmode";
-        private const string KeySkillKeyFmt = "control_skillkey_{0}";
+        // v2_ プレフィックス: WASD 移動導入によりスキルを Q/E/R/None に変更した際に
+        // 旧 Q/W/E/R 保存値を引き継がないようキープレフィックスを更新
+        private const string KeySkillKeyFmt = "control_skillkey_v2_{0}";
 
-        // デフォルトキー: Q/W/E/R
+        // デフォルトキー: Q/E/R（slot3 は将来枠・None）
         private static readonly Key[] DefaultSkillKeys =
         {
-            Key.Q, Key.W, Key.E, Key.R
+            Key.Q, Key.E, Key.R, Key.None
         };
 
         private readonly ISaveStore _store;

@@ -81,7 +81,8 @@ namespace Enigma.UI
                 _playerItems       = _playerHealth.GetComponent<PlayerItems>();
             }
 
-            for (int i = 0; i < 4; i++)
+            // スロット 0..2（Q/E/R）のみ。slot3 は HUD に存在しない
+            for (int i = 0; i < 3; i++)
             {
                 _skillSlots[i]     = root.Q<VisualElement>($"hud-skill-{i}");
                 _skillNames[i]     = root.Q<Label>($"hud-skill-name-{i}");
@@ -127,7 +128,8 @@ namespace Enigma.UI
         {
             if (_skillCaster == null) return;
 
-            for (int i = 0; i < 4; i++)
+            // スロット 0..2（Q/E/R）のみ更新。slot3 は HUD に存在しない
+            for (int i = 0; i < 3; i++)
             {
                 var def = _skillCaster.GetSkill(i);
 
@@ -237,9 +239,8 @@ namespace Enigma.UI
 
         private static UnityEngine.InputSystem.Key GetFallbackKey(int slot) =>
             slot switch { 0 => UnityEngine.InputSystem.Key.Q,
-                          1 => UnityEngine.InputSystem.Key.W,
-                          2 => UnityEngine.InputSystem.Key.E,
-                          3 => UnityEngine.InputSystem.Key.R,
+                          1 => UnityEngine.InputSystem.Key.E,
+                          2 => UnityEngine.InputSystem.Key.R,
                           _ => UnityEngine.InputSystem.Key.None };
     }
 }

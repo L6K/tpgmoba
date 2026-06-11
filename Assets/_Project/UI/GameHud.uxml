@@ -54,7 +54,7 @@
                     <ui:Label name="hud-skill-name-1" class="hud-skill-name" text="" />
                     <ui:VisualElement name="hud-skill-cd-1" class="hud-skill-cd" />
                     <ui:Label name="hud-skill-cdtext-1" class="hud-skill-cdtext" text="" />
-                    <ui:Label name="hud-skill-key-1" class="hud-skill-key" text="W" />
+                    <ui:Label name="hud-skill-key-1" class="hud-skill-key" text="E" />
                 </ui:VisualElement>
 
                 <!-- スロット 2 -->
@@ -62,15 +62,7 @@
                     <ui:Label name="hud-skill-name-2" class="hud-skill-name" text="" />
                     <ui:VisualElement name="hud-skill-cd-2" class="hud-skill-cd" />
                     <ui:Label name="hud-skill-cdtext-2" class="hud-skill-cdtext" text="" />
-                    <ui:Label name="hud-skill-key-2" class="hud-skill-key" text="E" />
-                </ui:VisualElement>
-
-                <!-- スロット 3: デフォルトは未設定（暗く表示） -->
-                <ui:VisualElement name="hud-skill-3" class="hud-skill-slot hud-skill-slot--empty">
-                    <ui:Label name="hud-skill-name-3" class="hud-skill-name" text="" />
-                    <ui:VisualElement name="hud-skill-cd-3" class="hud-skill-cd" />
-                    <ui:Label name="hud-skill-cdtext-3" class="hud-skill-cdtext" text="" />
-                    <ui:Label name="hud-skill-key-3" class="hud-skill-key" text="R" />
+                    <ui:Label name="hud-skill-key-2" class="hud-skill-key" text="R" />
                 </ui:VisualElement>
 
             </ui:VisualElement>

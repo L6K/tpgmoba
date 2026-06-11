@@ -9,15 +9,15 @@ namespace Enigma.Tests
         // --- デフォルト値 ---
 
         [Test]
-        public void DefaultSkillKeys_AreQWER()
+        public void DefaultSkillKeys_AreQERNone()
         {
             var store   = new FakeSaveStore();
             var service = new ControlSettingsService(store);
 
-            Assert.AreEqual(Key.Q, service.GetSkillKey(0));
-            Assert.AreEqual(Key.W, service.GetSkillKey(1));
-            Assert.AreEqual(Key.E, service.GetSkillKey(2));
-            Assert.AreEqual(Key.R, service.GetSkillKey(3));
+            Assert.AreEqual(Key.Q,    service.GetSkillKey(0));
+            Assert.AreEqual(Key.E,    service.GetSkillKey(1));
+            Assert.AreEqual(Key.R,    service.GetSkillKey(2));
+            Assert.AreEqual(Key.None, service.GetSkillKey(3));
         }
 
         [Test]

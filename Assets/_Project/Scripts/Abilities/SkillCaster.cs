@@ -78,6 +78,9 @@ namespace Enigma.Ability
                            || (mouse.rightButton.wasPressedThisFrame);
                 if (cancel)
                 {
+                    // 右クリックのペンディングを横取りし、TargetingSystem の右クリック選択が誤発動しないようにする
+                    if (mouse.rightButton.wasPressedThisFrame)
+                        _targeting?.CancelPendingRightClick();
                     _castLogic.HandleCancel();
                     SetIndicatorActive(null);
                     return;
@@ -256,7 +259,7 @@ namespace Enigma.Ability
 
         private static Key GetFallbackKey(int slot)
         {
-            return slot switch { 0 => Key.Q, 1 => Key.W, 2 => Key.E, 3 => Key.R, _ => Key.None };
+            return slot switch { 0 => Key.Q, 1 => Key.E, 2 => Key.R, _ => Key.None };
         }
 
         private static KeyControl GetKeyControl(Keyboard kb, Key key)

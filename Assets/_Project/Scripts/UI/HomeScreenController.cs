@@ -200,9 +200,9 @@ namespace Enigma.UI
             _dropdownCastMode.RegisterValueChangedCallback(_ =>
                 GameServices.ControlSettings.SetCastMode((CastMode)_dropdownCastMode.index));
 
-            // ゲームタブ: リバインドボタン（スロット 0..3）
-            _rebindBtns = new Button[4];
-            for (int i = 0; i < 4; i++)
+            // ゲームタブ: リバインドボタン（スロット 0..2: Q/E/R）
+            _rebindBtns = new Button[3];
+            for (int i = 0; i < 3; i++)
             {
                 var slot = i;
                 _rebindBtns[i] = root.Q<Button>($"btn-rebind-{slot}");

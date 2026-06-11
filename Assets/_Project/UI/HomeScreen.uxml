@@ -227,18 +227,13 @@
                     </ui:VisualElement>
 
                     <ui:VisualElement class="setting-row">
-                        <ui:Label text="スキル2（W枠）" class="setting-label" />
-                        <ui:Button name="btn-rebind-1" text="W" class="rebind-btn" />
+                        <ui:Label text="スキル2（E枠）" class="setting-label" />
+                        <ui:Button name="btn-rebind-1" text="E" class="rebind-btn" />
                     </ui:VisualElement>
 
                     <ui:VisualElement class="setting-row">
-                        <ui:Label text="スキル3（E枠）" class="setting-label" />
-                        <ui:Button name="btn-rebind-2" text="E" class="rebind-btn" />
-                    </ui:VisualElement>
-
-                    <ui:VisualElement class="setting-row">
-                        <ui:Label text="スキル4（R枠）" class="setting-label" />
-                        <ui:Button name="btn-rebind-3" text="R" class="rebind-btn" />
+                        <ui:Label text="スキル3（R枠）" class="setting-label" />
+                        <ui:Button name="btn-rebind-2" text="R" class="rebind-btn" />
                     </ui:VisualElement>
                 </ui:VisualElement>
 
