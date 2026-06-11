@@ -1,0 +1,51 @@
+============================================================
+Nature Assets License Information
+============================================================
+
+All assets in this folder (Assets/External/Nature/) are released under
+CC0 1.0 Universal (Public Domain Dedication).
+No attribution is required. Free for personal and commercial use.
+
+CC0 License text: https://creativecommons.org/publicdomain/zero/1.0/
+
+------------------------------------------------------------
+Pack 1: Tree Stylized Toon
+------------------------------------------------------------
+Files:
+  TreeToonStylized01.fbx
+  Textures/TreeToonStylized_Diffuse.png
+  Textures/TreeToonStylized_Normal.png
+Source URL: https://opengameart.org/content/tree-stylized-toon
+License: CC0 1.0 (Public Domain)
+Author stated: "You don't have to give me credit. I make this model
+available in the public domain."
+
+------------------------------------------------------------
+Pack 2: LowPoly Textured Trees (Textured Stylized Trees - May 2020)
+------------------------------------------------------------
+Files:
+  Birch_1.fbx
+  Pine_1.fbx
+  Tree_1.fbx
+  DeadTree_1.fbx
+  Textures/Birch_Bark.png
+  Textures/Birch_Leaves_Green.png
+  Textures/Pine_Leaves.png
+  Textures/Tree_Bark.jpg
+  Textures/Tree_Leaves.png
+Source URL: https://opengameart.org/content/lowpoly-textured-trees
+License: CC0 1.0 (Public Domain)
+Description: Stylized Animal Crossing-style trees in FBX, OBJ and Blend formats.
+
+------------------------------------------------------------
+Pack 3: Sinuous Toon Tree
+------------------------------------------------------------
+Files:
+  SinuousToonTree.fbx
+  SinuousToonTree_SeparateParts.fbx
+Source URL: https://opengameart.org/content/sinuous-toon-tree
+License: CC0 1.0 (Public Domain)
+Author stated: "I make it available in public domain these textures and
+these 3d models."
+Note: SinuousToonTree_SeparateParts.fbx has trunk and leaves as
+separate parts (sub-meshes), suitable for per-part material assignment.

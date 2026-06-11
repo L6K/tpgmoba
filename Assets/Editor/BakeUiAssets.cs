@@ -229,6 +229,10 @@ namespace Enigma.EditorTools
             // MinimapArrow 32x32 上向き白三角（透明背景）
             WriteGenerated("MinimapArrow.png", 32, 32, true,
                 GradientBaker.UpTriangle(32, Color.white));
+
+            // GrassBlade 128x128 草むらタフト用リーフカード（透明背景、wrap=Clamp）
+            WriteGenerated("GrassBlade.png", 128, 128, true,
+                GradientBaker.GrassBladeTexture(128));
         }
 
         // ---------------------------------------------------------------

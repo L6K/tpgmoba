@@ -169,5 +169,28 @@ namespace Enigma.Tests
 
             Assert.That(baseFilled, Is.GreaterThan(apexFilled), "底辺(下端)は頂点(上端)より幅広");
         }
+
+        [Test]
+        public void GrassBladeTexture_HasCorrectLength()
+        {
+            var px = GradientBaker.GrassBladeTexture(128);
+            Assert.That(px.Length, Is.EqualTo(128 * 128), "配列長 = size*size");
+        }
+
+        [Test]
+        public void GrassBladeTexture_HasTransparentAndOpaquePixels()
+        {
+            var px = GradientBaker.GrassBladeTexture(128);
+            bool hasZeroAlpha    = false;
+            bool hasNonZeroAlpha = false;
+            foreach (var c in px)
+            {
+                if (c.a <= 0.001f) hasZeroAlpha = true;
+                else hasNonZeroAlpha = true;
+                if (hasZeroAlpha && hasNonZeroAlpha) break;
+            }
+            Assert.That(hasZeroAlpha,    Is.True, "透明背景(alpha 0)の画素が存在する");
+            Assert.That(hasNonZeroAlpha, Is.True, "草の葉(alpha 非0)の画素が存在する");
+        }
     }
 }

@@ -179,21 +179,12 @@ public static class BuildAetherRiftMap
 
         // ジャングル樹木: System.Random(42) で各象限に26本（計104本）
         // クラスタ中心3〜4箇所 + 一様散布、木同士最小間隔1.2m
-        // スケール 3.8〜6.2 のランダム、コライダー半径も比例
-        // 追加樹種: tree_pineRoundA/B/C, tree_detailed, tree_tall
+        // 高品質 FBX（Assets/External/Nature）へ置換。ロード後に bounds を測って
+        // 目標樹高 4.5〜7m へ正規化（モデルごとの原寸差を吸収）。
+        // 種の混合: Tree_1 40% / Birch_1 25% / Pine_1 25% / TreeToonStylized01 10%、
+        // まれに DeadTree_1（5%以下、ジャングル奥のみ）。葉は 3 トーンからシード固定で割当。
         {
-            string[] treeFbxNames = {
-                "tree_pineTallA", "tree_pineTallB", "tree_default", "tree_oak", "tree_fat",
-                "tree_pineRoundA", "tree_pineRoundB", "tree_pineRoundC", "tree_detailed", "tree_tall"
-            };
-            var treeModelList = new System.Collections.Generic.List<GameObject>();
-            foreach (var fname in treeFbxNames)
-            {
-                var m = AssetDatabase.LoadAssetAtPath<GameObject>(
-                    $"Assets/External/Kenney/Nature/{fname}.fbx");
-                if (m != null) treeModelList.Add(m);
-            }
-            GameObject[] treeModels = treeModelList.ToArray();
+            var natureSpecies = LoadNatureSpecies();
 
             // 岩モデル: FindAssets で検索してフォールバックは Cube
             string[] rockSearchFilters = { "rock_large", "stone_large" };
@@ -276,7 +267,8 @@ public static class BuildAetherRiftMap
                         }
                         if (tooClose) continue;
 
-                        PlaceOneTree(treeModels, rng, tx, tz, q, placed, matJungle);
+                        // クラスタ中心はジャングル奥扱い → まれに枯木を許可
+                        PlaceOneTree(natureSpecies, rng, tx, tz, q, placed, matJungle, allowDeadTree: true);
                         placedPositions.Add(new Vector2(tx, tz));
                         cPlaced++;
                         placed++;
@@ -307,7 +299,7 @@ public static class BuildAetherRiftMap
                     }
                     if (tooClose) continue;
 
-                    PlaceOneTree(treeModels, rng, tx, tz, q, placed, matJungle);
+                    PlaceOneTree(natureSpecies, rng, tx, tz, q, placed, matJungle, allowDeadTree: false);
                     placedPositions.Add(new Vector2(tx, tz));
                     placed++;
                 }
@@ -387,6 +379,9 @@ public static class BuildAetherRiftMap
         var matJunglePath = GetOrCreateMat("JunglePath", new Color(0.68f, 0.60f, 0.46f));
         ApplyWutheringRamp(matJunglePath);
         PlaceJunglePathsAndCamps(matJunglePath);
+
+        // ---- 地表植生の散布（草タフト・小石）----
+        ScatterGroundVegetation();
 
         // 本拠地: Cylinder scale(22,1,22) pos(±56,0.5,0)
         {
@@ -1961,33 +1956,303 @@ public static class BuildAetherRiftMap
     }
 
     /// <summary>
-    /// スケール 3.8〜6.2 のランダムな木を1本配置する。
-    /// コライダー半径はスケールに比例（base 0.6 @ scale 4.5）。
+    /// 地表散布物（草タフト・小石）の配置除外判定。木/草で共通に使う。
+    /// 除外: レーン帯（半径40〜50）・川（中央 |x|<8 の帯）・ベイスン（半径<18）・
+    /// ジャングルパス近傍・ベース周辺（±56 付近半径12）。
+    /// </summary>
+    private static bool IsExcludedFromScatter(Vector3 p)
+    {
+        // 川（中央の縦帯）
+        if (Mathf.Abs(p.x) < 8f) return true;
+
+        // ベイスン（中央オブジェクティブ）
+        float distFromCenter = Mathf.Sqrt(p.x * p.x + p.z * p.z);
+        if (distFromCenter < 18f) return true;
+
+        // レーンアーク帯（半径 40〜50）
+        if (distFromCenter > 40f && distFromCenter < 50f) return true;
+
+        // ジャングルパス近傍
+        if (IsNearAnyJunglePath(p, 4.5f)) return true;
+
+        // ベース周辺（±56, 半径12）
+        if (Vector3.Distance(p, new Vector3(-56f, 0f, 0f)) < 12f) return true;
+        if (Vector3.Distance(p, new Vector3( 56f, 0f, 0f)) < 12f) return true;
+
+        return false;
+    }
+
+    /// <summary>
+    /// 草むらタフト（約350個）と小石（60個）を草地に決定論的に散布する。
+    /// シードは Random.InitState(20260612) で固定。すべて static フラグ・コライダー無し。
+    /// 草タフトは ShadowCastingMode.Off（数が多くシャドウマップを汚すため）。
+    /// </summary>
+    private static void ScatterGroundVegetation()
+    {
+        Random.InitState(20260612);
+
+        var grassParent = new GameObject("GroundVegetation");
+        SetStatic(grassParent);
+
+        // --- 草タフト用マテリアル: Enigma/ToonLeaf + GrassBlade.png、_Cutoff 0.45 ---
+        // 交差 Quad は単面のため、両面・輪郭線なしの葉専用シェーダーを使う
+        var grassTex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+            "Assets/_Project/UI/Textures/GrassBlade.png");
+        var matGrass = GetOrCreateMat("GrassTuft", new Color(0.55f, 0.78f, 0.40f));
+        var leafShader = Shader.Find("Enigma/ToonLeaf");
+        if (leafShader != null) matGrass.shader = leafShader;
+        ApplyWutheringRamp(matGrass);
+        if (grassTex != null) matGrass.SetTexture("_BaseMap", grassTex);
+        if (matGrass.HasProperty("_Cutoff")) matGrass.SetFloat("_Cutoff", 0.45f);
+        matGrass.EnableKeyword("_ALPHATEST_ON");
+        matGrass.SetOverrideTag("RenderType", "TransparentCutout");
+        matGrass.renderQueue = (int)RenderQueue.AlphaTest;
+        EditorUtility.SetDirty(matGrass);
+
+        // 交差 Quad タフトの共有メッシュ（1m 四方の Quad を3枚 0/60/120°で交差）
+        var tuftMesh = CreateCrossedQuadMesh();
+
+        // --- 草タフト 約350個 ---
+        const int grassGoal = 350;
+        int grassPlaced = 0;
+        int grassAttempts = 0;
+        while (grassPlaced < grassGoal && grassAttempts < grassGoal * 12)
+        {
+            grassAttempts++;
+            // 草地: 半径 18〜68 のリング内（外周岩壁 72 の内側）に一様散布。
+            float r   = 18f + Random.value * 50f;
+            float ang = Random.value * 360f * Mathf.Deg2Rad;
+            float gx  = r * Mathf.Cos(ang);
+            float gz  = r * Mathf.Sin(ang);
+            var pos   = new Vector3(gx, 0f, gz);
+            if (IsExcludedFromScatter(pos)) continue;
+
+            float size = 0.7f + Random.value * 0.4f; // 0.7〜1.1m
+            float yaw  = Random.value * 360f;
+
+            var tuft = new GameObject($"GrassTuft_{grassPlaced:D3}");
+            tuft.transform.SetParent(grassParent.transform, false);
+            tuft.transform.position   = pos;
+            tuft.transform.localScale = new Vector3(size, size, size);
+            tuft.transform.rotation   = Quaternion.Euler(0f, yaw, 0f);
+            var mf = tuft.AddComponent<MeshFilter>();
+            mf.sharedMesh = tuftMesh;
+            var mr = tuft.AddComponent<MeshRenderer>();
+            mr.sharedMaterial = matGrass;
+            // 草は影を落とさない（数が多くシャドウマップを汚す）
+            mr.shadowCastingMode = ShadowCastingMode.Off;
+            SetStatic(tuft);
+            grassPlaced++;
+        }
+
+        // --- 小石 60個（灰系2色の扁平 Sphere、コライダー無し）---
+        var matPebbleA = GetOrCreateMat("PebbleA", new Color(0.55f, 0.55f, 0.57f));
+        var matPebbleB = GetOrCreateMat("PebbleB", new Color(0.42f, 0.43f, 0.40f));
+        ApplyWutheringRamp(matPebbleA);
+        ApplyWutheringRamp(matPebbleB);
+
+        const int pebbleGoal = 60;
+        int pebblePlaced = 0;
+        int pebbleAttempts = 0;
+        while (pebblePlaced < pebbleGoal && pebbleAttempts < pebbleGoal * 12)
+        {
+            pebbleAttempts++;
+            float r   = 18f + Random.value * 50f;
+            float ang = Random.value * 360f * Mathf.Deg2Rad;
+            float px  = r * Mathf.Cos(ang);
+            float pz  = r * Mathf.Sin(ang);
+            var pos   = new Vector3(px, 0f, pz);
+            if (IsExcludedFromScatter(pos)) continue;
+
+            float s = 0.25f + Random.value * 0.4f; // 0.25〜0.65m
+            var pebble = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            // 当たり判定不要 → 自動付与された Collider を除去
+            var col = pebble.GetComponent<Collider>();
+            if (col != null) Object.DestroyImmediate(col);
+            pebble.name = $"Pebble_{pebblePlaced:D2}";
+            pebble.transform.SetParent(grassParent.transform, false);
+            // 扁平（地面に半埋まり）
+            pebble.transform.position   = new Vector3(px, s * 0.18f, pz);
+            pebble.transform.localScale = new Vector3(s, s * 0.5f, s);
+            pebble.transform.rotation   = Quaternion.Euler(0f, Random.value * 360f, 0f);
+            SetMat(pebble, (Random.value < 0.5f) ? matPebbleA : matPebbleB);
+            SetStatic(pebble);
+            pebblePlaced++;
+        }
+
+        Debug.Log($"[BuildAetherRiftMap] 植生散布: 草タフト {grassPlaced}個 / 小石 {pebblePlaced}個");
+    }
+
+    /// <summary>
+    /// 1m 四方の Quad を Y 軸 0°/60°/120° で交差させた単一メッシュを生成する（草タフト用）。
+    /// 各 Quad は原点を底辺中央とし、上方向（+Y）へ立つ。両面描画のため法線は上向き固定。
+    /// </summary>
+    private static Mesh CreateCrossedQuadMesh()
+    {
+        var mesh = new Mesh { name = "GrassCrossedQuad" };
+        var verts = new System.Collections.Generic.List<Vector3>();
+        var uvs   = new System.Collections.Generic.List<Vector2>();
+        var tris  = new System.Collections.Generic.List<int>();
+
+        float[] degs = { 0f, 60f, 120f };
+        foreach (float deg in degs)
+        {
+            float rad = deg * Mathf.Deg2Rad;
+            var dir = new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad));
+            float half = 0.5f;
+            // 底辺は y=0、上辺は y=1。
+            var bl = -dir * half;                       // 底辺左
+            var br =  dir * half;                        // 底辺右
+            var tl = -dir * half + Vector3.up;           // 上辺左
+            var tr =  dir * half + Vector3.up;           // 上辺右
+            int baseIdx = verts.Count;
+            verts.Add(bl); verts.Add(br); verts.Add(tr); verts.Add(tl);
+            uvs.Add(new Vector2(0f, 0f)); uvs.Add(new Vector2(1f, 0f));
+            uvs.Add(new Vector2(1f, 1f)); uvs.Add(new Vector2(0f, 1f));
+            // 表裏両面（背面カリングでも見えるよう2組）
+            tris.Add(baseIdx + 0); tris.Add(baseIdx + 2); tris.Add(baseIdx + 1);
+            tris.Add(baseIdx + 0); tris.Add(baseIdx + 3); tris.Add(baseIdx + 2);
+            tris.Add(baseIdx + 0); tris.Add(baseIdx + 1); tris.Add(baseIdx + 2);
+            tris.Add(baseIdx + 0); tris.Add(baseIdx + 2); tris.Add(baseIdx + 3);
+        }
+
+        mesh.SetVertices(verts);
+        mesh.SetUVs(0, uvs);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    /// <summary>
+    /// 1 樹種の FBX プレハブと、そのトゥーンマテリアル群（幹 + 葉3トーン）を束ねる。
+    /// マテリアル名規約は ConvertNatureMaterials が生成するものに一致させる。
+    /// </summary>
+    private sealed class NatureSpecies
+    {
+        public GameObject Prefab;
+        public Material   Bark;
+        public Material[] LeafTones; // 3 トーン（標準/黄緑/深緑）。フラット樹種でも 3 本。
+        public bool       IsDead;    // 枯木フラグ（葉なし扱い）
+        public int        Weight;    // 出現重み（合計から正規化）
+    }
+
+    /// <summary>
+    /// Nature 樹種テーブルをロードする。FBX とマテリアルを Assets/External/Nature から読む。
+    /// マテリアルは ConvertNatureMaterials が事前生成している前提。欠けていれば null のまま
+    /// （PlaceOneNatureTree 側でフォールバック）。
+    /// </summary>
+    private static System.Collections.Generic.List<NatureSpecies> LoadNatureSpecies()
+    {
+        var list = new System.Collections.Generic.List<NatureSpecies>();
+
+        // 出現重み: Tree 40 / Birch 25 / Pine 25 / TreeToon 10。DeadTree は専用枠。
+        AddSpecies(list, "Tree_1",             "Tree",     weight: 40, isDead: false);
+        AddSpecies(list, "Birch_1",            "Birch",    weight: 25, isDead: false);
+        AddSpecies(list, "Pine_1",             "Pine",     weight: 25, isDead: false);
+        AddSpecies(list, "TreeToonStylized01", "TreeToon", weight: 10, isDead: false);
+        // DeadTree は通常の重みテーブルに含めず、確率判定で別扱い（weight 0）。
+        AddSpecies(list, "DeadTree_1",         "DeadTree", weight: 0,  isDead: true);
+
+        return list;
+    }
+
+    private static void AddSpecies(
+        System.Collections.Generic.List<NatureSpecies> list,
+        string fbxName, string matSpecies, int weight, bool isDead)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+            $"Assets/External/Nature/{fbxName}.fbx");
+        if (prefab == null) return; // FBX が無ければスキップ
+
+        const string matDir = "Assets/External/Nature/Materials";
+        var bark = AssetDatabase.LoadAssetAtPath<Material>($"{matDir}/Nature_{matSpecies}_Bark.mat");
+        var leaves = new Material[3];
+        for (int i = 0; i < 3; i++)
+            leaves[i] = AssetDatabase.LoadAssetAtPath<Material>($"{matDir}/Nature_{matSpecies}_Leaf_{i}.mat");
+
+        list.Add(new NatureSpecies
+        {
+            Prefab = prefab, Bark = bark, LeafTones = leaves,
+            IsDead = isDead, Weight = weight,
+        });
+    }
+
+    /// <summary>重み付き抽選で通常樹種を1つ選ぶ。allowDeadTree かつ5%判定が当たれば枯木を返す。</summary>
+    private static NatureSpecies PickSpecies(
+        System.Collections.Generic.List<NatureSpecies> species,
+        System.Random rng, bool allowDeadTree)
+    {
+        if (species.Count == 0) return null;
+
+        // ジャングル奥のみ、5%未満の確率で枯木を選ぶ。
+        if (allowDeadTree && rng.NextDouble() < 0.04)
+        {
+            foreach (var s in species) if (s.IsDead) return s;
+        }
+
+        int totalWeight = 0;
+        foreach (var s in species) totalWeight += s.Weight;
+        if (totalWeight <= 0)
+        {
+            // 重み無し（マテリアル未変換等）→ 非枯木を等確率で。
+            foreach (var s in species) if (!s.IsDead) return s;
+            return species[0];
+        }
+
+        int roll = rng.Next(0, totalWeight);
+        foreach (var s in species)
+        {
+            if (s.Weight <= 0) continue;
+            roll -= s.Weight;
+            if (roll < 0) return s;
+        }
+        return species[0];
+    }
+
+    /// <summary>
+    /// 高品質 FBX の木を1本配置する。ロード後に bounds を測って目標樹高 4.5〜7m へ
+    /// 正規化スケールし、モデルごとの原寸差を吸収する。葉は 3 トーンからシード固定で割当。
+    /// コライダーは幹相当の CapsuleCollider。Renderer の shadowCastingMode は既定（On）。
     /// </summary>
     private static void PlaceOneTree(
-        GameObject[] treeModels, System.Random rng,
-        float tx, float tz, int q, int index, Material matJungle)
+        System.Collections.Generic.List<NatureSpecies> species, System.Random rng,
+        float tx, float tz, int q, int index, Material matJungle, bool allowDeadTree)
     {
-        float treeScale = (float)(rng.NextDouble() * 2.4 + 3.8); // 3.8〜6.2
-        float yaw       = (float)(rng.NextDouble() * 360.0);
-        int   modelIdx  = treeModels.Length > 0 ? rng.Next(0, treeModels.Length) : -1;
+        float yaw = (float)(rng.NextDouble() * 360.0);
+        var sp   = PickSpecies(species, rng, allowDeadTree);
 
         GameObject treeGo;
-        if (modelIdx >= 0 && treeModels[modelIdx] != null)
+        if (sp != null && sp.Prefab != null)
         {
-            treeGo = (GameObject)PrefabUtility.InstantiatePrefab(treeModels[modelIdx]);
-            treeGo.transform.position   = new Vector3(tx, 0f, tz);
-            treeGo.transform.localScale = Vector3.one * treeScale;
-            treeGo.transform.rotation   = Quaternion.Euler(0f, yaw, 0f);
-            // コライダー半径はスケールに比例（base 0.6 @ scale 4.5）
-            float capRadius = 0.6f * (treeScale / 4.5f);
+            treeGo = (GameObject)PrefabUtility.InstantiatePrefab(sp.Prefab);
+            treeGo.transform.position = new Vector3(tx, 0f, tz);
+            treeGo.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+
+            // --- 原寸差の吸収: ローカル bounds の高さを測り目標樹高へ正規化 ---
+            // 目標樹高 4.5〜7m の乱数 + スタイル用に 0.9〜1.4 のランダム倍率を掛ける。
+            float targetHeight = (float)(rng.NextDouble() * 2.5 + 4.5);  // 4.5〜7
+            float styleMul     = (float)(rng.NextDouble() * 0.5 + 0.9);  // 0.9〜1.4
+            float normScale    = ComputeNormalizedScale(treeGo, targetHeight) * styleMul;
+            // FBX ルートはファイル単位変換のスケール(例: 100)を持つことがあるため、
+            // 上書きでなく現在値への乗算で正規化する(計測 bounds は現在スケール込みのため)
+            treeGo.transform.localScale = treeGo.transform.localScale * normScale;
+
+            // --- マテリアル差し替え: 葉トーンをシード固定で抽選し、幹/葉を判定して割当 ---
+            int leafTone = rng.Next(0, 3);
+            ApplyNatureMaterials(treeGo, sp, leafTone);
+
+            // コライダー: 幹相当の半径（正規化後の樹高に比例）。
+            float capHeight = targetHeight * styleMul;
             var cap = treeGo.AddComponent<CapsuleCollider>();
-            cap.center = new Vector3(0f, 2f, 0f);
-            cap.radius = capRadius;
-            cap.height = 5f;
+            cap.center = new Vector3(0f, capHeight * 0.5f, 0f);
+            cap.radius = Mathf.Max(0.25f, capHeight * 0.06f);
+            cap.height = capHeight;
         }
         else
         {
+            // フォールバック（FBX 欠落時）: 旧来の円柱ダミー。
+            float treeScale = (float)(rng.NextDouble() * 2.4 + 3.8);
             treeGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             treeGo.transform.position   = new Vector3(tx, 2.5f, tz);
             treeGo.transform.localScale = new Vector3(0.8f * treeScale / 4.5f, 2.5f * treeScale / 4.5f, 0.8f * treeScale / 4.5f);
@@ -1995,6 +2260,58 @@ public static class BuildAetherRiftMap
         }
         treeGo.name = $"Tree_Q{q}_{index:D2}";
         SetStatic(treeGo);
+    }
+
+    /// <summary>
+    /// GameObject の全 Renderer のローカル bounds 高さから、目標樹高へ収めるための一様スケールを返す。
+    /// bounds はワールド（現状 scale=1）で測れるため、目標高 / 現高 がそのまま正規化倍率になる。
+    /// </summary>
+    private static float ComputeNormalizedScale(GameObject go, float targetHeight)
+    {
+        var bounds = new Bounds(Vector3.zero, Vector3.zero);
+        bool init = false;
+        foreach (var r in go.GetComponentsInChildren<Renderer>())
+        {
+            if (!init) { bounds = r.bounds; init = true; }
+            else bounds.Encapsulate(r.bounds);
+        }
+        if (!init || bounds.size.y < 1e-4f) return 1f;
+        return targetHeight / bounds.size.y;
+    }
+
+    /// <summary>
+    /// 木の各 Renderer のサブメッシュを「幹」か「葉」か推定して Toon マテリアルを差し替える。
+    /// 元マテリアル名/レンダラー名に "leaf/leaves/foliage/needle" を含むものを葉とみなす。
+    /// 枯木（IsDead）は全て幹マテリアルで塗る。判定不能時は幹マテリアルを既定とする。
+    /// </summary>
+    private static void ApplyNatureMaterials(GameObject go, NatureSpecies sp, int leafTone)
+    {
+        var leafMat = (sp.LeafTones != null && sp.LeafTones[leafTone] != null)
+            ? sp.LeafTones[leafTone] : null;
+        var barkMat = sp.Bark;
+
+        foreach (var r in go.GetComponentsInChildren<Renderer>())
+        {
+            var mats = r.sharedMaterials;
+            var next = new Material[mats.Length];
+            for (int i = 0; i < mats.Length; i++)
+            {
+                bool isLeaf = !sp.IsDead && IsLeafSlot(r, mats[i]);
+                var chosen  = isLeaf ? leafMat : barkMat;
+                // マテリアル未変換時は元のマテリアルを温存（null 差し替えを避ける）。
+                next[i] = chosen != null ? chosen : mats[i];
+            }
+            r.sharedMaterials = next;
+        }
+    }
+
+    /// <summary>レンダラー名 / 元マテリアル名から葉スロットかを推定する。</summary>
+    private static bool IsLeafSlot(Renderer r, Material srcMat)
+    {
+        string name = ((srcMat != null ? srcMat.name : "") + " " + r.gameObject.name).ToLowerInvariant();
+        return name.Contains("leaf") || name.Contains("leaves")
+            || name.Contains("foliage") || name.Contains("needle")
+            || name.Contains("canopy");
     }
 
     /// <summary>点 p から線分 a-b への最短距離を返す（XZ 平面で評価）。</summary>

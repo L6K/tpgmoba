@@ -230,5 +230,71 @@ namespace Enigma.UI
             }
             return px;
         }
+
+        /// <summary>
+        /// 草むらタフト用の RGBA テクスチャ。透明背景に細い三角ブレードを 5〜7 本描く。
+        /// 各ブレードは根本（下端）が太く先端（上端）で幅 0 に収束し、緑の縦グラデを持つ。
+        /// 決定論的（内部ハッシュのみで乱数源を使わない）なのでベイク結果は常に同一。
+        /// 返す配列は行 0 = 下端（テクスチャ下端 = 草の根本）。
+        /// </summary>
+        public static Color[] GrassBladeTexture(int size)
+        {
+            var px = new Color[size * size]; // 既定 (0,0,0,0) = 透明背景
+
+            // ブレード本数は size から決定論的に 5〜7 本へ。
+            int bladeCount = 5 + (Hash01Int(size, 911) % 3); // 5,6,7
+
+            var rootX   = new float[bladeCount];
+            var tipX    = new float[bladeCount];
+            var topY    = new float[bladeCount];
+            var rootHalf = new float[bladeCount];
+            for (int b = 0; b < bladeCount; b++)
+            {
+                // 根本 x はテクスチャ幅にほぼ均等分布させ、ハッシュで微小に揺らす。
+                float spread = (b + 0.5f) / bladeCount;
+                rootX[b] = (spread + (Hash01(b, 0, 71) - 0.5f) * 0.12f) * (size - 1);
+                // 先端は根本から横へ傾ける（風に揺れた葉のシルエット）。
+                tipX[b]  = rootX[b] + (Hash01(b, 1, 73) - 0.5f) * size * 0.45f;
+                // 葉の高さは上端の 70〜100%。
+                topY[b]  = (0.7f + Hash01(b, 2, 79) * 0.3f) * (size - 1);
+                // 根本の半幅（先端へ向け 0 に収束）。
+                rootHalf[b] = (0.018f + Hash01(b, 3, 83) * 0.02f) * size;
+            }
+
+            for (int y = 0; y < size; y++)
+            {
+                int rowStart = y * size;
+                for (int x = 0; x < size; x++)
+                {
+                    for (int b = 0; b < bladeCount; b++)
+                    {
+                        if (y > topY[b]) continue; // 葉先より上は描かない
+                        float t = topY[b] <= 0f ? 0f : y / topY[b]; // 0=根本, 1=先端
+                        // 根本から先端へ x を補間し、半幅は先端で 0 に。
+                        float centerX = Mathf.Lerp(rootX[b], tipX[b], t);
+                        float half    = rootHalf[b] * (1f - t);
+                        if (half <= 0f) continue;
+                        if (Mathf.Abs(x - centerX) <= half)
+                        {
+                            // 縦グラデ: 根本は濃い緑、先端は明るい黄緑。
+                            var col = Color.Lerp(
+                                new Color(0.16f, 0.38f, 0.14f, 1f),
+                                new Color(0.42f, 0.70f, 0.30f, 1f), t);
+                            px[rowStart + x] = col;
+                        }
+                    }
+                }
+            }
+            return px;
+        }
+
+        private static int Hash01Int(int a, int seed)
+        {
+            unchecked
+            {
+                int h = seed * 73856093 ^ a * 19349663;
+                return h & 0x7FFFFFFF;
+            }
+        }
     }
 }
