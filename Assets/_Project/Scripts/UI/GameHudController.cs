@@ -23,7 +23,10 @@ namespace Enigma.UI
 
         // HP バー
         private VisualElement _hpFill;
+        private VisualElement _hpDamage;
         private Label         _hpText;
+        private VisualElement _hpBarBg;
+        private float         _lastMaxHp = -1f;
 
         // チームバフ残り時間ラベル
         private Label _buffLabel;
@@ -41,7 +44,8 @@ namespace Enigma.UI
         private readonly Label[]         _skillCdText   = new Label[4];
 
         // 所持金ラベル
-        private Label _goldLabel;
+        private Label  _goldLabel;
+        private int    _lastGold = -1;
 
         // アイテムスロット（6枠）
         private readonly VisualElement[] _itemSlots    = new VisualElement[6];
@@ -60,7 +64,9 @@ namespace Enigma.UI
             var root = _uiDocument.rootVisualElement;
 
             _timerLabel = root.Q<Label>("hud-timer");
+            _hpBarBg    = root.Q<VisualElement>("hud-hp-bar-bg");
             _hpFill     = root.Q<VisualElement>("hud-hp-fill");
+            _hpDamage   = root.Q<VisualElement>("hud-hp-damage");
             _hpText     = root.Q<Label>("hud-hp-text");
             _buffLabel  = root.Q<Label>("hud-buff");
             _levelLabel = root.Q<Label>("hud-level");
@@ -114,14 +120,73 @@ namespace Enigma.UI
         private void UpdateHp()
         {
             if (_playerHealth == null || _playerHealth.Model == null) return;
-            var model    = _playerHealth.Model;
-            float ratio  = model.MaxHp > 0f ? Mathf.Clamp01(model.CurrentHp / model.MaxHp) : 0f;
+            var model   = _playerHealth.Model;
+            float maxHp = model.MaxHp;
+            float ratio = maxHp > 0f ? Mathf.Clamp01(model.CurrentHp / maxHp) : 0f;
+            float pct   = ratio * 100f;
+
+            // 最大 HP が変わったとき（初回含む）目盛りを再生成する
+            if (!Mathf.Approximately(maxHp, _lastMaxHp))
+            {
+                _lastMaxHp = maxHp;
+                RebuildHpTicks(maxHp);
+            }
 
             if (_hpFill != null)
-                _hpFill.style.width = Length.Percent(ratio * 100f);
+                _hpFill.style.width = Length.Percent(pct);
+
+            // ダメージトレイル: 減少時は delay 付き transition で遅れて縮む。回復時は即追従。
+            if (_hpDamage != null)
+            {
+                bool healing = pct > _hpDamage.resolvedStyle.width / (_hpBarBg?.resolvedStyle.width ?? 1f) * 100f;
+                if (healing)
+                {
+                    // 遅延なしで即追従（インライン transition-delay を 0 に上書き）
+                    _hpDamage.style.transitionDelay = new StyleList<TimeValue>(
+                        new System.Collections.Generic.List<TimeValue> { new TimeValue(0f, TimeUnit.Second) });
+                }
+                else
+                {
+                    // USS の delay (0.25s) に戻す
+                    _hpDamage.style.transitionDelay = StyleKeyword.Null;
+                }
+                _hpDamage.style.width = Length.Percent(pct);
+            }
+
+            // 低 HP 警告クラス
+            if (_hpFill != null)
+                _hpFill.EnableInClassList("hud-hp-fill--low", ratio < 0.3f);
 
             if (_hpText != null)
-                _hpText.text = $"{Mathf.CeilToInt(model.CurrentHp)} / {Mathf.CeilToInt(model.MaxHp)}";
+                _hpText.text = $"{Mathf.CeilToInt(model.CurrentHp)} / {Mathf.CeilToInt(maxHp)}";
+        }
+
+        private void RebuildHpTicks(float maxHp)
+        {
+            if (_hpBarBg == null) return;
+
+            // 既存 tick を削除
+            var existing = _hpBarBg.Query<VisualElement>(className: "hud-hp-tick").ToList();
+            foreach (var t in existing)
+                t.RemoveFromHierarchy();
+
+            int count = HealthBarTicks.InnerTickCount(maxHp);
+            for (int i = 1; i <= count; i++)
+            {
+                float leftPct = HealthBarTicks.TickRatio(maxHp, i) * 100f;
+                var tick = new VisualElement();
+                tick.AddToClassList("hud-hp-tick");
+                tick.style.position        = Position.Absolute;
+                tick.style.left            = Length.Percent(leftPct);
+                tick.style.top             = 0;
+                tick.style.bottom          = 0;
+                tick.style.width           = 1;
+                tick.style.backgroundColor = new StyleColor(new Color(0f, 0f, 0f, 0.45f));
+
+                // fill の直後、hp-text の直前に挿入して描画順を制御
+                int insertIndex = _hpBarBg.IndexOf(_hpFill) + 1;
+                _hpBarBg.Insert(insertIndex, tick);
+            }
         }
 
         private void UpdateSkills()
@@ -206,7 +271,23 @@ namespace Enigma.UI
         private void UpdateGoldAndItems()
         {
             if (_goldLabel != null && _playerWallet != null)
-                _goldLabel.text = $"{_playerWallet.Wallet.Gold} G";
+            {
+                int gold = _playerWallet.Wallet.Gold;
+                if (gold != _lastGold)
+                {
+                    bool increased = gold > _lastGold && _lastGold >= 0;
+                    _lastGold = gold;
+                    _goldLabel.text = $"{gold} G";
+
+                    if (increased)
+                    {
+                        _goldLabel.AddToClassList("hud-gold--pulse");
+                        _goldLabel.schedule.Execute(() =>
+                            _goldLabel.RemoveFromClassList("hud-gold--pulse"))
+                            .StartingIn(300);
+                    }
+                }
+            }
 
             if (_playerItems == null) return;
             var items = _playerItems.Inventory.Items;

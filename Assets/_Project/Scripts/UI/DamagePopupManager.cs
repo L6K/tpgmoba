@@ -44,8 +44,11 @@ namespace Enigma.UI
         private void SpawnPopup(HealthComponent hc, float amount)
         {
             // 頭上 +1.8 をアンカー位置にする（ポップアップはそこから相対で上昇）
+            // 水平ジッターで連続ヒット時の重なりを防ぐ
+            var jitter = Random.insideUnitCircle * 0.25f;
             var anchor = new GameObject("PopupAnchor");
-            anchor.transform.position = hc.transform.position + Vector3.up * 1.8f;
+            anchor.transform.position = hc.transform.position + Vector3.up * 1.8f
+                + new Vector3(jitter.x, 0f, jitter.y);
 
             var popupGo  = new GameObject("DamagePopup");
             popupGo.transform.SetParent(anchor.transform, false);

@@ -44,6 +44,7 @@
                 <!-- HP バー行 -->
                 <ui:VisualElement class="hud-hp-row">
                     <ui:VisualElement name="hud-hp-bar-bg" class="hud-hp-bar-bg">
+                        <ui:VisualElement name="hud-hp-damage" class="hud-hp-damage" />
                         <ui:VisualElement name="hud-hp-fill" class="hud-hp-fill" />
                         <!-- HP テキストをバー中央に重ねる -->
                         <ui:Label name="hud-hp-text" class="hud-hp-text" text="200 / 200" />

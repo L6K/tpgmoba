@@ -644,7 +644,8 @@ public static class BuildAetherRiftMap
 
         // 頭上 HP バー（緑）＋ レベル表示テキスト
         var matBarGreenPlayer = GetOrCreateBarMat("BarGreen", new Color(0.30f, 0.85f, 0.35f));
-        var playerBarFill     = CreateWorldHealthBar(player.transform, 1.4f, 2.1f, matBarGreenPlayer);
+        // プレイヤーのピボットはカプセル中心（地上+1.05m）。UnityChan の頭頂はローカル+0.45 付近
+        var playerBarFill     = CreateWorldHealthBar(player.transform, 1.05f, 0.65f, matBarGreenPlayer, 200f);
 
         // LevelText: HealthBar GO の子に配置し、バー左側に添える
         var healthBarGo = player.transform.Find("HealthBar");
@@ -652,13 +653,13 @@ public static class BuildAetherRiftMap
         {
             var lvTextGo = new GameObject("LevelText");
             lvTextGo.transform.SetParent(healthBarGo, false);
-            // 親の HealthBar が既に頭上 (y+2.1) にあるためローカル Y は 0
-            lvTextGo.transform.localPosition = new Vector3(-0.95f, 0f, 0f);
+            // 親の HealthBar が既に頭上 (y+1.75) にあるためローカル Y は 0
+            lvTextGo.transform.localPosition = new Vector3(-0.68f, 0f, 0f);
             var lvTm             = lvTextGo.AddComponent<TextMesh>();
             lvTm.text            = "1";
             lvTm.color           = Color.white;
             lvTm.fontSize        = 36;
-            lvTm.characterSize   = 0.06f;
+            lvTm.characterSize   = 0.05f;
             lvTm.anchor          = TextAnchor.MiddleCenter;
             lvTm.alignment       = TextAlignment.Center;
         }
@@ -920,8 +921,9 @@ public static class BuildAetherRiftMap
     /// <param name="width">バーの全幅</param>
     /// <param name="yOffset">頭上オフセット（localPosition.y）</param>
     /// <param name="fillMat">Fill Quad に設定するマテリアル</param>
+    /// <param name="maxHp">目盛り間隔の計算に使う最大 HP</param>
     private static Transform CreateWorldHealthBar(
-        Transform parent, float width, float yOffset, Material fillMat)
+        Transform parent, float width, float yOffset, Material fillMat, float maxHp)
     {
         var matBack = GetOrCreateBarMat("BarBack", new Color(0.08f, 0.08f, 0.10f));
 
@@ -957,6 +959,24 @@ public static class BuildAetherRiftMap
         fill.transform.localScale    = new Vector3(width, 0.14f, 1f);
         fill.GetComponent<Renderer>().sharedMaterial = fillMat;
         Object.DestroyImmediate(fill.GetComponent<MeshCollider>());
+
+        // 目盛り Quad: Background の子として各目盛り位置に配置。
+        // Background は 1x1 Quad（localScale = (width, 0.18, 1)）なので、
+        // 子の localPosition.x は [-0.5, +0.5] が全幅に対応。
+        // FillWrapper は hpBar ローカル z=-0.001 なので、z=-0.002 で Fill より手前に描画される。
+        var matTick   = GetOrCreateBarMat("BarTick", new Color(0.05f, 0.05f, 0.05f));
+        int tickCount = HealthBarTicks.InnerTickCount(maxHp);
+        for (int i = 1; i <= tickCount; i++)
+        {
+            float ratio = HealthBarTicks.TickRatio(maxHp, i);
+            var tick = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            tick.name = $"Tick_{i}";
+            tick.transform.SetParent(bg.transform, false);
+            tick.transform.localPosition = new Vector3(ratio - 0.5f, 0f, -0.002f);
+            tick.transform.localScale    = new Vector3(0.02f / width, 1f, 1f);
+            tick.GetComponent<Renderer>().sharedMaterial = matTick;
+            Object.DestroyImmediate(tick.GetComponent<MeshCollider>());
+        }
 
         return fillWrapper.transform;
     }
@@ -1295,7 +1315,7 @@ public static class BuildAetherRiftMap
         var td = dummy.AddComponent<TargetDummy>();
 
         var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
-        var wrapper   = CreateWorldHealthBar(dummy.transform, 1.2f, 1.6f, matBarRed);
+        var wrapper   = CreateWorldHealthBar(dummy.transform, 1.2f, 1.6f, matBarRed, 200f);
 
         var soTd = new SerializedObject(td);
         soTd.FindProperty("_barFill").objectReferenceValue = wrapper;
@@ -1329,7 +1349,7 @@ public static class BuildAetherRiftMap
         // プレハブのデフォルト色は BarRed（敵チーム）。Blue のときは MinionAI.Initialize で差し替える
         var matBarRed   = GetOrCreateBarMat("BarRed",   new Color(0.92f, 0.30f, 0.25f));
         var matBarGreen = GetOrCreateBarMat("BarGreen",  new Color(0.30f, 0.85f, 0.35f));
-        var wrapper     = CreateWorldHealthBar(go.transform, 1.2f, 1.6f, matBarRed);
+        var wrapper     = CreateWorldHealthBar(go.transform, 1.2f, 1.6f, matBarRed, 50f);
 
         // HealthComponent の maxHp を 50 に設定
         var soHc = new SerializedObject(go.GetComponent<HealthComponent>());
@@ -1469,7 +1489,7 @@ public static class BuildAetherRiftMap
 
         // ボスの頭上 HP バー（中立ボスは BarRed、幅は大きめ 2.4）
         var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
-        var wrapper   = CreateWorldHealthBar(boss.transform, 2.4f, 1.6f, matBarRed);
+        var wrapper   = CreateWorldHealthBar(boss.transform, 2.4f, 1.6f, matBarRed, 1000f);
 
         // TargetDummy を流用してボスのバー更新（リスポーンなし）
         var td = boss.AddComponent<TargetDummy>();
@@ -1615,7 +1635,7 @@ public static class BuildAetherRiftMap
 
         // 頭上 HP バー（中立モンスターは BarRed）
         var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
-        var wrapper   = CreateWorldHealthBar(parent.transform, 1.2f, 1.6f, matBarRed);
+        var wrapper   = CreateWorldHealthBar(parent.transform, 1.2f, 1.6f, matBarRed, 120f);
 
         // JungleMonster コンポーネント: Initialize で campCenter と barFill（FillWrapper）を渡す
         var jm = parent.AddComponent<JungleMonster>();

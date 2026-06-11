@@ -226,6 +226,17 @@
     position: relative;
 }
 
+/* HP ダメージトレイル: fill の下に置き、transition の遅延差でトレイルが生まれる */
+.hud-hp-damage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: rgba(255, 240, 215, 0.85);
+    transition: width 0.45s ease 0.25s;
+}
+
 /* HP fill: LoL 風グリーン（width は Controller が % 制御） */
 .hud-hp-fill {
     position: absolute;
@@ -235,6 +246,12 @@
     width: 100%;
     background-color: var(--color-hp);
     border-radius: 1px;
+    transition: width 0.12s ease-out;
+}
+
+/* 低 HP 警告色（比率 < 0.3 で付与） */
+.hud-hp-fill--low {
+    background-color: rgb(214, 84, 48);
 }
 
 /* HP テキスト: バー中央に白字で重ねる */
@@ -266,6 +283,7 @@
     width: 100%;
     background-color: var(--color-xp);
     border-radius: 1px;
+    transition: width 0.25s ease-out;
 }
 
 /* ── スキルスロット列 ────────────────────────────────── */
@@ -404,6 +422,13 @@
     -unity-text-align: middle-right;
     letter-spacing: 0;
     padding-right: 2px;
+    transition: color 0.2s, scale 0.2s;
+}
+
+/* 所持金増加パルスエフェクト */
+.hud-gold--pulse {
+    color: rgb(255, 230, 150);
+    scale: 1.12 1.12;
 }
 
 /* ── ショップ範囲外ヒント ────────────────────────────── */
