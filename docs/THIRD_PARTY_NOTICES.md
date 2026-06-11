@@ -17,3 +17,31 @@
 ### TODO
 
 - [ ] ホーム画面またはタイトル画面にクレジット表記を追加（配布前に必須）
+
+---
+
+## Marcellus (フォント)
+
+- 提供: Astigmatic
+- ライセンス: SIL Open Font License 1.1 (OFL-1.1)
+- ライセンス全文: https://openfontlicense.org/open-font-license-official-text/
+- 配置: `Assets/_Project/UI/Fonts/Marcellus-Regular.ttf`
+
+---
+
+## Noto Sans JP (フォント)
+
+- 提供: Google LLC
+- ライセンス: SIL Open Font License 1.1 (OFL-1.1)
+- ライセンス全文: https://openfontlicense.org/open-font-license-official-text/
+- 配置: `Assets/_Project/UI/Fonts/NotoSansJP.ttf`
+
+---
+
+## Kenney Game Icons / Game Icons Expansion (アイコン)
+
+- 提供: Kenney (kenney.nl)
+- ライセンス: Creative Commons Zero v1.0 Universal (CC0 1.0)
+- ライセンス全文: https://creativecommons.org/publicdomain/zero/1.0/
+- 配置: `Assets/_Project/UI/Icons/` (白色 1x PNG、16 ファイル)
+- クレジット表記: 不要（CC0 パブリックドメイン）。任意で "Assets by Kenney (kenney.nl)" と表記可

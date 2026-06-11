@@ -42,6 +42,7 @@ namespace Enigma.UI
         private readonly Label[]         _skillKeys     = new Label[4];
         private readonly VisualElement[] _skillCdOverlay = new VisualElement[4];
         private readonly Label[]         _skillCdText   = new Label[4];
+        private readonly VisualElement[] _skillIcons    = new VisualElement[4];
 
         // 所持金ラベル
         private Label  _goldLabel;
@@ -95,6 +96,7 @@ namespace Enigma.UI
                 _skillKeys[i]      = root.Q<Label>($"hud-skill-key-{i}");
                 _skillCdOverlay[i] = root.Q<VisualElement>($"hud-skill-cd-{i}");
                 _skillCdText[i]    = root.Q<Label>($"hud-skill-cdtext-{i}");
+                _skillIcons[i]     = root.Q<VisualElement>($"hud-skill-icon-{i}");
             }
         }
 
@@ -204,6 +206,9 @@ namespace Enigma.UI
                 if (_skillNames[i] != null)
                     _skillNames[i].text = def != null ? def.SkillName : "";
 
+                // Targeting 種別に応じてアイコンクラスを排他付与（背景画像は USS が持つ）
+                UpdateSkillIcon(i, def);
+
                 // キーバインド表示
                 if (_skillKeys[i] != null)
                 {
@@ -227,6 +232,21 @@ namespace Enigma.UI
                         _skillCdText[i].text = remaining.ToString("F1");
                 }
             }
+        }
+
+        // Targeting 種別に対応するアイコンクラスのみを残し、他を外す
+        private void UpdateSkillIcon(int slot, SkillDefinition def)
+        {
+            var icon = _skillIcons[slot];
+            if (icon == null) return;
+
+            bool directional = def != null && def.Targeting == SkillTargeting.Directional;
+            bool aoe         = def != null && def.Targeting == SkillTargeting.GroundAoe;
+            bool targeted    = def != null && def.Targeting == SkillTargeting.Targeted;
+
+            icon.EnableInClassList("hud-skill-icon--directional", directional);
+            icon.EnableInClassList("hud-skill-icon--aoe", aoe);
+            icon.EnableInClassList("hud-skill-icon--targeted", targeted);
         }
 
         private void UpdateBuff()
@@ -298,9 +318,12 @@ namespace Enigma.UI
                 {
                     var item = items[i];
 
-                    // スロット背景色をアイテムのテーマカラーに設定
+                    // スロット背景色をアイテムのテーマカラーに設定。取得済みは金縁を付与
                     if (_itemSlots[i] != null)
+                    {
                         _itemSlots[i].style.backgroundColor = new StyleColor(item.ThemeColor);
+                        _itemSlots[i].EnableInClassList("hud-item-slot--filled", true);
+                    }
 
                     // 頭文字1文字を表示
                     if (_itemInitials[i] != null)
@@ -308,9 +331,12 @@ namespace Enigma.UI
                 }
                 else
                 {
-                    // 空枠: 背景色をデフォルトに戻して文字をクリア
+                    // 空枠: 背景色をデフォルトに戻し、金縁を外して文字をクリア
                     if (_itemSlots[i] != null)
-                        _itemSlots[i].style.backgroundColor = new StyleColor(new Color(10f / 255f, 12f / 255f, 22f / 255f, 0.60f));
+                    {
+                        _itemSlots[i].style.backgroundColor = new StyleColor(new Color(0f, 0f, 0f, 0.35f));
+                        _itemSlots[i].EnableInClassList("hud-item-slot--filled", false);
+                    }
 
                     if (_itemInitials[i] != null)
                         _itemInitials[i].text = "";

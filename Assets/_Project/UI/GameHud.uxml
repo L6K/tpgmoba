@@ -13,9 +13,10 @@
         <ui:Label name="hud-buff" class="hud-buff" text=""
                   style="position: absolute; left: 16px; bottom: 192px; display: none;" />
 
-        <!-- 左下: ミニマップパネル（円形マップ・160x160 正方形） -->
+        <!-- 左下: ミニマップパネル（円形マップ・176x176） -->
         <ui:VisualElement name="hud-minimap" class="hud-minimap">
-            <ui:VisualElement class="minimap-river" />
+            <!-- 内側の暗金リング（二重縁取り装飾・ドットは後からコードで上に追加） -->
+            <ui:VisualElement name="minimap-rim" class="minimap-rim" picking-mode="Ignore" />
         </ui:VisualElement>
 
         <!-- LoL 風統合下部パネル（下部中央） -->
@@ -29,8 +30,9 @@
 
                 <!-- ポートレート枠（装飾のみ・name なし） -->
                 <ui:VisualElement class="hud-portrait-frame">
-                    <ui:VisualElement class="hud-portrait-bg">
-                        <ui:Label class="hud-portrait-initial" text="ゼ" />
+                    <ui:VisualElement class="hud-portrait-bg" picking-mode="Ignore">
+                        <!-- イニシャルはポートレート画像適用に伴い非表示（削除はしない） -->
+                        <ui:Label class="hud-portrait-initial" text="ゼ" style="display: none;" />
                     </ui:VisualElement>
                     <!-- レベルバッジ: 既存 hud-level を左下に金色バッジで重ねる -->
                     <ui:Label name="hud-level" class="hud-level" text="Lv.1" />
@@ -38,8 +40,40 @@
 
             </ui:VisualElement>
 
-            <!-- 中左: HP・XP バー列 -->
+            <!-- 中左: スキル行(上)・HP/XP バー(下) — LoL 準拠の積み順 -->
             <ui:VisualElement class="hud-bars-section">
+
+                <!-- スキル3枠 -->
+                <ui:VisualElement name="hud-skills" class="hud-skills">
+
+                    <!-- スロット 0 (Q) -->
+                    <ui:VisualElement name="hud-skill-0" class="hud-skill-slot">
+                        <ui:VisualElement name="hud-skill-icon-0" class="hud-skill-icon" picking-mode="Ignore" />
+                        <ui:Label name="hud-skill-name-0" class="hud-skill-name" text="" />
+                        <ui:VisualElement name="hud-skill-cd-0" class="hud-skill-cd" />
+                        <ui:Label name="hud-skill-cdtext-0" class="hud-skill-cdtext" text="" />
+                        <ui:Label name="hud-skill-key-0" class="hud-skill-key" text="Q" />
+                    </ui:VisualElement>
+
+                    <!-- スロット 1 (E) -->
+                    <ui:VisualElement name="hud-skill-1" class="hud-skill-slot">
+                        <ui:VisualElement name="hud-skill-icon-1" class="hud-skill-icon" picking-mode="Ignore" />
+                        <ui:Label name="hud-skill-name-1" class="hud-skill-name" text="" />
+                        <ui:VisualElement name="hud-skill-cd-1" class="hud-skill-cd" />
+                        <ui:Label name="hud-skill-cdtext-1" class="hud-skill-cdtext" text="" />
+                        <ui:Label name="hud-skill-key-1" class="hud-skill-key" text="E" />
+                    </ui:VisualElement>
+
+                    <!-- スロット 2 (R) -->
+                    <ui:VisualElement name="hud-skill-2" class="hud-skill-slot">
+                        <ui:VisualElement name="hud-skill-icon-2" class="hud-skill-icon" picking-mode="Ignore" />
+                        <ui:Label name="hud-skill-name-2" class="hud-skill-name" text="" />
+                        <ui:VisualElement name="hud-skill-cd-2" class="hud-skill-cd" />
+                        <ui:Label name="hud-skill-cdtext-2" class="hud-skill-cdtext" text="" />
+                        <ui:Label name="hud-skill-key-2" class="hud-skill-key" text="R" />
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
 
                 <!-- HP バー行 -->
                 <ui:VisualElement class="hud-hp-row">
@@ -54,35 +88,6 @@
                 <!-- XP バー行 -->
                 <ui:VisualElement class="hud-xp-bar-bg">
                     <ui:VisualElement name="hud-xp-fill" class="hud-xp-fill" />
-                </ui:VisualElement>
-
-                <!-- スキル3枠 -->
-                <ui:VisualElement name="hud-skills" class="hud-skills">
-
-                    <!-- スロット 0 (Q) -->
-                    <ui:VisualElement name="hud-skill-0" class="hud-skill-slot">
-                        <ui:Label name="hud-skill-name-0" class="hud-skill-name" text="" />
-                        <ui:VisualElement name="hud-skill-cd-0" class="hud-skill-cd" />
-                        <ui:Label name="hud-skill-cdtext-0" class="hud-skill-cdtext" text="" />
-                        <ui:Label name="hud-skill-key-0" class="hud-skill-key" text="Q" />
-                    </ui:VisualElement>
-
-                    <!-- スロット 1 (E) -->
-                    <ui:VisualElement name="hud-skill-1" class="hud-skill-slot">
-                        <ui:Label name="hud-skill-name-1" class="hud-skill-name" text="" />
-                        <ui:VisualElement name="hud-skill-cd-1" class="hud-skill-cd" />
-                        <ui:Label name="hud-skill-cdtext-1" class="hud-skill-cdtext" text="" />
-                        <ui:Label name="hud-skill-key-1" class="hud-skill-key" text="E" />
-                    </ui:VisualElement>
-
-                    <!-- スロット 2 (R) -->
-                    <ui:VisualElement name="hud-skill-2" class="hud-skill-slot">
-                        <ui:Label name="hud-skill-name-2" class="hud-skill-name" text="" />
-                        <ui:VisualElement name="hud-skill-cd-2" class="hud-skill-cd" />
-                        <ui:Label name="hud-skill-cdtext-2" class="hud-skill-cdtext" text="" />
-                        <ui:Label name="hud-skill-key-2" class="hud-skill-key" text="R" />
-                    </ui:VisualElement>
-
                 </ui:VisualElement>
 
             </ui:VisualElement>
@@ -118,8 +123,11 @@
                     </ui:VisualElement>
                 </ui:VisualElement>
 
-                <!-- 所持金 -->
-                <ui:Label name="hud-gold" class="hud-gold" text="500 G" />
+                <!-- 所持金（コインアイコン + 金額） -->
+                <ui:VisualElement class="hud-gold-row" picking-mode="Ignore">
+                    <ui:VisualElement class="hud-gold-coin" picking-mode="Ignore" />
+                    <ui:Label name="hud-gold" class="hud-gold" text="500 G" />
+                </ui:VisualElement>
 
             </ui:VisualElement>
 

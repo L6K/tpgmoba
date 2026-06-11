@@ -27299,6 +27299,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Enigma::Enigma.Minimap.MinimapController
   _uiDocument: {fileID: 1812323465}
+  _mapBackground: {fileID: 0}
+  _arrowIcon: {fileID: 0}
 --- !u!114 &1812323463
 MonoBehaviour:
   m_ObjectHideFlags: 0
