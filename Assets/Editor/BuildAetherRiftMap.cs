@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -104,16 +104,23 @@ public static class BuildAetherRiftMap
         var dirLight = new GameObject("Directional Light");
         var light = dirLight.AddComponent<Light>();
         light.type      = LightType.Directional;
-        light.color     = Color.white;
-        light.intensity = 130000f;
+        light.color     = new Color(1f, 0.97f, 0.92f);
+        light.intensity = 1.35f;
         dirLight.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
 
-        // Sky and Fog Volume
-        var skyGo   = new GameObject("Sky and Fog Volume");
-        var volume  = skyGo.AddComponent<Volume>();
+        // アニメ調スカイボックス + 環境光（URP）
+        var skyMat = AssetDatabase.LoadAssetAtPath<Material>(MatDir + "/AnimeSky.mat");
+        if (skyMat != null) RenderSettings.skybox = skyMat;
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
+        RenderSettings.ambientSkyColor     = new Color(0.62f, 0.72f, 0.88f);
+        RenderSettings.ambientEquatorColor = new Color(0.52f, 0.56f, 0.62f);
+        RenderSettings.ambientGroundColor  = new Color(0.34f, 0.32f, 0.30f);
+
+        // グローバルポスプロボリューム（URP）
+        var postGo  = new GameObject("Global Post Volume");
+        var volume  = postGo.AddComponent<Volume>();
         volume.isGlobal = true;
-        var profilePath = "Assets/Settings/SkyandFogSettingsProfile.asset";
-        var profile     = AssetDatabase.LoadAssetAtPath<VolumeProfile>(profilePath);
+        var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>("Assets/Settings/URP/EnigmaPost.asset");
         if (profile != null) volume.sharedProfile = profile;
 
         // 5. Projectile プレハブ
@@ -347,7 +354,7 @@ public static class BuildAetherRiftMap
             return existing;
         }
 
-        var shader = Shader.Find("HDRP/Lit") ?? Shader.Find("Standard");
+        var shader = Shader.Find("Enigma/Toon") ?? Shader.Find("Universal Render Pipeline/Lit");
         var mat    = new Material(shader);
         mat.SetColor("_BaseColor", color);
         AssetDatabase.CreateAsset(mat, path);
@@ -364,16 +371,19 @@ public static class BuildAetherRiftMap
             return existing;
         }
 
-        // HDRP/Unlit を使用して透明度を確実に設定
-        var shader = Shader.Find("HDRP/Unlit") ?? Shader.Find("HDRP/Lit") ?? Shader.Find("Standard");
+        // URP/Unlit の半透明設定（予兆・インジケーター系はライティング不要）
+        var shader = Shader.Find("Universal Render Pipeline/Unlit");
         var mat    = new Material(shader);
         mat.SetColor("_BaseColor", color);
 
-        // SurfaceType=Transparent (1)、renderQueue
-        mat.SetFloat("_SurfaceType", 1f);
-        mat.SetFloat("_BlendMode", 0f);         // Alpha
-        mat.renderQueue = (int)RenderQueue.Transparent;
+        mat.SetFloat("_Surface", 1f);
+        mat.SetFloat("_Blend", 0f);
         mat.SetOverrideTag("RenderType", "Transparent");
+        mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+        mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+        mat.SetFloat("_ZWrite", 0f);
+        mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        mat.renderQueue = (int)RenderQueue.Transparent;
 
         AssetDatabase.CreateAsset(mat, path);
         return mat;
@@ -492,7 +502,7 @@ public static class BuildAetherRiftMap
         bg.name = "Background";
         bg.transform.SetParent(hpBar.transform, false);
         bg.transform.localScale = new Vector3(1.2f, 0.18f, 1f);
-        var bgMat = new Material(Shader.Find("HDRP/Lit") ?? Shader.Find("Standard"));
+        var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         bgMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f));
         bg.GetComponent<Renderer>().sharedMaterial = bgMat;
         Object.DestroyImmediate(bg.GetComponent<MeshCollider>());
@@ -505,7 +515,7 @@ public static class BuildAetherRiftMap
         fill.name = "Fill";
         fill.transform.SetParent(fillWrapper.transform, false);
         fill.transform.localScale = new Vector3(1.16f, 0.14f, 1f);
-        var fillMat = new Material(Shader.Find("HDRP/Lit") ?? Shader.Find("Standard"));
+        var fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         fillMat.SetColor("_BaseColor", Color.green);
         fill.GetComponent<Renderer>().sharedMaterial = fillMat;
         Object.DestroyImmediate(fill.GetComponent<MeshCollider>());
@@ -540,7 +550,7 @@ public static class BuildAetherRiftMap
         bg.name = "Background";
         bg.transform.SetParent(hpBar.transform, false);
         bg.transform.localScale = new Vector3(1.2f, 0.18f, 1f);
-        var bgMat = new Material(Shader.Find("HDRP/Lit") ?? Shader.Find("Standard"));
+        var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         bgMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f));
         bg.GetComponent<Renderer>().sharedMaterial = bgMat;
         Object.DestroyImmediate(bg.GetComponent<MeshCollider>());
@@ -553,7 +563,7 @@ public static class BuildAetherRiftMap
         fill.name = "Fill";
         fill.transform.SetParent(fillWrapper.transform, false);
         fill.transform.localScale = new Vector3(1.16f, 0.14f, 1f);
-        var fillMat = new Material(Shader.Find("HDRP/Lit") ?? Shader.Find("Standard"));
+        var fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         fillMat.SetColor("_BaseColor", Color.green);
         fill.GetComponent<Renderer>().sharedMaterial = fillMat;
         Object.DestroyImmediate(fill.GetComponent<MeshCollider>());
@@ -673,7 +683,7 @@ public static class BuildAetherRiftMap
         bg.name = "Background";
         bg.transform.SetParent(hpBar.transform, false);
         bg.transform.localScale = new Vector3(1.2f, 0.18f, 1f);
-        var bgMat = new Material(Shader.Find("HDRP/Lit") ?? Shader.Find("Standard"));
+        var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         bgMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f));
         bg.GetComponent<Renderer>().sharedMaterial = bgMat;
         Object.DestroyImmediate(bg.GetComponent<MeshCollider>());
@@ -686,7 +696,7 @@ public static class BuildAetherRiftMap
         fill.name = "Fill";
         fill.transform.SetParent(fillWrapper.transform, false);
         fill.transform.localScale = new Vector3(1.16f, 0.14f, 1f);
-        var fillMat = new Material(Shader.Find("HDRP/Lit") ?? Shader.Find("Standard"));
+        var fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
         fillMat.SetColor("_BaseColor", Color.red);
         fill.GetComponent<Renderer>().sharedMaterial = fillMat;
         Object.DestroyImmediate(fill.GetComponent<MeshCollider>());

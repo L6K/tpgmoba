@@ -44,10 +44,10 @@
 
 ## プロジェクト概要
 
-**Enigma（エニグマ）** は Fantasy × SF テーマの 3D MOBA。Smite 風の TPS 視点（肩越しカメラ）、Unity HDRP レンダリング。
+**Enigma（エニグマ）** は Fantasy × SF テーマの 3D MOBA。Smite 風の TPS 視点（FF14 準拠カメラ）、Hoyoverse 風トゥーン表現。
 
 - **Unity バージョン**: プロジェクト設定に従う
-- **レンダーパイプライン**: HDRP (High Definition Render Pipeline)
+- **レンダーパイプライン**: URP (Universal Render Pipeline)。Hoyoverse 風 NPR のため HDRP から移行（2026-06-11）
 - **言語**: C#
 - **ターゲットプラットフォーム**: PC (Windows/Mac)
 
@@ -113,11 +113,11 @@ Assets/
 - `GameManager` はシングルトンだが `static` 乱用禁止、EventBus 経由で疎結合
 - スキルは `AbilityBase` (ScriptableObject) を継承して定義し、`AbilityExecutor` (MonoBehaviour) が実行
 - ダメージは必ず `IDamageable.TakeDamage()` を通す
-- HDRP マテリアルは `Lit` または独自サブグラフを使用、旧来の Standard Shader 禁止
+- 不透明マテリアルは原則 `Enigma/Toon`（セルルック統一）、エフェクト系半透明は `URP/Unlit`。旧来の Standard Shader 禁止
 
 ## 依存パッケージ（予定）
 
-- `com.unity.render-pipelines.high-definition`
+- `com.unity.render-pipelines.universal`
 - `com.unity.netcode.gameobjects`
 - `com.unity.inputsystem`
 - `com.unity.cinemachine`
