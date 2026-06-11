@@ -4,6 +4,8 @@ baseurl: "/tpgmoba"
 url: "https://l6k.github.io"
 lang: ja
 markdown: kramdown
+timezone: Asia/Tokyo
+future: true
 permalink: /:year/:month/:day/:title/
 exclude:
   - README.md
