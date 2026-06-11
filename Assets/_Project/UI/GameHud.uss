@@ -97,6 +97,45 @@
     color: var(--color-text-dim);
 }
 
+/* ── レベル行（Lvバッジ + XP バー） ─────────────────── */
+.hud-level-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+/* アクセント色の小バッジ風ラベル */
+.hud-level {
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    background-color: var(--color-accent);
+    border-radius: 3px;
+    padding-left: 5px;
+    padding-right: 5px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    margin-right: 6px;
+}
+
+/* XP バー背景: 細い帯（高さ4px） */
+.hud-xp-bar-bg {
+    flex-grow: 1;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+/* XP fill: 白〜アクセントの控えめなグラデーション風（単色で代替） */
+/* width は GameHudController が % で制御する */
+.hud-xp-fill {
+    height: 100%;
+    width: 100%;
+    background-color: rgba(130, 180, 255, 0.75);
+    border-radius: 2px;
+}
+
 /* ── スキルスロット列（下部中央） ───────────────────── */
 .hud-skills {
     flex-direction: row;

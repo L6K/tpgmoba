@@ -1,5 +1,6 @@
 using UnityEngine;
 using Enigma.Core;
+using Enigma.Character;
 
 namespace Enigma.Combat
 {
@@ -17,7 +18,14 @@ namespace Enigma.Combat
             var buffs = GameServices.TeamBuffs;
             if (buffs == null) return baseDamage;
 
-            return baseDamage * buffs.GetDamageMultiplier(teamTag.Team, Time.time);
+            float damage = baseDamage * buffs.GetDamageMultiplier(teamTag.Team, Time.time);
+
+            // プレイヤーのレベルに応じたダメージ倍率を乗算
+            var progression = attacker.GetComponent<PlayerProgression>();
+            if (progression != null)
+                damage *= progression.DamageMultiplier;
+
+            return damage;
         }
     }
 }

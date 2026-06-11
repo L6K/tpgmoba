@@ -200,6 +200,10 @@ public static class BuildAetherRiftMap
                     // レーン回避: |dist from arc| < 7
                     float distFromArc = Mathf.Abs(Mathf.Sqrt(tx * tx + tz * tz) - R);
                     if (distFromArc < 7f) continue;
+                    // ジャングルパス回避: 4本の対角線セグメント（P1→P2）から4.5m以内
+                    if (IsNearAnyJunglePath(new Vector3(tx, 0f, tz), 4.5f)) continue;
+                    // ジャングルキャンプ回避: 半径30、θ=45/135/225/315° 中心から6m以内
+                    if (IsNearAnyCamp(new Vector3(tx, 0f, tz), 6f)) continue;
 
                     int modelIdx = rng.Next(0, treeModels.Length);
                     float yaw    = (float)(rng.NextDouble() * 360.0);
@@ -230,6 +234,10 @@ public static class BuildAetherRiftMap
                 }
             }
         }
+
+        // ---- ジャングルパス（4本）& キャンプ ----
+        var matJunglePath = GetOrCreateMat("JunglePath", new Color(0.68f, 0.60f, 0.46f));
+        PlaceJunglePathsAndCamps(matJunglePath);
 
         // 本拠地: Cylinder scale(22,1,22) pos(±56,0.5,0)
         {
@@ -489,6 +497,9 @@ public static class BuildAetherRiftMap
         soSkillCaster.FindProperty("_targeting").objectReferenceValue          = targeting;
         soSkillCaster.FindProperty("_muzzle").objectReferenceValue             = muzzle.transform;
         soSkillCaster.ApplyModifiedPropertiesWithoutUndo();
+
+        // XP・レベル成長コンポーネント
+        player.AddComponent<PlayerProgression>();
 
         // MatchBootstrap: ピック済みキャラのスキルを Start 時に注入する
         var bootstrap    = player.AddComponent<MatchBootstrap>();
@@ -868,6 +879,12 @@ public static class BuildAetherRiftMap
         soTa.FindProperty("_projectilePrefab").objectReferenceValue = projPrefab;
         soTa.FindProperty("_muzzle").objectReferenceValue           = muzzleGo.transform;
         soTa.ApplyModifiedPropertiesWithoutUndo();
+
+        // タワー撃破で100XP付与
+        var towerReward = go.AddComponent<XpReward>();
+        var soTowerReward = new SerializedObject(towerReward);
+        soTowerReward.FindProperty("_amount").floatValue = 100f;
+        soTowerReward.ApplyModifiedPropertiesWithoutUndo();
     }
 
     /// <summary>Projectile プレハブ生成後に全タワーの TowerAttack へ結線する。</summary>
@@ -1048,6 +1065,12 @@ public static class BuildAetherRiftMap
         soAi.FindProperty("_barFill").objectReferenceValue = fill.transform;
         soAi.ApplyModifiedPropertiesWithoutUndo();
 
+        // ミニオン撃破で20XP付与
+        var minionReward = go.AddComponent<XpReward>();
+        var soMinionReward = new SerializedObject(minionReward);
+        soMinionReward.FindProperty("_amount").floatValue = 20f;
+        soMinionReward.ApplyModifiedPropertiesWithoutUndo();
+
         var prefab = PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
         Object.DestroyImmediate(go);
         return prefab.GetComponent<MinionAI>();
@@ -1194,5 +1217,200 @@ public static class BuildAetherRiftMap
         var soTd = new SerializedObject(td);
         soTd.FindProperty("_barFill").objectReferenceValue = fill.transform;
         soTd.ApplyModifiedPropertiesWithoutUndo();
+
+        // ボス撃破で250XP付与
+        var bossReward = boss.AddComponent<XpReward>();
+        var soBossReward = new SerializedObject(bossReward);
+        soBossReward.FindProperty("_amount").floatValue = 250f;
+        soBossReward.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // ---- ジャングルパスとキャンプ配置 ----
+
+    /// <summary>
+    /// 対角線4本のジャングルパスと、各θ=45/135/225/315°半径30のスライムキャンプを配置する。
+    /// </summary>
+    private static void PlaceJunglePathsAndCamps(Material matJunglePath)
+    {
+        float[] campAngles = { 45f, 135f, 225f, 315f };
+
+        foreach (float deg in campAngles)
+        {
+            float rad = deg * Mathf.Deg2Rad;
+
+            // パス端点: レーンアーク側(R=45)からベイスン縁(r=18)
+            var p1 = new Vector3(45f * Mathf.Cos(rad), 0f, 45f * Mathf.Sin(rad));
+            var p2 = new Vector3(18f * Mathf.Cos(rad), 0f, 18f * Mathf.Sin(rad));
+
+            // パスを5セグメントの Cube で敷く（y=0.03: レーン0.02と川0.05の中間）
+            const int   SegCount = 5;
+            float       segLen   = Vector3.Distance(p1, p2) / SegCount;
+            var         fwd      = (p2 - p1).normalized;
+
+            for (int si = 0; si < SegCount; si++)
+            {
+                float  t      = (si + 0.5f) / SegCount;
+                var    center = Vector3.Lerp(p1, p2, t);
+                center.y = 0.03f;
+
+                var seg = PlaceCube(
+                    $"JunglePath_{(int)deg}_{si}",
+                    center,
+                    new Vector3(6f, 0.1f, segLen + 1f),
+                    matJunglePath);
+                if (fwd != Vector3.zero)
+                    seg.transform.rotation = Quaternion.LookRotation(fwd, Vector3.up);
+            }
+
+            // キャンプ中心（半径30）
+            var campCenter = new Vector3(30f * Mathf.Cos(rad), 0f, 30f * Mathf.Sin(rad));
+
+            // 足元の空き地サークル（コライダーなし）
+            var clearing = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            clearing.name = $"CampClearing_{(int)deg}";
+            clearing.transform.position   = new Vector3(campCenter.x, 0.025f, campCenter.z);
+            clearing.transform.localScale = new Vector3(9f, 0.04f, 9f);
+            UseFlatMeshCollider(clearing, keepCollider: false);
+            SetStatic(clearing);
+            SetMat(clearing, matJunglePath);
+
+            // スライムモンスター配置
+            CreateSlime($"Slime_{(int)deg}", campCenter);
+        }
+    }
+
+    /// <summary>
+    /// スライムモンスターをプロシージャルに合成してキャンプ中心に配置する。
+    /// </summary>
+    private static void CreateSlime(string name, Vector3 campCenter)
+    {
+        // 親 GO（地面 y=0.8 に配置）
+        var parent = new GameObject(name);
+        parent.transform.position = new Vector3(campCenter.x, 0.8f, campCenter.z);
+
+        // 本体 Sphere
+        var body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        body.name = "Body";
+        body.transform.SetParent(parent.transform, false);
+        body.transform.localScale = new Vector3(1.6f, 1.1f, 1.6f);
+        SetMat(body, GetOrCreateMat("Slime", new Color(0.35f, 0.75f, 0.45f)));
+        // 本体の SphereCollider は除去し、親に CapsuleCollider を付与
+        Object.DestroyImmediate(body.GetComponent<SphereCollider>());
+        var cap = parent.AddComponent<CapsuleCollider>();
+        cap.radius = 0.9f;
+        cap.height = 1.6f;
+        cap.center = Vector3.zero;
+
+        // 目（白）×2
+        Vector3[] eyeOffsets = { new Vector3(-0.28f, 0.25f, 0.62f), new Vector3(0.28f, 0.25f, 0.62f) };
+        foreach (var eo in eyeOffsets)
+        {
+            var eye = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            eye.name = "Eye";
+            eye.transform.SetParent(body.transform, false);
+            eye.transform.localPosition = eo;
+            eye.transform.localScale    = Vector3.one * 0.22f;
+            SetMat(eye, GetOrCreateMat("SlimeEye", Color.white));
+            Object.DestroyImmediate(eye.GetComponent<SphereCollider>());
+
+            // 瞳（黒）
+            var pupil = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            pupil.name = "Pupil";
+            pupil.transform.SetParent(eye.transform, false);
+            pupil.transform.localPosition = new Vector3(0f, 0f, 0.5f);
+            pupil.transform.localScale    = Vector3.one * 0.45f; // 親の 0.22 * 0.45 ≒ 0.1
+            SetMat(pupil, GetOrCreateMat("SlimePupil", Color.black));
+            Object.DestroyImmediate(pupil.GetComponent<SphereCollider>());
+        }
+
+        // HealthComponent (120 HP)
+        var hc   = parent.AddComponent<HealthComponent>();
+        var soHc = new SerializedObject(hc);
+        soHc.FindProperty("_maxHp").floatValue = 120f;
+        soHc.ApplyModifiedPropertiesWithoutUndo();
+
+        // TeamTag (Neutral)
+        var tt   = parent.AddComponent<TeamTag>();
+        var soTt = new SerializedObject(tt);
+        soTt.FindProperty("_team").enumValueIndex = (int)TeamId.Neutral;
+        soTt.ApplyModifiedPropertiesWithoutUndo();
+
+        // XpReward (50)
+        var xp   = parent.AddComponent<XpReward>();
+        var soXp = new SerializedObject(xp);
+        soXp.FindProperty("_amount").floatValue = 50f;
+        soXp.ApplyModifiedPropertiesWithoutUndo();
+
+        // 頭上 HP バー（ミニオンと同じ構成）
+        var hpBar = new GameObject("HealthBar");
+        hpBar.transform.SetParent(parent.transform, false);
+        hpBar.transform.localPosition = new Vector3(0f, 1.6f, 0f);
+        hpBar.AddComponent<HealthBarBillboard>();
+
+        var bg = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        bg.name = "Background";
+        bg.transform.SetParent(hpBar.transform, false);
+        bg.transform.localScale = new Vector3(1.2f, 0.18f, 1f);
+        var bgMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        bgMat.SetColor("_BaseColor", new Color(0.1f, 0.1f, 0.1f));
+        bg.GetComponent<Renderer>().sharedMaterial = bgMat;
+        Object.DestroyImmediate(bg.GetComponent<MeshCollider>());
+
+        var fillWrapper = new GameObject("FillWrapper");
+        fillWrapper.transform.SetParent(hpBar.transform, false);
+        fillWrapper.transform.localPosition = new Vector3(0f, 0f, -0.001f);
+
+        var fill = GameObject.CreatePrimitive(PrimitiveType.Quad);
+        fill.name = "Fill";
+        fill.transform.SetParent(fillWrapper.transform, false);
+        fill.transform.localScale = new Vector3(1.16f, 0.14f, 1f);
+        var fillMat = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
+        fillMat.SetColor("_BaseColor", Color.green);
+        fill.GetComponent<Renderer>().sharedMaterial = fillMat;
+        Object.DestroyImmediate(fill.GetComponent<MeshCollider>());
+
+        // JungleMonster コンポーネント: Initialize で campCenter と barFill を渡す
+        var jm = parent.AddComponent<JungleMonster>();
+        jm.Initialize(campCenter, fill.transform);
+    }
+
+    // ---- ジャングルパス/キャンプ判定ヘルパー ----
+
+    /// <summary>点 p が4本のジャングルパス線分のいずれかから radius 以内か判定する。</summary>
+    private static bool IsNearAnyJunglePath(Vector3 p, float radius)
+    {
+        float[] campAngles = { 45f, 135f, 225f, 315f };
+        foreach (float deg in campAngles)
+        {
+            float rad = deg * Mathf.Deg2Rad;
+            var p1 = new Vector3(45f * Mathf.Cos(rad), 0f, 45f * Mathf.Sin(rad));
+            var p2 = new Vector3(18f * Mathf.Cos(rad), 0f, 18f * Mathf.Sin(rad));
+            if (DistPointToSegment(p, p1, p2) < radius) return true;
+        }
+        return false;
+    }
+
+    /// <summary>点 p が4キャンプ中心（半径30、θ=45/135/225/315°）のいずれかから radius 以内か判定する。</summary>
+    private static bool IsNearAnyCamp(Vector3 p, float radius)
+    {
+        float[] campAngles = { 45f, 135f, 225f, 315f };
+        foreach (float deg in campAngles)
+        {
+            float rad    = deg * Mathf.Deg2Rad;
+            var   center = new Vector3(30f * Mathf.Cos(rad), 0f, 30f * Mathf.Sin(rad));
+            if (Vector3.Distance(p, center) < radius) return true;
+        }
+        return false;
+    }
+
+    /// <summary>点 p から線分 a-b への最短距離を返す（XZ 平面で評価）。</summary>
+    private static float DistPointToSegment(Vector3 p, Vector3 a, Vector3 b)
+    {
+        var ab = b - a;
+        var ap = p - a;
+        float t = Vector3.Dot(ap, ab) / Mathf.Max(ab.sqrMagnitude, 1e-6f);
+        t = Mathf.Clamp01(t);
+        var closest = a + ab * t;
+        return Vector3.Distance(p, closest);
     }
 }

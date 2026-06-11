@@ -4,6 +4,7 @@ using Enigma.Combat;
 using Enigma.Ability;
 using Enigma.Core;
 using Enigma.Data;
+using Enigma.Character;
 
 namespace Enigma.UI
 {
@@ -27,6 +28,11 @@ namespace Enigma.UI
         // チームバフ残り時間ラベル
         private Label _buffLabel;
 
+        // レベル・XP 表示
+        private Label         _levelLabel;
+        private VisualElement _xpFill;
+        private PlayerProgression _playerProgression;
+
         // スキルスロット（4スロット分）
         private readonly VisualElement[] _skillSlots    = new VisualElement[4];
         private readonly Label[]         _skillNames    = new Label[4];
@@ -46,6 +52,12 @@ namespace Enigma.UI
             _hpFill     = root.Q<VisualElement>("hud-hp-fill");
             _hpText     = root.Q<Label>("hud-hp-text");
             _buffLabel  = root.Q<Label>("hud-buff");
+            _levelLabel = root.Q<Label>("hud-level");
+            _xpFill     = root.Q<VisualElement>("hud-xp-fill");
+
+            // SerializedObject を増やさずに playerHealth から取得
+            if (_playerHealth != null)
+                _playerProgression = _playerHealth.GetComponent<PlayerProgression>();
 
             for (int i = 0; i < 4; i++)
             {
@@ -63,6 +75,7 @@ namespace Enigma.UI
             UpdateHp();
             UpdateSkills();
             UpdateBuff();
+            UpdateLevelXp();
         }
 
         private void UpdateTimer()
@@ -143,6 +156,24 @@ namespace Enigma.UI
             else
             {
                 _buffLabel.style.display = DisplayStyle.None;
+            }
+        }
+
+        private void UpdateLevelXp()
+        {
+            if (_playerProgression == null) return;
+            var exp = _playerProgression.Experience;
+
+            if (_levelLabel != null)
+                _levelLabel.text = $"Lv.{exp.Level}";
+
+            if (_xpFill != null)
+            {
+                // 最大レベル時は100%固定
+                float ratio = exp.Level >= ExperienceModel.MaxLevel
+                    ? 1f
+                    : (exp.XpToNext > 0f ? Mathf.Clamp01(exp.CurrentXp / exp.XpToNext) : 0f);
+                _xpFill.style.width = Length.Percent(ratio * 100f);
             }
         }
 

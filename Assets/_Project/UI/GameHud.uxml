@@ -24,6 +24,13 @@
 
             <!-- 下部左: HP バー -->
             <ui:VisualElement name="hud-hp-panel" class="hud-hp-panel">
+                <!-- レベルバッジ + XP バー（HP バーより上の行） -->
+                <ui:VisualElement class="hud-level-row">
+                    <ui:Label name="hud-level" class="hud-level" text="Lv.1" />
+                    <ui:VisualElement class="hud-xp-bar-bg">
+                        <ui:VisualElement name="hud-xp-fill" class="hud-xp-fill" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
                 <ui:Label class="hud-hp-label" text="HP" />
                 <ui:VisualElement name="hud-hp-bar-bg" class="hud-hp-bar-bg">
                     <ui:VisualElement name="hud-hp-fill" class="hud-hp-fill" />
