@@ -77,3 +77,27 @@
 - 出典: https://opengameart.org/content/sinuous-toon-tree
 - 配置ファイル: `SinuousToonTree.fbx`、`SinuousToonTree_SeparateParts.fbx`
 - 内容: うねり形状のトゥーン樹木。`SeparateParts` 版は幹と葉が別パーツで、マテリアル個別設定が可能
+
+---
+
+## Tower Assets — CC0 防衛タワーパック (OpenGameArt.org)
+
+クレジット表記: **不要**（すべて CC0 1.0 パブリックドメイン）
+ライセンス全文: https://creativecommons.org/publicdomain/zero/1.0/
+ライセンスファイル: `Assets/External/Towers/LICENSE.txt`
+
+### Basic Defense Tower
+
+- 提供: OpenGameArt.org 投稿者
+- ライセンス: CC0 1.0 (Public Domain)
+- 出典: https://opengameart.org/content/basic-defense-tower
+- 配置ファイル: `DefenseTower.fbx`
+- 内容: アニメーション付きタワーディフェンス用タワー（回転砲塔メカ型、FBX 内テクスチャ参照 Tower.png）
+
+### Dungeon - Low Poly Toon Battle Arena / Tower Defense Pack
+
+- 提供: OpenGameArt.org 投稿者
+- ライセンス: CC0 1.0 (Public Domain)
+- 出典: https://opengameart.org/content/dungeon-low-poly-toon-battle-arena-tower-defense-pack
+- 配置ファイル: `DungeonTowerD.fbx`、`DungeonCastleD.fbx`、`DungeonArena_ColorPaletteBLUE.png`、`DungeonArena_ColorPaletteRED.png`
+- 内容: ロウポリトゥーンスタイルのダンジョン防衛タワー（TowerD）と城壁建造物（CastleD）。カラーパレットテクスチャ 2 色バリアント付き

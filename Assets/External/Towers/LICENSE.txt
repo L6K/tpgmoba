@@ -1,0 +1,22 @@
+== Towers Assets License ==
+
+--- DefenseTower.fbx ---
+Asset: "Basic Defense Tower" (Animated and textured Tower for tower defense)
+Source: https://opengameart.org/content/basic-defense-tower
+Author: OpenGameArt contributor
+License: CC0 1.0 Universal (Public Domain Dedication)
+  "Free to use for any purpose without attribution."
+File: Tower.fbx (renamed to DefenseTower.fbx)
+
+--- DungeonTowerD.fbx / DungeonCastleD.fbx ---
+--- DungeonArena_ColorPaletteBLUE.png / DungeonArena_ColorPaletteRED.png ---
+Asset: "Dungeon - Low Poly Toon Battle Arena / Tower Defense Pack"
+Source: https://opengameart.org/content/dungeon-low-poly-toon-battle-arena-tower-defense-pack
+License: CC0 1.0 Universal (Public Domain Dedication)
+Files extracted: TowerD.fbx (renamed DungeonTowerD.fbx),
+                 CastleD.fbx (renamed DungeonCastleD.fbx),
+                 ColorPaletteBLUE.png (renamed DungeonArena_ColorPaletteBLUE.png),
+                 ColorPaletteRED.png (renamed DungeonArena_ColorPaletteRED.png)
+
+Both assets are released under CC0 and may be used freely in any project,
+including commercial projects, without attribution.
