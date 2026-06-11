@@ -51,6 +51,10 @@
 - **言語**: C#
 - **ターゲットプラットフォーム**: PC (Windows/Mac)
 
+## サードパーティアセット
+
+- **ユニティちゃん**（`Assets/UnityChan/`、UCL2.02）: プレイヤーモデル。**配布時はタイトル/クレジット画面に「© Unity Technologies Japan/UCL」表記が必須**（docs/THIRD_PARTY_NOTICES.md 参照）。License フォルダは削除禁止
+
 ## ディレクトリ構造
 
 ```

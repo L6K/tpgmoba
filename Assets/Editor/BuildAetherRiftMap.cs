@@ -267,6 +267,9 @@ public static class BuildAetherRiftMap
         soPlayer.FindProperty("_cameraTransform").objectReferenceValue = camGo.transform;
         soPlayer.ApplyModifiedPropertiesWithoutUndo();
 
+        // プレイヤーの見た目: UnityChan モデル（© Unity Technologies Japan/UCL）
+        AttachUnityChanModel(player);
+
         // OrbitCamera
         var soCam = new SerializedObject(orbitCam);
         soCam.FindProperty("_target").objectReferenceValue = player.transform;
@@ -408,6 +411,129 @@ public static class BuildAetherRiftMap
         AssetDatabase.CreateAsset(so, path);
         return so;
     }
+
+    // UnityChan モデルをプレイヤーの見た目として取り付ける。
+    // 物理・操作はゲーム側（CharacterController/PlayerController）が持つため、
+    // プレハブ付属の制御系コンポーネントは除去し、揺れもの・瞬きのみ残す
+    private static void AttachUnityChanModel(GameObject player)
+    {
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/UnityChan/Prefabs/for Locomotion/unitychan.prefab");
+        if (prefab == null)
+        {
+            Debug.LogWarning("[BuildAetherRiftMap] unitychan.prefab が見つからないためカプセル表示のまま");
+            return;
+        }
+
+        var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+        model.name = "UnityChanModel";
+        PrefabUtility.UnpackPrefabInstance(model, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        model.transform.SetParent(player.transform, false);
+        model.transform.localPosition = new Vector3(0f, -1.05f, 0f);
+        model.transform.localRotation = Quaternion.identity;
+
+        // RequireComponent(Rigidbody) を持つ制御スクリプトを先に消さないと Rigidbody が除去できない
+        foreach (var mb in model.GetComponentsInChildren<MonoBehaviour>(true))
+        {
+            if (mb == null) continue;
+            string n = mb.GetType().Name;
+            bool keep = n.Contains("Spring") || n.Contains("AutoBlink") || n.Contains("RandomWind");
+            if (!keep) Object.DestroyImmediate(mb);
+        }
+        foreach (var rb in model.GetComponentsInChildren<Rigidbody>(true))
+            Object.DestroyImmediate(rb);
+        foreach (var col in model.GetComponentsInChildren<Collider>(true))
+            Object.DestroyImmediate(col);
+
+        var animator = model.GetComponent<Animator>();
+        if (animator != null)
+        {
+            var ctrl = AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
+                "Assets/UnityChan/Animators/UnityChanLocomotions.controller");
+            if (ctrl != null) animator.runtimeAnimatorController = ctrl;
+            // 位置移動は CharacterController が担うためルートモーションは切る
+            animator.applyRootMotion = false;
+        }
+
+        var capsuleRenderer = player.GetComponent<MeshRenderer>();
+        if (capsuleRenderer != null) capsuleRenderer.enabled = false;
+
+        var soPc = new SerializedObject(player.GetComponent<PlayerController>());
+        soPc.FindProperty("_animator").objectReferenceValue = animator;
+        soPc.ApplyModifiedPropertiesWithoutUndo();
+
+        ApplyToonMaterials(model);
+    }
+
+    // 元マテリアルのメインテクスチャを引き継いだ Enigma/Toon マテリアルに差し替える
+    private static void ApplyToonMaterials(GameObject model)
+    {
+        const string dir = "Assets/_Project/Materials/UnityChan";
+        if (!AssetDatabase.IsValidFolder(dir))
+            AssetDatabase.CreateFolder("Assets/_Project/Materials", "UnityChan");
+        var toon = Shader.Find("Enigma/Toon");
+        if (toon == null) return;
+
+        foreach (var r in model.GetComponentsInChildren<Renderer>(true))
+        {
+            var mats = r.sharedMaterials;
+            for (int i = 0; i < mats.Length; i++)
+            {
+                var src = mats[i];
+                if (src == null) continue;
+
+                string path = $"{dir}/Toon_{src.name}.mat";
+                var dst = AssetDatabase.LoadAssetAtPath<Material>(path);
+                if (dst == null)
+                {
+                    dst = new Material(toon);
+                    // 元マテリアルは Unity Toon Shader 前提でプロパティが読めないため、
+                    // テクスチャはマテリアル名から直接対応付ける
+                    var tex = FindUnityChanTexture(src.name)
+                              ?? (src.HasProperty("_MainTex") ? src.GetTexture("_MainTex") : null);
+                    if (tex != null) dst.SetTexture("_BaseMap", tex);
+                    dst.SetColor("_BaseColor", Color.white);
+                    // body 等のアルファはスペキュラマスクなのでカットアウト対象にしない
+                    dst.SetFloat("_Cutoff", UnityChanCutoff(src.name));
+                    dst.SetFloat("_OutlineWidth", 0.0025f);  // キャラは細めの輪郭線
+                    AssetDatabase.CreateAsset(dst, path);
+                }
+                mats[i] = dst;
+            }
+            r.sharedMaterials = mats;
+        }
+    }
+
+    private static Texture FindUnityChanTexture(string materialName)
+    {
+        const string texDir = "Assets/UnityChan/Models/Texture/";
+        string file = materialName switch
+        {
+            "body"      => "body_01.tga",
+            "face"      => "face_00.tga",
+            "eyebase"   => "face_00.tga",
+            "eyeline"   => "eyeline_00.tga",
+            "eye_L1"    => "eye_iris_L_00.tga",
+            "eye_R1"    => "eye_iris_R_00.tga",
+            "hair"      => "hair_01.tga",
+            "mat_cheek" => "cheek_00.tga",
+            "skin1"     => "skin_01.tga",
+            "Left"      => "eyeline_00.tga",
+            "Right"     => "eyeline_00.tga",
+            _           => null,
+        };
+        return file == null ? null : AssetDatabase.LoadAssetAtPath<Texture>(texDir + file);
+    }
+
+    private static float UnityChanCutoff(string materialName) => materialName switch
+    {
+        "hair"      => 0.30f, // 毛先の透過
+        "eyeline"   => 0.40f, // まつ毛
+        "Left"      => 0.40f,
+        "Right"     => 0.40f,
+        "mat_cheek" => 0.90f, // 頬の赤み: ほぼ透過なので実質非表示
+        _           => 0f,    // 不透明（body/face/skin/eye はアルファ=マスク用途）
+    };
 
     private static GameObject PlaceCube(string name, Vector3 pos, Vector3 scale, Material mat)
     {

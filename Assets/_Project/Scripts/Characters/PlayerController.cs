@@ -10,6 +10,9 @@ namespace Enigma.Character
         [SerializeField] private Transform _cameraTransform;
         [SerializeField] private float _moveSpeed = 6f;
         [SerializeField] private float _turnSpeedDegrees = 720f;
+        [SerializeField] private Animator _animator; // 見た目モデルのアニメーター（任意）
+
+        private static readonly int SpeedParam = Animator.StringToHash("Speed");
 
         private const float Gravity = -20f;
 
@@ -51,6 +54,9 @@ namespace Enigma.Character
                 transform.rotation = MovementLogic.RotateTowards(
                     transform.rotation, moveDir, _turnSpeedDegrees * Time.deltaTime);
             }
+
+            if (_animator != null)
+                _animator.SetFloat(SpeedParam, moveDir == Vector3.zero ? 0f : 1f);
         }
     }
 }

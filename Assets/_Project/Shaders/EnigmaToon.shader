@@ -13,6 +13,7 @@ Shader "Enigma/Toon"
         _RimPower("Rim Power", Range(0.5, 8)) = 3.5
         _OutlineColor("Outline Color", Color) = (0.12, 0.1, 0.16, 1)
         _OutlineWidth("Outline Width", Range(0, 0.02)) = 0.0035
+        _Cutoff("Alpha Cutoff", Range(0, 1)) = 0
     }
 
     SubShader
@@ -48,6 +49,7 @@ Shader "Enigma/Toon"
                 half   _RimPower;
                 half4  _OutlineColor;
                 half   _OutlineWidth;
+                half   _Cutoff;
             CBUFFER_END
 
             struct Attributes
@@ -81,6 +83,8 @@ Shader "Enigma/Toon"
             half4 Frag(Varyings input) : SV_Target
             {
                 half4 baseTex = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv);
+                // _Cutoff > 0 のマテリアルのみカットアウト（まつ毛・前髪など）
+                clip(baseTex.a - _Cutoff);
                 half3 albedo  = baseTex.rgb * _BaseColor.rgb;
 
                 float3 normalWS = normalize(input.normalWS);
@@ -139,6 +143,7 @@ Shader "Enigma/Toon"
                 half   _RimPower;
                 half4  _OutlineColor;
                 half   _OutlineWidth;
+                half   _Cutoff;
             CBUFFER_END
 
             struct Attributes
