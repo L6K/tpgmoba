@@ -171,44 +171,25 @@
     border-radius: 4px;
 }
 
-/* ── ミニマップパネル（左下固定・220x154） ─────────── */
+/* ── ミニマップパネル（左下固定・160x160 正方形） ─────────── */
 .hud-minimap {
     position: absolute;
     left: 16px;
     bottom: 16px;
-    width: 220px;
-    height: 154px;
+    width: 160px;
+    height: 160px;
     background-color: rgba(10, 12, 22, 0.78);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.15);
     overflow: hidden;
 }
 
-/* レーン帯（横方向の半透明スラブ） */
-.minimap-lane {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 13px;
-    background-color: rgba(255, 255, 255, 0.06);
-}
-
-/* TOPレーン: z=+50 → パネル y = (70-50)/140*154 ≈ 22px、帯中心がそこに来るよう top=15.5→16 */
-.minimap-lane--top {
-    top: 16px;
-}
-
-/* BOTレーン: z=-50 → パネル y = (70+50)/140*154 ≈ 132px、帯中心がそこに来るよう top=125.5→126 */
-.minimap-lane--bot {
-    top: 126px;
-}
-
-/* 川帯（縦方向・中央） */
+/* 川帯（縦方向・中央）: 幅 14/150*160 ≈ 15px、left=(160-15)/2=72px */
 .minimap-river {
     position: absolute;
     top: 0;
     bottom: 0;
-    left: 103px;
+    left: 72px;
     width: 15px;
     background-color: rgba(46, 107, 242, 0.15);
 }

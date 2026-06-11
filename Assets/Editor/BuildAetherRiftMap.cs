@@ -32,8 +32,8 @@ public static class BuildAetherRiftMap
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
         // 2. マテリアル生成
-        var matGround    = GetOrCreateMat("Ground",      new Color(0.16f, 0.18f, 0.16f));
-        var matLane      = GetOrCreateMat("Lane",        new Color(0.45f, 0.45f, 0.42f));
+        var matGround    = GetOrCreateMat("Ground",      new Color(0.40f, 0.58f, 0.32f));
+        var matLane      = GetOrCreateMat("Lane",        new Color(0.62f, 0.55f, 0.42f));
         var matRiver     = GetOrCreateMat("River",       new Color(0.15f, 0.35f, 0.70f));
         var matPit       = GetOrCreateMat("Pit",         new Color(0.25f, 0.15f, 0.35f));
         var matJungle    = GetOrCreateMat("JungleWall",  new Color(0.12f, 0.30f, 0.16f));
@@ -50,58 +50,250 @@ public static class BuildAetherRiftMap
         var matAoeCircle   = GetOrCreateTransparentMat("AoeCircle",    new Color(0.2f, 0.6f, 1f, 0.4f));
         var matStackMarker = GetOrCreateTransparentMat("StackMarker",  new Color(1f, 0.85f, 0f, 0.5f));
 
-        // 3. ジオメトリ配置
-        PlaceCube("Ground",   new Vector3(0f, -0.5f, 0f),   new Vector3(200f, 1f, 140f), matGround);
-        PlaceCube("TopLane",  new Vector3(0f, 0.01f,  50f), new Vector3(200f, 0.1f, 12f), matLane);
-        PlaceCube("BotLane",  new Vector3(0f, 0.01f, -50f), new Vector3(200f, 0.1f, 12f), matLane);
-        PlaceCube("River",    new Vector3(0f, 0.02f, 0f),   new Vector3(14f, 0.1f, 140f), matRiver);
+        // 3. ジオメトリ配置（円形マップ）
+        // ---- レイアウト定数 ----
+        // プレイフィールド半径70、レーンアーク半径R=45、レーン幅10
+        // 本拠地中心(±56,0,0) 半径11
 
-        var pit = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        pit.name = "BossPit";
-        pit.transform.position   = new Vector3(0f, 0.03f, 0f);
-        pit.transform.localScale = new Vector3(28f, 0.05f, 28f);
-        SetStatic(pit);
-        SetMat(pit, matPit);
+        // Ground: Cylinder scale(150,1,150)
+        {
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            ground.name = "Ground";
+            // Cylinder メッシュは高さ2のため scaleY=0.5 で天面が y=0 になる
+            ground.transform.position   = new Vector3(0f, -0.5f, 0f);
+            ground.transform.localScale = new Vector3(150f, 0.5f, 150f);
+            UseFlatMeshCollider(ground, keepCollider: true);
+            SetStatic(ground);
+            // 草原グリーン
+            matGround.SetColor("_BaseColor", new Color(0.40f, 0.58f, 0.32f));
+            SetMat(ground, matGround);
+        }
 
-        PlaceCube("WallNorth",  new Vector3(0f,  2f,  71f), new Vector3(200f, 4f, 2f), matJungle);
-        PlaceCube("WallSouth",  new Vector3(0f,  2f, -71f), new Vector3(200f, 4f, 2f), matJungle);
-        PlaceCube("WallEast",   new Vector3( 101f, 2f, 0f), new Vector3(2f, 4f, 140f), matJungle);
-        PlaceCube("WallWest",   new Vector3(-101f, 2f, 0f), new Vector3(2f, 4f, 140f), matJungle);
+        // 川: 縦帯 Cube (両レーンに届く長さ92)
+        // 同一平面のチラつき防止のため レーン(0.02) < 川(0.05) < ベイスン(0.12) < ピット(0.18) と階段状にする
+        PlaceCube("River", new Vector3(0f, 0.05f, 0f), new Vector3(14f, 0.1f, 92f), matRiver);
 
-        PlaceCube("JungleBorderTopN_W", new Vector3(-30f, 2f,  44f), new Vector3(46f, 4f, 2f), matJungle);
-        PlaceCube("JungleBorderTopN_E", new Vector3( 30f, 2f,  44f), new Vector3(46f, 4f, 2f), matJungle);
-        PlaceCube("JungleBorderTopS_W", new Vector3(-30f, 2f,  38f), new Vector3(46f, 4f, 2f), matJungle);
-        PlaceCube("JungleBorderTopS_E", new Vector3( 30f, 2f,  38f), new Vector3(46f, 4f, 2f), matJungle);
-        PlaceCube("JungleBorderBotN_W", new Vector3(-30f, 2f, -38f), new Vector3(46f, 4f, 2f), matJungle);
-        PlaceCube("JungleBorderBotN_E", new Vector3( 30f, 2f, -38f), new Vector3(46f, 4f, 2f), matJungle);
-        PlaceCube("JungleBorderBotS_W", new Vector3(-30f, 2f, -44f), new Vector3(46f, 4f, 2f), matJungle);
-        PlaceCube("JungleBorderBotS_E", new Vector3( 30f, 2f, -44f), new Vector3(46f, 4f, 2f), matJungle);
+        // レーン色を土色に更新
+        matLane.SetColor("_BaseColor", new Color(0.62f, 0.55f, 0.42f));
 
-        PlaceCube("JungleSideWest", new Vector3(-45f, 2f, 0f), new Vector3(2f, 4f, 40f), matJungle);
-        PlaceCube("JungleSideEast", new Vector3( 45f, 2f, 0f), new Vector3(2f, 4f, 40f), matJungle);
+        // レーンアーク: TOP (θ=0..180°) と BOT (θ=180..360°) を 7.5° 刻みで Cube セグメント配置
+        const float R = 45f;
+        const float stepDeg = 7.5f;
+        for (int si = 0; si < 48; si++)
+        {
+            float theta = si * stepDeg; // 0..352.5°
+            string laneName = theta < 180f ? "LaneArc_Top" : "LaneArc_Bot";
+            float rad = theta * Mathf.Deg2Rad;
+            float x = R * Mathf.Cos(rad);
+            float z = R * Mathf.Sin(rad);
+            var seg = PlaceCube($"{laneName}_{si:D2}", new Vector3(x, 0.02f, z), new Vector3(6.5f, 0.1f, 10f), matLane);
+            // 接線方向: pos=(Rcosθ,0,Rsinθ) の接線 forward = (-sinθ, 0, cosθ)
+            var forward = new Vector3(-Mathf.Sin(rad), 0f, Mathf.Cos(rad));
+            if (forward != Vector3.zero)
+                seg.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+        }
 
-        PlaceCube("PitWallNorth",  new Vector3(0f,  2f,  16f),   new Vector3(20f, 4f, 2f), matJungle);
-        PlaceCube("PitWallSouth",  new Vector3(0f,  2f, -16f),   new Vector3(20f, 4f, 2f), matJungle);
-        PlaceCube("PitWallWestN",  new Vector3(-10f, 2f,  10f),  new Vector3(2f, 4f, 12f), matJungle);
-        PlaceCube("PitWallWestS",  new Vector3(-10f, 2f, -10f),  new Vector3(2f, 4f, 12f), matJungle);
-        PlaceCube("PitWallEastN",  new Vector3( 10f, 2f,  10f),  new Vector3(2f, 4f, 12f), matJungle);
-        PlaceCube("PitWallEastS",  new Vector3( 10f, 2f, -10f),  new Vector3(2f, 4f, 12f), matJungle);
+        // 中央ベイスン（ボスの足場）: 大円 + 小円、壁なし
+        {
+            var basin = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            basin.name = "Basin";
+            basin.transform.position   = new Vector3(0f, 0.12f, 0f);
+            basin.transform.localScale = new Vector3(32f, 0.06f, 32f);
+            UseFlatMeshCollider(basin, keepCollider: false);
+            SetStatic(basin);
+            SetMat(basin, matRiver);
 
-        // projPrefab はこの時点では未生成なので後回し（後段で結線）
-        PlaceTower("Tower_BTop",    new Vector3(-55f, 4f,  50f), matBlue, null);
-        PlaceTower("Tower_BBot",    new Vector3(-55f, 4f, -50f), matBlue, null);
-        PlaceTower("Tower_BMidTop", new Vector3(-80f, 4f,  50f), matBlue, null);
-        PlaceTower("Tower_BMidBot", new Vector3(-80f, 4f, -50f), matBlue, null);
-        PlaceTower("Tower_RTop",    new Vector3( 55f, 4f,  50f), matRed,  null);
-        PlaceTower("Tower_RBot",    new Vector3( 55f, 4f, -50f), matRed,  null);
-        PlaceTower("Tower_RMidTop", new Vector3( 80f, 4f,  50f), matRed,  null);
-        PlaceTower("Tower_RMidBot", new Vector3( 80f, 4f, -50f), matRed,  null);
+            var pit = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            pit.name = "BossPit";
+            pit.transform.position   = new Vector3(0f, 0.18f, 0f);
+            pit.transform.localScale = new Vector3(16f, 0.04f, 16f);
+            UseFlatMeshCollider(pit, keepCollider: false);
+            SetStatic(pit);
+            SetMat(pit, matPit);
+        }
 
-        PlaceCube("Base_Blue", new Vector3(-95f, 0.5f, 0f), new Vector3(20f, 1f, 30f), matBlue);
-        PlaceCube("Base_Red",  new Vector3( 95f, 0.5f, 0f), new Vector3(20f, 1f, 30f), matRed);
+        // 外周リング: 36分割、半径72に岩壁配置
+        {
+            const int ringSegs = 36;
+            // 優先順位: cliff_block_rock > cliff_blockCave_rock > Cube フォールバック
+            string[] cliffCandidates = {
+                "Assets/External/Kenney/Nature/cliff_block_rock.fbx",
+                "Assets/External/Kenney/Nature/cliff_blockCave_rock.fbx",
+                "Assets/External/Kenney/Castle/cliff_block_rock.fbx",
+            };
+            GameObject cliffModel = null;
+            foreach (var cp in cliffCandidates)
+            {
+                cliffModel = AssetDatabase.LoadAssetAtPath<GameObject>(cp);
+                if (cliffModel != null) break;
+            }
 
-        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-95f, 4f, 0f), matBlue);
-        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 95f, 4f, 0f), matRed);
+            for (int ri = 0; ri < ringSegs; ri++)
+            {
+                float phi = ri * (360f / ringSegs) * Mathf.Deg2Rad;
+                float rx = 72f * Mathf.Cos(phi);
+                float rz = 72f * Mathf.Sin(phi);
+                var wallPos = new Vector3(rx, 0f, rz);
+
+                GameObject wallGo;
+                if (cliffModel != null)
+                {
+                    wallGo = (GameObject)PrefabUtility.InstantiatePrefab(cliffModel);
+                    wallGo.transform.position   = wallPos;
+                    wallGo.transform.localScale = Vector3.one * 6f;
+                    // 中心向き回転
+                    wallGo.transform.rotation = Quaternion.LookRotation(-wallPos.normalized, Vector3.up);
+                    // BoxCollider をレンダラー境界に合わせて追加
+                    var bounds = new Bounds(Vector3.zero, Vector3.zero);
+                    bool boundsInit = false;
+                    foreach (var r in wallGo.GetComponentsInChildren<Renderer>())
+                    {
+                        if (!boundsInit) { bounds = r.bounds; boundsInit = true; }
+                        else bounds.Encapsulate(r.bounds);
+                    }
+                    var bc = wallGo.AddComponent<BoxCollider>();
+                    if (boundsInit)
+                    {
+                        bc.center = wallGo.transform.InverseTransformPoint(bounds.center);
+                        bc.size   = Vector3.Scale(bounds.size, new Vector3(
+                            1f / wallGo.transform.lossyScale.x,
+                            1f / wallGo.transform.lossyScale.y,
+                            1f / wallGo.transform.lossyScale.z));
+                    }
+                }
+                else
+                {
+                    wallGo = PlaceCube($"RingWall_{ri:D2}", wallPos, new Vector3(13f, 6f, 4f), matJungle);
+                    wallGo.transform.rotation = Quaternion.LookRotation(-wallPos.normalized, Vector3.up);
+                }
+                wallGo.name = $"RingWall_{ri:D2}";
+                SetStatic(wallGo);
+            }
+        }
+
+        // ジャングル樹木: System.Random(42) で各象限に約10本（計40本）
+        {
+            string[] treeFbxNames = { "tree_pineTallA", "tree_pineTallB", "tree_default", "tree_oak", "tree_fat" };
+            GameObject[] treeModels = new GameObject[treeFbxNames.Length];
+            for (int ti = 0; ti < treeFbxNames.Length; ti++)
+                treeModels[ti] = AssetDatabase.LoadAssetAtPath<GameObject>(
+                    $"Assets/External/Kenney/Nature/{treeFbxNames[ti]}.fbx");
+
+            var rng = new System.Random(42);
+            // 4象限: Q0=(+x,+z), Q1=(-x,+z), Q2=(-x,-z), Q3=(+x,-z)
+            // 象限 q の角度範囲: [q*90, q*90+90)°
+            for (int q = 0; q < 4; q++)
+            {
+                int placed = 0;
+                int attempts = 0;
+                while (placed < 10 && attempts < 300)
+                {
+                    attempts++;
+                    float r     = (float)(rng.NextDouble() * 18.0 + 20.0); // [20, 38]
+                    float angle = (float)(rng.NextDouble() * 90.0 + q * 90.0); // 象限内
+                    float rad   = angle * Mathf.Deg2Rad;
+                    float tx    = r * Mathf.Cos(rad);
+                    float tz    = r * Mathf.Sin(rad);
+
+                    // 川回避: |x| < 9
+                    if (Mathf.Abs(tx) < 9f) continue;
+                    // レーン回避: |dist from arc| < 7
+                    float distFromArc = Mathf.Abs(Mathf.Sqrt(tx * tx + tz * tz) - R);
+                    if (distFromArc < 7f) continue;
+
+                    int modelIdx = rng.Next(0, treeModels.Length);
+                    float yaw    = (float)(rng.NextDouble() * 360.0);
+
+                    GameObject treeGo;
+                    if (treeModels[modelIdx] != null)
+                    {
+                        treeGo = (GameObject)PrefabUtility.InstantiatePrefab(treeModels[modelIdx]);
+                        treeGo.transform.position   = new Vector3(tx, 0f, tz);
+                        treeGo.transform.localScale = Vector3.one * 4.5f;
+                        treeGo.transform.rotation   = Quaternion.Euler(0f, yaw, 0f);
+                        // CapsuleCollider 付与
+                        var cap = treeGo.AddComponent<CapsuleCollider>();
+                        cap.center = new Vector3(0f, 2f, 0f);
+                        cap.radius = 0.6f;
+                        cap.height = 5f;
+                    }
+                    else
+                    {
+                        treeGo = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                        treeGo.transform.position   = new Vector3(tx, 2.5f, tz);
+                        treeGo.transform.localScale = new Vector3(0.8f, 2.5f, 0.8f);
+                        SetMat(treeGo, matJungle);
+                    }
+                    treeGo.name = $"Tree_Q{q}_{placed:D2}";
+                    SetStatic(treeGo);
+                    placed++;
+                }
+            }
+        }
+
+        // 本拠地: Cylinder scale(22,1,22) pos(±56,0.5,0)
+        {
+            var baseBlue = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            baseBlue.name = "Base_Blue";
+            baseBlue.transform.position   = new Vector3(-56f, 0.5f, 0f);
+            baseBlue.transform.localScale = new Vector3(22f, 0.5f, 22f);
+            UseFlatMeshCollider(baseBlue, keepCollider: true);
+            SetStatic(baseBlue);
+            SetMat(baseBlue, matBlue);
+
+            var baseRed = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            baseRed.name = "Base_Red";
+            baseRed.transform.position   = new Vector3(56f, 0.5f, 0f);
+            baseRed.transform.localScale = new Vector3(22f, 0.5f, 22f);
+            UseFlatMeshCollider(baseRed, keepCollider: true);
+            SetStatic(baseRed);
+            SetMat(baseRed, matRed);
+        }
+
+        // タイタン: pos(±56, 4, 0)
+        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-56f, 4f, 0f), matBlue);
+        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 56f, 4f, 0f), matRed);
+
+        // タワー8基: Kenney tower-square.fbx (フォールバック: Cylinder)
+        // TOP: θ=160°,140° (Blue)、θ=40°,20° (Red)
+        // BOT: θ=200°,220° (Blue)、θ=320°,340° (Red)
+        {
+            var towerModel = AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/External/Kenney/Castle/tower-square.fbx");
+
+            (string name, float theta, Material mat)[] towerDefs =
+            {
+                ("Tower_BTop",    160f, matBlue),
+                ("Tower_BMidTop", 140f, matBlue),
+                ("Tower_RTop",     40f, matRed),
+                ("Tower_RMidTop",  20f, matRed),
+                ("Tower_BBot",    200f, matBlue),
+                ("Tower_BMidBot", 220f, matBlue),
+                ("Tower_RBot",    320f, matRed),
+                ("Tower_RMidBot", 340f, matRed),
+            };
+
+            foreach (var (tname, theta, tmat) in towerDefs)
+            {
+                float tr  = theta * Mathf.Deg2Rad;
+                float tx  = R * Mathf.Cos(tr);
+                float tz  = R * Mathf.Sin(tr);
+                var tPos  = new Vector3(tx, 0f, tz);
+
+                PlaceTower(tname, tPos + Vector3.up * 4f, tmat, null, towerModel);
+
+                // 足元チーム色リング
+                var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                ring.name = $"{tname}_Ring";
+                ring.transform.position   = new Vector3(tx, 0.08f, tz);
+                ring.transform.localScale = new Vector3(7f, 0.05f, 7f);
+                UseFlatMeshCollider(ring, keepCollider: false);
+                SetStatic(ring);
+                SetMat(ring, tmat);
+            }
+        }
+
+        // projPrefab はこの時点では未生成なので後段で結線
 
         // 4. ライティング
         var dirLight = new GameObject("Directional Light");
@@ -210,7 +402,7 @@ public static class BuildAetherRiftMap
         WireCharacterSkills("Char_nova",  new[] { novaQ, novaW, novaE, (SkillDefinition)null });
 
         // 9. プレイヤー
-        var playerSpawnPos = new Vector3(-90f, 1.1f, 50f);
+        var playerSpawnPos = new Vector3(-52f, 1.1f, 10f);
         var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         player.name = "Player";
         player.tag  = "Player";
@@ -337,9 +529,9 @@ public static class BuildAetherRiftMap
         soCam.FindProperty("_target").objectReferenceValue = player.transform;
         soCam.ApplyModifiedPropertiesWithoutUndo();
 
-        // 11. ターゲットダミー 2体（現状維持）
-        CreateDummy("Dummy_A", new Vector3(-40f, 1f, 50f), matDummy);
-        CreateDummy("Dummy_B", new Vector3(-20f, 1f, 50f), matDummy);
+        // 11. ターゲットダミー 2体
+        CreateDummy("Dummy_A", new Vector3(-32f, 1f, 30f), matDummy);
+        CreateDummy("Dummy_B", new Vector3(-26f, 1f, 36f), matDummy);
 
         // 7b. TelegraphSector プレハブ（空 GO + MeshFilter + MeshRenderer + TelegraphSector）
         var sectorGo   = new GameObject("TelegraphSector");
@@ -363,7 +555,7 @@ public static class BuildAetherRiftMap
         var smPrefab     = PrefabUtility.SaveAsPrefabAsset(smGo, smPrefabPath);
         Object.DestroyImmediate(smGo);
 
-        // 12. ニュートラルボス（ボスピット中央）
+        // 12. ニュートラルボス（ベイスン中央、壁なし）
         CreateBoss(telegraphPrefab, sectorPrefab, smPrefab, matBoss);
 
         // 13. ゲーム内 HUD
@@ -603,6 +795,14 @@ public static class BuildAetherRiftMap
         _           => 0f,    // 不透明（body/face/skin/eye はアルファ=マスク用途）
     };
 
+    // Cylinder プリミティブ付属の CapsuleCollider は扁平スケールで球面ドーム状になり
+    // 床として機能しない（プレイヤーが滑落する）ため MeshCollider に差し替える
+    private static void UseFlatMeshCollider(GameObject cylinderGo, bool keepCollider)
+    {
+        Object.DestroyImmediate(cylinderGo.GetComponent<CapsuleCollider>());
+        if (keepCollider) cylinderGo.AddComponent<MeshCollider>();
+    }
+
     private static GameObject PlaceCube(string name, Vector3 pos, Vector3 scale, Material mat)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
@@ -614,33 +814,55 @@ public static class BuildAetherRiftMap
         return go;
     }
 
-    private static void PlaceTower(string name, Vector3 pos, Material mat, Projectile projPrefab)
+    /// <summary>
+    /// タワーを配置する。towerModel が null の場合は Cylinder フォールバック。
+    /// ジオメトリ節から呼ばれる overload（Kenney モデル対応版）。
+    /// </summary>
+    private static void PlaceTower(string name, Vector3 pos, Material mat, Projectile projPrefab,
+        GameObject towerModel = null)
     {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        go.name              = name;
-        go.transform.position   = pos;
-        go.transform.localScale = new Vector3(4f, 4f, 4f);
+        GameObject go;
+        if (towerModel != null)
+        {
+            go = (GameObject)PrefabUtility.InstantiatePrefab(towerModel);
+            go.transform.position   = pos;
+            go.transform.localScale = Vector3.one * 4.5f;
+            // CapsuleCollider 付与（既存コライダーは除去してから追加）
+            foreach (var c in go.GetComponentsInChildren<Collider>())
+                Object.DestroyImmediate(c);
+            var cap = go.AddComponent<CapsuleCollider>();
+            cap.radius = 1.5f;
+            cap.height = 8f;
+            cap.center = new Vector3(0f, 4f, 0f);
+        }
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            go.transform.position   = pos;
+            go.transform.localScale = new Vector3(4f, 4f, 4f);
+            SetMat(go, mat);
+        }
+        go.name = name;
         SetStatic(go);
-        SetMat(go, mat);
 
-        // タワーは戦略オブジェクトなので HP と TeamTag を持たせる
+        // HP
         var hc = go.AddComponent<HealthComponent>();
         var soHc = new SerializedObject(hc);
         soHc.FindProperty("_maxHp").floatValue = 500f;
         soHc.ApplyModifiedPropertiesWithoutUndo();
 
+        // チーム
         var tt   = go.AddComponent<TeamTag>();
         var soTt = new SerializedObject(tt);
-        // x < 0 = Blue, x > 0 = Red
         soTt.FindProperty("_team").enumValueIndex = pos.x < 0f ? (int)TeamId.Blue : (int)TeamId.Red;
         soTt.ApplyModifiedPropertiesWithoutUndo();
 
-        // TowerAttack: 射程内の敵を自動攻撃する
-        var ta   = go.AddComponent<TowerAttack>();
+        // TowerAttack
+        var ta      = go.AddComponent<TowerAttack>();
         var muzzleGo = new GameObject("Muzzle");
         muzzleGo.transform.SetParent(go.transform, false);
-        // タワーの localScale が 4 なので worldspace で頂部に来るよう localY+1 = world+4
-        muzzleGo.transform.localPosition = new Vector3(0f, 1f, 0f);
+        // Kenney モデルはワールド localScale 4.5 → top ≈ y+6（世界座標） → localY ≈ 6/4.5 ≈ 1.33
+        muzzleGo.transform.localPosition = new Vector3(0f, towerModel != null ? 1.33f : 1f, 0f);
 
         var soTa = new SerializedObject(ta);
         soTa.FindProperty("_projectilePrefab").objectReferenceValue = projPrefab;
@@ -833,29 +1055,47 @@ public static class BuildAetherRiftMap
 
     private static void PlaceMinionSpawners(MinionAI minionPrefab, Material matBlue, Material matRed)
     {
-        // 西TOP → 東方向 (Blue)
+        // アーク半径 R=45 上のウェイポイント計算ヘルパー
+        static Vector3 ArcPt(float deg) {
+            float r = deg * Mathf.Deg2Rad;
+            return new Vector3(45f * Mathf.Cos(r), 0f, 45f * Mathf.Sin(r));
+        }
+
+        // BlueTop: 出発(-50,0,10)→ θ=160,135,90,45,20 のアーク→終点(50,0,8)
         PlaceSpawner("Spawner_BlueTop",
-            new Vector3(-88f, 0f, 50f),
+            new Vector3(-50f, 0f, 10f),
             TeamId.Blue, matBlue, minionPrefab,
-            new Vector3[] { new Vector3(0f, 0f, 50f), new Vector3(55f, 0f, 50f), new Vector3(88f, 0f, 50f) });
+            new Vector3[] {
+                ArcPt(160f), ArcPt(135f), ArcPt(90f), ArcPt(45f), ArcPt(20f),
+                new Vector3(50f, 0f, 8f)
+            });
 
-        // 西BOT → 東方向 (Blue)
-        PlaceSpawner("Spawner_BlueBot",
-            new Vector3(-88f, 0f, -50f),
-            TeamId.Blue, matBlue, minionPrefab,
-            new Vector3[] { new Vector3(0f, 0f, -50f), new Vector3(55f, 0f, -50f), new Vector3(88f, 0f, -50f) });
-
-        // 東TOP → 西方向 (Red)
+        // RedTop: 出発(50,0,10)→ θ=20,45,90,135,160 のアーク→終点(-50,0,8)
         PlaceSpawner("Spawner_RedTop",
-            new Vector3(88f, 0f, 50f),
+            new Vector3(50f, 0f, 10f),
             TeamId.Red, matRed, minionPrefab,
-            new Vector3[] { new Vector3(0f, 0f, 50f), new Vector3(-55f, 0f, 50f), new Vector3(-88f, 0f, 50f) });
+            new Vector3[] {
+                ArcPt(20f), ArcPt(45f), ArcPt(90f), ArcPt(135f), ArcPt(160f),
+                new Vector3(-50f, 0f, 8f)
+            });
 
-        // 東BOT → 西方向 (Red)
+        // BlueBot: z 符号反転版（出発(-50,0,-10)→ θ=200,225,270,315,340→終点(50,0,-8)）
+        PlaceSpawner("Spawner_BlueBot",
+            new Vector3(-50f, 0f, -10f),
+            TeamId.Blue, matBlue, minionPrefab,
+            new Vector3[] {
+                ArcPt(200f), ArcPt(225f), ArcPt(270f), ArcPt(315f), ArcPt(340f),
+                new Vector3(50f, 0f, -8f)
+            });
+
+        // RedBot: z 符号反転版（出発(50,0,-10)→ θ=340,315,270,225,200→終点(-50,0,-8)）
         PlaceSpawner("Spawner_RedBot",
-            new Vector3(88f, 0f, -50f),
+            new Vector3(50f, 0f, -10f),
             TeamId.Red, matRed, minionPrefab,
-            new Vector3[] { new Vector3(0f, 0f, -50f), new Vector3(-55f, 0f, -50f), new Vector3(-88f, 0f, -50f) });
+            new Vector3[] {
+                ArcPt(340f), ArcPt(315f), ArcPt(270f), ArcPt(225f), ArcPt(200f),
+                new Vector3(-50f, 0f, -8f)
+            });
     }
 
     private static void PlaceSpawner(

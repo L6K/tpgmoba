@@ -9,16 +9,12 @@
             <ui:Label name="hud-timer" class="hud-timer" text="00:00" />
         </ui:VisualElement>
 
-        <!-- 左下ミニマップ上部: チームバフ残り時間表示（ミニマップの上 16px に配置）-->
+        <!-- 左下ミニマップ上部: チームバフ残り時間表示（ミニマップの上 16px に配置: 160+16+16=192）-->
         <ui:Label name="hud-buff" class="hud-buff" text=""
-                  style="position: absolute; left: 16px; bottom: 186px; display: none;" />
+                  style="position: absolute; left: 16px; bottom: 192px; display: none;" />
 
-        <!-- 左下: ミニマップパネル -->
+        <!-- 左下: ミニマップパネル（円形マップ・160x160 正方形） -->
         <ui:VisualElement name="hud-minimap" class="hud-minimap">
-            <!-- TOPレーン帯（z=+50 → パネル y ≈ 22px、帯高さ13px で中心を合わせる） -->
-            <ui:VisualElement class="minimap-lane minimap-lane--top" />
-            <!-- BOTレーン帯（z=-50 → パネル y ≈ 132px） -->
-            <ui:VisualElement class="minimap-lane minimap-lane--bot" />
             <!-- 中央縦川帯 -->
             <ui:VisualElement class="minimap-river" />
         </ui:VisualElement>

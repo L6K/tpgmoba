@@ -18,11 +18,11 @@ namespace Enigma.Minimap
 
         // ---- 定数 ----
 
-        // マップの世界座標範囲（AetherRift_Map 設計値）
-        private static readonly Rect WorldBounds = new Rect(-100f, -70f, 200f, 140f);
+        // マップの世界座標範囲（円形マップ: 半径75 の正方形に内包）
+        private static readonly Rect WorldBounds = new Rect(-75f, -75f, 150f, 150f);
 
         // ミニマップパネルのピクセルサイズ（GameHud.uss の hud-minimap に合わせる）
-        private static readonly Vector2 PanelSize = new Vector2(220f, 154f);
+        private static readonly Vector2 PanelSize = new Vector2(160f, 160f);
 
         // ドットの基準サイズ（通常ユニット 6px、自分・タワー等 8px）
         private const float DotSizeNormal = 6f;
