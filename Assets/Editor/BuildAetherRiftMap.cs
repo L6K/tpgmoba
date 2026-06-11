@@ -40,6 +40,7 @@ public static class BuildAetherRiftMap
         var matRiver     = GetOrCreateMat("River",       new Color(0.15f, 0.35f, 0.70f));
         var matPit       = GetOrCreateMat("Pit",         new Color(0.25f, 0.15f, 0.35f));
         var matJungle    = GetOrCreateMat("JungleWall",  new Color(0.12f, 0.30f, 0.16f));
+        ApplyWutheringRamp(matJungle);
         var matBlue      = GetOrCreateMat("TeamBlue",    new Color(0.18f, 0.42f, 0.95f));
         var matRed       = GetOrCreateMat("TeamRed",     new Color(0.85f, 0.25f, 0.25f));
         var matDummy     = GetOrCreateMat("Dummy",       Color.red);
@@ -69,6 +70,9 @@ public static class BuildAetherRiftMap
             SetStatic(ground);
             // 草原グリーン
             matGround.SetColor("_BaseColor", new Color(0.40f, 0.58f, 0.32f));
+            // 鳴潮風: 柔らかいランプ + 青みの影、色むらノイズテクスチャ
+            ApplyWutheringRamp(matGround);
+            ApplyNoiseBaseMap(matGround, "GroundNoise", new Vector2(10f, 10f));
             SetMat(ground, matGround);
         }
 
@@ -79,6 +83,9 @@ public static class BuildAetherRiftMap
 
         // レーン色を土色に更新
         matLane.SetColor("_BaseColor", new Color(0.62f, 0.55f, 0.42f));
+        // 鳴潮風: 柔らかいランプ + 青みの影、色むらノイズテクスチャ
+        ApplyWutheringRamp(matLane);
+        ApplyNoiseBaseMap(matLane, "LaneNoise", new Vector2(8f, 8f));
 
         // レーンアーク: Cube 48個を滑らかなリング帯メッシュ1枚に置換（角のはみ出し解消）
         const float R = 45f;
@@ -378,6 +385,7 @@ public static class BuildAetherRiftMap
 
         // ---- ジャングルパス（4本）& キャンプ ----
         var matJunglePath = GetOrCreateMat("JunglePath", new Color(0.68f, 0.60f, 0.46f));
+        ApplyWutheringRamp(matJunglePath);
         PlaceJunglePathsAndCamps(matJunglePath);
 
         // 本拠地: Cylinder scale(22,1,22) pos(±56,0.5,0)
@@ -448,17 +456,26 @@ public static class BuildAetherRiftMap
         var dirLight = new GameObject("Directional Light");
         var light = dirLight.AddComponent<Light>();
         light.type      = LightType.Directional;
-        light.color     = new Color(1f, 0.97f, 0.92f);
-        light.intensity = 1.35f;
-        dirLight.transform.rotation = Quaternion.Euler(50f, -30f, 0f);
+        light.color     = new Color(1.0f, 0.96f, 0.88f);
+        light.intensity = 1.25f;
+        // 鳴潮風の柔らかい実時間影（shadowBias/normalBias はデフォルトのまま）
+        light.shadows        = LightShadows.Soft;
+        light.shadowStrength = 0.85f;
+        dirLight.transform.rotation = Quaternion.Euler(48f, -38f, 0f);
 
         // アニメ調スカイボックス + 環境光（URP）
         var skyMat = AssetDatabase.LoadAssetAtPath<Material>(MatDir + "/AnimeSky.mat");
         if (skyMat != null) RenderSettings.skybox = skyMat;
         RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Trilight;
-        RenderSettings.ambientSkyColor     = new Color(0.62f, 0.72f, 0.88f);
-        RenderSettings.ambientEquatorColor = new Color(0.52f, 0.56f, 0.62f);
-        RenderSettings.ambientGroundColor  = new Color(0.34f, 0.32f, 0.30f);
+        RenderSettings.ambientSkyColor     = new Color(0.55f, 0.65f, 0.85f);
+        RenderSettings.ambientEquatorColor = new Color(0.46f, 0.50f, 0.58f);
+        RenderSettings.ambientGroundColor  = new Color(0.30f, 0.28f, 0.30f);
+
+        // 大気フォグ（遠景を薄く沈める）
+        RenderSettings.fog           = true;
+        RenderSettings.fogMode       = FogMode.ExponentialSquared;
+        RenderSettings.fogColor      = new Color(0.62f, 0.70f, 0.85f);
+        RenderSettings.fogDensity    = 0.0045f;
 
         // グローバルポスプロボリューム（URP）
         var postGo  = new GameObject("Global Post Volume");
@@ -870,6 +887,34 @@ public static class BuildAetherRiftMap
     {
         if (!Directory.Exists(path))
             Directory.CreateDirectory(path);
+    }
+
+    /// <summary>
+    /// 鳴潮風の柔らかいトゥーンランプを設定する。
+    /// バンド境界をぼかし（_RampSmoothing）、暗部に青みを与える（_ShadeColor）。
+    /// シェーダー本体は変更せずマテリアルプロパティのみ調整する。
+    /// </summary>
+    private static void ApplyWutheringRamp(Material mat)
+    {
+        if (mat == null) return;
+        if (mat.HasProperty("_RampSmoothing")) mat.SetFloat("_RampSmoothing", 0.18f);
+        if (mat.HasProperty("_ShadeColor"))    mat.SetColor("_ShadeColor", new Color(0.58f, 0.62f, 0.80f, 1f));
+        EditorUtility.SetDirty(mat);
+    }
+
+    /// <summary>
+    /// Assets/_Project/UI/Textures 配下のノイズ PNG を _BaseMap に設定し、タイリングを与える。
+    /// 既存マテリアルを GetOrCreateMat が返した場合でも上書き設定する。
+    /// </summary>
+    private static void ApplyNoiseBaseMap(Material mat, string textureName, Vector2 tiling)
+    {
+        if (mat == null) return;
+        var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(
+            $"Assets/_Project/UI/Textures/{textureName}.png");
+        if (tex == null) return;
+        mat.SetTexture("_BaseMap", tex);
+        mat.SetTextureScale("_BaseMap", tiling);
+        EditorUtility.SetDirty(mat);
     }
 
     private static Material GetOrCreateMat(string name, Color color)

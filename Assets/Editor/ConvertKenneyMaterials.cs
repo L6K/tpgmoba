@@ -74,6 +74,11 @@ public static class ConvertKenneyMaterials
                     newMat.SetTexture("_BaseMap", baseMap);
                 if (newMat.HasProperty("_OutlineWidth"))
                     newMat.SetFloat("_OutlineWidth", 0.002f);
+                // 鳴潮風: 柔らかいランプ + 青みの影（地面・木・岩系と統一）
+                if (newMat.HasProperty("_RampSmoothing"))
+                    newMat.SetFloat("_RampSmoothing", 0.18f);
+                if (newMat.HasProperty("_ShadeColor"))
+                    newMat.SetColor("_ShadeColor", new Color(0.58f, 0.62f, 0.80f, 1f));
 
                 AssetDatabase.CreateAsset(newMat, outPath);
                 createdMaterials[matName] = newMat;

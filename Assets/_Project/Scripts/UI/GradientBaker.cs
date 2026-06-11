@@ -121,6 +121,94 @@ namespace Enigma.UI
         }
 
         /// <summary>
+        /// タイル可能なバリューノイズテクスチャ。色 a〜b を雲状ノイズで補間する。
+        /// Mathf.PerlinNoise はタイル不可なので、格子点を size 周期でラップしてハッシュし、
+        /// smoothstep 補間で滑らかにつなぐ。これにより左右端・上下端が連続する。
+        /// </summary>
+        /// <param name="size">正方テクスチャの一辺（ピクセル）</param>
+        /// <param name="a">ノイズ値 0 側の色</param>
+        /// <param name="b">ノイズ値 1 側の色</param>
+        /// <param name="cells">基本周波数の格子分割数（タイル境界で連続）</param>
+        /// <param name="octaves">重ね合わせるオクターブ数（各段で周波数倍・振幅半減）</param>
+        /// <param name="seed">決定論的なハッシュシード</param>
+        public static Color[] ValueNoiseTexture(
+            int size, Color a, Color b, int cells, int octaves, int seed = 0)
+        {
+            if (size < 1) size = 1;
+            if (cells < 1) cells = 1;
+            if (octaves < 1) octaves = 1;
+
+            var px = new Color[size * size];
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // [0,1) の UV。size を周期とすることでテクスチャ端が連続する。
+                    float u = (float)x / size;
+                    float v = (float)y / size;
+
+                    float sum   = 0f;
+                    float amp   = 1f;
+                    float ampSum = 0f;
+                    int   freq  = cells;
+                    for (int o = 0; o < octaves; o++)
+                    {
+                        sum    += amp * TileableValue(u, v, freq, seed + o * 131);
+                        ampSum += amp;
+                        amp    *= 0.5f;
+                        freq   *= 2;
+                    }
+                    float n = ampSum > 0f ? sum / ampSum : 0f; // [0,1] に正規化
+                    px[y * size + x] = Color.Lerp(a, b, Mathf.Clamp01(n));
+                }
+            }
+            return px;
+        }
+
+        /// <summary>
+        /// 周期 period の格子上でタイル可能なバリューノイズを 1 サンプル返す（[0,1]）。
+        /// u,v は [0,1)。格子座標を period でラップして整数ハッシュし、smoothstep 補間。
+        /// </summary>
+        private static float TileableValue(float u, float v, int period, int seed)
+        {
+            float fx = u * period;
+            float fy = v * period;
+            int x0 = Mathf.FloorToInt(fx);
+            int y0 = Mathf.FloorToInt(fy);
+            float tx = fx - x0;
+            float ty = fy - y0;
+
+            // 格子点を period でラップ → 端と端が同じハッシュ値になりタイル化する
+            int x0w = ((x0 % period) + period) % period;
+            int y0w = ((y0 % period) + period) % period;
+            int x1w = (x0w + 1) % period;
+            int y1w = (y0w + 1) % period;
+
+            float c00 = Hash01(x0w, y0w, seed);
+            float c10 = Hash01(x1w, y0w, seed);
+            float c01 = Hash01(x0w, y1w, seed);
+            float c11 = Hash01(x1w, y1w, seed);
+
+            float sx = tx * tx * (3f - 2f * tx); // smoothstep
+            float sy = ty * ty * (3f - 2f * ty);
+            float top = Mathf.Lerp(c00, c10, sx);
+            float bot = Mathf.Lerp(c01, c11, sx);
+            return Mathf.Lerp(top, bot, sy);
+        }
+
+        /// <summary>整数格子点を決定論的に [0,1] へハッシュする。</summary>
+        private static float Hash01(int x, int y, int seed)
+        {
+            unchecked
+            {
+                uint h = (uint)(x * 374761393 + y * 668265263 + seed * 2246822519);
+                h = (h ^ (h >> 13)) * 1274126177u;
+                h ^= h >> 16;
+                return (h & 0xFFFFFF) / (float)0x1000000; // [0,1)
+            }
+        }
+
+        /// <summary>
         /// 上向き白三角アイコン（背景透明）。頂点が上端中央、底辺が下端。
         /// </summary>
         public static Color[] UpTriangle(int size, Color fill)

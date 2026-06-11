@@ -34,6 +34,7 @@ namespace Enigma.EditorTools
             BakeMinimapBg();
             BakePortrait();
             BakeGradients();
+            BakeGroundNoise();
 
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
@@ -55,9 +56,13 @@ namespace Enigma.EditorTools
             RenderTexture rt = null;
             Texture2D tex = null;
             RenderTexture prevActive = RenderTexture.active;
+            bool prevFog = RenderSettings.fog;
 
             try
             {
+                // 真上 120m からの撮影は距離フォグで全体が霞むため、ベイク中のみ無効化
+                RenderSettings.fog = false;
+
                 // 映り込み除去: HealthBar / Telegraph を一時非表示
                 HideObjects(hidden, go =>
                     go.name == "HealthBar" || go.name.Contains("Telegraph"));
@@ -96,6 +101,7 @@ namespace Enigma.EditorTools
             }
             finally
             {
+                RenderSettings.fog = prevFog;
                 RenderTexture.active = prevActive;
                 RestoreObjects(hidden);
                 if (rt != null)
@@ -226,6 +232,43 @@ namespace Enigma.EditorTools
         }
 
         // ---------------------------------------------------------------
+        // 1d. 地面の色むらノイズ（タイル可能、wrap=Repeat）
+        // ---------------------------------------------------------------
+
+        private static void BakeGroundNoise()
+        {
+            const int Size = 512;
+
+            // 草の明暗: ベース 1.0 に対し ±数% の倍率むら（マテリアル _BaseColor へ乗算される想定）
+            WriteRepeatTexture("GroundNoise.png", Size,
+                GradientBaker.ValueNoiseTexture(Size,
+                    new Color(0.93f, 0.97f, 0.90f), new Color(1.06f, 1.04f, 0.97f),
+                    cells: 8, octaves: 2, seed: 1001));
+
+            // レーン土の明暗
+            WriteRepeatTexture("LaneNoise.png", Size,
+                GradientBaker.ValueNoiseTexture(Size,
+                    new Color(0.94f, 0.92f, 0.90f), new Color(1.05f, 1.03f, 1.0f),
+                    cells: 8, octaves: 2, seed: 2002));
+        }
+
+        private static void WriteRepeatTexture(string fileName, int size, Color[] pixels)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+            tex.SetPixels(pixels);
+            tex.Apply();
+            try
+            {
+                WritePng(tex, fileName);
+            }
+            finally
+            {
+                Object.DestroyImmediate(tex);
+            }
+            ImportTexture(fileName, NextPow2AtLeast(size), hasAlpha: false, wrap: TextureWrapMode.Repeat);
+        }
+
+        // ---------------------------------------------------------------
         // ヘルパー
         // ---------------------------------------------------------------
 
@@ -253,7 +296,8 @@ namespace Enigma.EditorTools
             File.WriteAllBytes(sysPath, png);
         }
 
-        private static void ImportTexture(string fileName, int maxSize, bool hasAlpha)
+        private static void ImportTexture(string fileName, int maxSize, bool hasAlpha,
+            TextureWrapMode wrap = TextureWrapMode.Clamp)
         {
             string assetPath = OutputDir + "/" + fileName;
             AssetDatabase.ImportAsset(assetPath, ImportAssetOptions.ForceUpdate);
@@ -263,12 +307,13 @@ namespace Enigma.EditorTools
 
             importer.textureType = TextureImporterType.Default;
             importer.sRGBTexture = true;
-            importer.mipmapEnabled = false;
+            // タイルテクスチャ（Repeat）はミップを有効にして遠景のモアレを抑える
+            importer.mipmapEnabled = wrap == TextureWrapMode.Repeat;
             importer.alphaIsTransparency = hasAlpha;
             importer.alphaSource = hasAlpha
                 ? TextureImporterAlphaSource.FromInput
                 : TextureImporterAlphaSource.None;
-            importer.wrapMode = TextureWrapMode.Clamp;
+            importer.wrapMode = wrap;
             importer.filterMode = FilterMode.Bilinear;
             importer.maxTextureSize = maxSize;
             // UI から URL 参照するスプライト用途も想定し圧縮は無効寄りに。

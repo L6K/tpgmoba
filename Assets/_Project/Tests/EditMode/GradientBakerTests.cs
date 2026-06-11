@@ -101,6 +101,59 @@ namespace Enigma.Tests
         }
 
         [Test]
+        public void ValueNoiseTexture_HasCorrectLength()
+        {
+            var px = GradientBaker.ValueNoiseTexture(
+                64, Color.black, Color.white, 8, 2, seed: 1);
+            Assert.That(px.Length, Is.EqualTo(64 * 64), "配列長 = size*size");
+        }
+
+        [Test]
+        public void ValueNoiseTexture_IsTileable_EdgesMatch()
+        {
+            int size = 64;
+            var px = GradientBaker.ValueNoiseTexture(
+                size, Color.black, Color.white, 8, 2, seed: 7);
+
+            // タイル可能なら 左端列と「右端の1つ外（= 左端へラップ）」が連続する。
+            // 実装は周期 size で格子をラップするため、x=0 と x=size の値は一致する。
+            // テクスチャ上では x=size-1 → x=0 へ折り返しても破綻が小さいことを確認する。
+            for (int y = 0; y < size; y++)
+            {
+                // 左端と右端の差が大きすぎない（高周波の段差が無い）ことを確認
+                float left  = px[y * size + 0].r;
+                float right = px[y * size + (size - 1)].r;
+                Assert.That(Mathf.Abs(left - right), Is.LessThan(0.5f),
+                    $"行 {y}: 左端と右端のノイズ値が大きく不連続（タイル不可）");
+            }
+        }
+
+        [Test]
+        public void ValueNoiseTexture_ValuesWithinColorRange()
+        {
+            var a = new Color(0.2f, 0.3f, 0.4f);
+            var b = new Color(0.8f, 0.9f, 1.0f);
+            var px = GradientBaker.ValueNoiseTexture(32, a, b, 4, 2, seed: 3);
+
+            float min = Mathf.Min(a.r, b.r);
+            float max = Mathf.Max(a.r, b.r);
+            foreach (var c in px)
+            {
+                Assert.That(c.r, Is.GreaterThanOrEqualTo(min - Eps));
+                Assert.That(c.r, Is.LessThanOrEqualTo(max + Eps));
+            }
+        }
+
+        [Test]
+        public void ValueNoiseTexture_IsDeterministic()
+        {
+            var p1 = GradientBaker.ValueNoiseTexture(16, Color.black, Color.white, 4, 2, seed: 5);
+            var p2 = GradientBaker.ValueNoiseTexture(16, Color.black, Color.white, 4, 2, seed: 5);
+            for (int i = 0; i < p1.Length; i++)
+                Assert.That(p1[i].r, Is.EqualTo(p2[i].r).Within(1e-6f), $"index {i} が非決定論的");
+        }
+
+        [Test]
         public void UpTriangle_ApexNarrow_BaseWide()
         {
             int size = 32;
