@@ -1,0 +1,25 @@
+---
+layout: default
+---
+<section class="hero">
+  <h1>ENIGMA <span class="gold">DEV LOG</span></h1>
+  <p>Fantasy×SF テーマの 3v3 3D MOBA を Unity で開発中。進捗・設計の裏側・ハマったポイントを記録します。</p>
+  <div class="hero-badges">
+    <span class="badge">Unity 6 / URP</span>
+    <span class="badge">UI Toolkit</span>
+    <span class="badge">トゥーンシェーダー</span>
+    <span class="badge">EditMode テスト 157件</span>
+  </div>
+</section>
+
+<ul class="post-list">
+  {% for post in site.posts %}
+  <li>
+    <a class="post-card" href="{{ post.url | relative_url }}">
+      <span class="date">{{ post.date | date: "%Y.%m.%d" }}</span>
+      <h2>{{ post.title }}</h2>
+      <p>{{ post.excerpt | strip_html | truncate: 90 }}</p>
+    </a>
+  </li>
+  {% endfor %}
+</ul>

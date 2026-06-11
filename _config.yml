@@ -1,0 +1,9 @@
+title: Enigma 開発ログ
+description: Fantasy×SF 3v3 MOBA「Enigma」の開発進捗・技術メモ
+baseurl: "/tpgmoba"
+url: "https://l6k.github.io"
+lang: ja
+markdown: kramdown
+permalink: /:year/:month/:day/:title/
+exclude:
+  - README.md

@@ -1,0 +1,158 @@
+/* ── Enigma Dev Log — ゲームHUDと同じデザイン言語(深紺×金) ── */
+:root {
+  --bg:            #0a0e1a;
+  --bg-panel:      #10141f;
+  --bg-panel-2:    #131a2a;
+  --gold:          #c8aa6e;
+  --gold-bright:   #ebc85a;
+  --gold-dark:     #785a28;
+  --parchment:     #f0e6d2;
+  --parchment-dim: #a09b8c;
+  --hp-green:      #34d567;
+  --xp-purple:     #a06bf0;
+  --code-bg:       #0d1117;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  background-image: radial-gradient(ellipse at top, #131a2e 0%, var(--bg) 55%);
+  color: var(--parchment);
+  font-family: "Noto Sans JP", sans-serif;
+  line-height: 1.85;
+  font-size: 16px;
+}
+
+.container { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+
+/* ── ヘッダー ── */
+.site-header { background: rgba(10, 14, 26, 0.92); }
+.header-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 18px; padding-bottom: 14px;
+}
+.brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+.brand-mark {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%;
+  border: 2px solid var(--gold);
+  box-shadow: 0 0 0 1px var(--gold-dark);
+  color: var(--gold); font-family: "Marcellus", serif; font-size: 22px;
+  background: var(--bg-panel-2);
+}
+.brand-text {
+  font-family: "Marcellus", serif; letter-spacing: 4px;
+  color: var(--parchment); font-size: 20px;
+}
+.brand-sub { color: var(--gold); font-size: 12px; letter-spacing: 3px; }
+.nav a {
+  color: var(--parchment-dim); text-decoration: none; margin-left: 22px;
+  font-size: 14px; letter-spacing: 1px;
+}
+.nav a:hover { color: var(--gold-bright); }
+.gold-line {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold) 30%, var(--gold) 70%, transparent);
+}
+
+/* ── ヒーロー(トップページ) ── */
+.hero { text-align: center; padding: 56px 0 36px; }
+.hero h1 {
+  font-family: "Marcellus", serif; font-weight: 400;
+  font-size: 40px; margin: 0 0 10px; letter-spacing: 6px; color: var(--parchment);
+}
+.hero h1 .gold { color: var(--gold); }
+.hero p { color: var(--parchment-dim); margin: 0; }
+.hero-badges { margin-top: 18px; }
+.badge {
+  display: inline-block; margin: 0 4px 8px; padding: 3px 12px;
+  border: 1px solid var(--gold-dark); border-radius: 2px;
+  color: var(--gold); font-size: 12px; letter-spacing: 1px;
+  background: rgba(200, 170, 110, 0.06);
+}
+
+/* ── 記事カード一覧 ── */
+.post-list { list-style: none; padding: 0; margin: 24px 0 64px; }
+.post-card {
+  display: block; text-decoration: none;
+  background: linear-gradient(180deg, var(--bg-panel-2), var(--bg-panel));
+  border: 1px solid var(--gold-dark); border-top-color: var(--gold);
+  border-radius: 3px; padding: 22px 26px; margin-bottom: 18px;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.post-card:hover { transform: translateY(-2px); border-color: var(--gold); }
+.post-card .date { color: var(--gold); font-family: "Marcellus", serif; font-size: 13px; letter-spacing: 2px; }
+.post-card h2 { margin: 6px 0 8px; font-size: 21px; color: var(--parchment); font-weight: 500; }
+.post-card p { margin: 0; color: var(--parchment-dim); font-size: 14px; }
+
+/* ── 記事ページ ── */
+.post { padding: 40px 0 60px; }
+.post-header { text-align: center; margin-bottom: 38px; }
+.post-date { color: var(--gold); font-family: "Marcellus", serif; letter-spacing: 2px; margin: 0; }
+.post-title {
+  font-family: "Marcellus", serif; font-weight: 400; font-size: 32px;
+  margin: 8px 0 14px; color: var(--parchment); line-height: 1.4;
+}
+.post-tags { margin: 0; }
+.tag {
+  display: inline-block; margin: 0 4px; padding: 2px 10px;
+  border: 1px solid var(--gold-dark); border-radius: 2px;
+  color: var(--gold); font-size: 11px;
+}
+
+.post-content h2 {
+  font-family: "Marcellus", serif; font-weight: 400;
+  color: var(--gold); font-size: 24px; letter-spacing: 1px;
+  margin: 48px 0 16px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--gold-dark);
+}
+.post-content h3 { color: var(--parchment); font-size: 18px; margin: 32px 0 10px; }
+.post-content a { color: var(--gold-bright); }
+.post-content img {
+  max-width: 100%; border: 1px solid var(--gold-dark); border-radius: 3px;
+  display: block; margin: 18px auto;
+}
+.post-content figure { margin: 18px 0; }
+.post-content figcaption {
+  text-align: center; color: var(--parchment-dim); font-size: 13px; margin-top: 6px;
+}
+.post-content blockquote {
+  margin: 18px 0; padding: 12px 18px;
+  border-left: 3px solid var(--gold);
+  background: rgba(200, 170, 110, 0.05);
+  color: var(--parchment-dim);
+}
+.post-content code {
+  font-family: Consolas, "Courier New", monospace;
+  background: rgba(255, 255, 255, 0.07); padding: 1px 6px; border-radius: 3px;
+  font-size: 14px; color: var(--gold-bright);
+}
+.post-content pre {
+  background: var(--code-bg); border: 1px solid #2a3040; border-radius: 4px;
+  padding: 16px 18px; overflow-x: auto; line-height: 1.6;
+}
+.post-content pre code { background: none; padding: 0; color: #d8e0ea; font-size: 13.5px; }
+.post-content table { border-collapse: collapse; width: 100%; margin: 18px 0; font-size: 14px; }
+.post-content th, .post-content td { border: 1px solid var(--gold-dark); padding: 8px 12px; text-align: left; }
+.post-content th { background: rgba(200, 170, 110, 0.10); color: var(--gold); }
+.post-content ul li::marker { color: var(--gold); }
+
+.post-footer { margin-top: 48px; }
+.back-link { color: var(--gold); text-decoration: none; letter-spacing: 1px; }
+.back-link:hover { color: var(--gold-bright); }
+
+/* ── フッター ── */
+.site-footer { margin-top: 40px; padding-bottom: 28px; }
+.footer-inner { text-align: center; padding-top: 18px; }
+.footer-inner p { margin: 4px 0; color: var(--parchment-dim); font-size: 13px; }
+.credit { font-size: 11px; }
+
+@media (max-width: 600px) {
+  .hero h1 { font-size: 28px; letter-spacing: 3px; }
+  .post-title { font-size: 24px; }
+  .header-inner { flex-direction: column; gap: 8px; }
+}
