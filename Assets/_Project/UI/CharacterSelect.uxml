@@ -1,0 +1,65 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="CharacterSelect.uss" />
+    <ui:VisualElement class="cs-root">
+        <!-- 上部: タイトル + タイマー -->
+        <ui:VisualElement class="cs-header">
+            <ui:Label text="キャラクター選択" class="cs-header__title" />
+            <ui:Label name="cs-timer" text="0:30" class="cs-timer" />
+        </ui:VisualElement>
+
+        <!-- 味方スロット行 -->
+        <ui:VisualElement class="cs-slots-row">
+            <!-- スロット 0 -->
+            <ui:VisualElement name="cs-slot-0" class="cs-slot">
+                <ui:VisualElement name="cs-slot-icon-0" class="cs-slot__icon">
+                    <ui:Label name="cs-slot-initial-0" class="cs-slot__initial" />
+                </ui:VisualElement>
+                <ui:VisualElement class="cs-slot__info">
+                    <ui:Label name="cs-slot-name-0" text="---" class="cs-slot__name" />
+                    <ui:Label name="cs-slot-pick-0" text="" class="cs-slot__pick" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- スロット 1 -->
+            <ui:VisualElement name="cs-slot-1" class="cs-slot">
+                <ui:VisualElement name="cs-slot-icon-1" class="cs-slot__icon">
+                    <ui:Label name="cs-slot-initial-1" class="cs-slot__initial" />
+                </ui:VisualElement>
+                <ui:VisualElement class="cs-slot__info">
+                    <ui:Label name="cs-slot-name-1" text="---" class="cs-slot__name" />
+                    <ui:Label name="cs-slot-pick-1" text="" class="cs-slot__pick" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- スロット 2 -->
+            <ui:VisualElement name="cs-slot-2" class="cs-slot">
+                <ui:VisualElement name="cs-slot-icon-2" class="cs-slot__icon">
+                    <ui:Label name="cs-slot-initial-2" class="cs-slot__initial" />
+                </ui:VisualElement>
+                <ui:VisualElement class="cs-slot__info">
+                    <ui:Label name="cs-slot-name-2" text="---" class="cs-slot__name" />
+                    <ui:Label name="cs-slot-pick-2" text="" class="cs-slot__pick" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- 中段: プレビュー + グリッド -->
+        <ui:VisualElement class="cs-middle">
+            <!-- 左: 大型プレビューパネル -->
+            <ui:VisualElement class="cs-preview">
+                <ui:VisualElement name="cs-preview-icon" class="cs-preview__icon">
+                    <ui:Label name="cs-preview-initial" class="cs-preview__initial" />
+                </ui:VisualElement>
+                <ui:Label name="cs-preview-name" text="キャラクター名" class="cs-preview__name" />
+                <ui:Label name="cs-preview-role" text="" class="cs-preview__role" />
+                <ui:Label name="cs-preview-desc" text="" class="cs-preview__desc" />
+            </ui:VisualElement>
+
+            <!-- 右: キャラグリッド (コントローラーが動的に追加) -->
+            <ui:ScrollView name="cs-grid" class="cs-grid" />
+        </ui:VisualElement>
+
+        <!-- 下部: ロックインボタン -->
+        <ui:Button name="cs-lock" text="ロックイン" class="cs-lock-btn" />
+    </ui:VisualElement>
+</ui:UXML>

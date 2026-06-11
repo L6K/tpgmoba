@@ -1,8 +1,10 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.Serialization;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 using System;
 using Enigma.Character;
 using Enigma.Core;
@@ -59,6 +61,9 @@ namespace Enigma.UI
         private Label         _labelBgmVal, _labelSeVal, _labelVoiceVal;
         private DropdownField _dropdownQuality, _dropdownWindow;
 
+        // ── マッチメイキング ───────────────────────────
+        private Label         _matchmakingStatus;
+
         // ── ゲームタブ ─────────────────────────────────
         private DropdownField _dropdownCastMode;
         private Button[]      _rebindBtns;
@@ -84,12 +89,16 @@ namespace Enigma.UI
             _btnProfile    = root.Q<Button>("btn-profile");
             _btnSettings   = root.Q<Button>("btn-settings");
 
+            _matchmakingStatus = root.Q<Label>("matchmaking-status");
+
             _tabGame.clicked      += () => SwitchTab(0);
             _tabInventory.clicked += () => SwitchTab(1);
             _tabGacha.clicked     += () => SwitchTab(2);
             _btnPlay.clicked      += OnPlayClicked;
             _btnProfile.clicked   += OnProfileClicked;
             _btnSettings.clicked  += OpenSettings;
+
+            GameServices.Matchmaking.MatchFound += OnMatchFound;
 
             // 設定オーバーレイ
             _settingsOverlay  = root.Q<VisualElement>("settings-overlay");
@@ -202,6 +211,12 @@ namespace Enigma.UI
             }
 
             SwitchTab(0);
+        }
+
+        private void OnDisable()
+        {
+            if (GameServices.Matchmaking != null)
+                GameServices.Matchmaking.MatchFound -= OnMatchFound;
         }
 
         // ── メインタブ切り替え ─────────────────────────
@@ -452,6 +467,17 @@ namespace Enigma.UI
         // ── ESC キーでオーバーレイを閉じる ────────────
         private void Update()
         {
+            // マッチング中は毎フレーム経過時間を進め、ラベルを更新する
+            var mm = GameServices.Matchmaking;
+            if (mm != null && mm.State == MatchmakingState.Searching)
+            {
+                mm.Tick(Time.deltaTime);
+                int totalSec = Mathf.FloorToInt(mm.ElapsedSeconds);
+                int m = totalSec / 60;
+                int s = totalSec % 60;
+                _matchmakingStatus.text = $"マッチング中… {m}:{s:D2}";
+            }
+
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
 
@@ -509,7 +535,39 @@ namespace Enigma.UI
         }
 
         // ── その他ボタン ───────────────────────────────
-        private void OnPlayClicked()    => Debug.Log("[HomeScreen] プレイ開始");
+        private void OnPlayClicked()
+        {
+            var mm = GameServices.Matchmaking;
+            if (mm.State == MatchmakingState.Idle || mm.State == MatchmakingState.Found)
+            {
+                mm.StartQueue();
+                _btnPlay.text = "キャンセル";
+                _matchmakingStatus.style.display = DisplayStyle.Flex;
+                _matchmakingStatus.RemoveFromClassList("matchmaking-status--found");
+            }
+            else if (mm.State == MatchmakingState.Searching)
+            {
+                mm.Cancel();
+                _btnPlay.text = "プレイ開始";
+                _btnPlay.SetEnabled(true);
+                _matchmakingStatus.style.display = DisplayStyle.None;
+            }
+        }
+
+        private void OnMatchFound()
+        {
+            _matchmakingStatus.text = "マッチが見つかりました!";
+            _matchmakingStatus.AddToClassList("matchmaking-status--found");
+            _btnPlay.SetEnabled(false);
+            StartCoroutine(LoadCharacterSelectAfterDelay());
+        }
+
+        private IEnumerator LoadCharacterSelectAfterDelay()
+        {
+            yield return new WaitForSeconds(1f);
+            SceneManager.LoadScene("CharacterSelect");
+        }
+
         private void OnProfileClicked() => OpenProfile();
 
         // ── フレンドリスト構築 ─────────────────────────

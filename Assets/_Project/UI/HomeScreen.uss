@@ -997,6 +997,24 @@
     margin-top: 28px;
 }
 
+/* ── マッチングステータスラベル ─────────────────────── */
+.matchmaking-status {
+    align-self: center;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: var(--color-text);
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 12px;
+    padding: 4px 14px;
+    letter-spacing: 1px;
+    -unity-text-align: middle-center;
+}
+
+/* マッチ成立時: アクセントカラーで強調 */
+.matchmaking-status--found {
+    color: var(--color-accent);
+}
+
 /* ── リバインドボタン ────────────────────────────────── */
 .rebind-btn {
     width: 160px;

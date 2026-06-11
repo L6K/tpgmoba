@@ -7,10 +7,12 @@ namespace Enigma.Core
     // どのシーンからでも呼べる必要があるため。
     public static class GameServices
     {
-        public static ISettingsService       Settings        { get; private set; }
-        public static ICharacterOwnership    Ownership       { get; private set; }
-        public static IGachaService          Gacha           { get; private set; }
+        public static ISettingsService        Settings        { get; private set; }
+        public static ICharacterOwnership     Ownership       { get; private set; }
+        public static IGachaService           Gacha           { get; private set; }
         public static IControlSettingsService ControlSettings { get; private set; }
+        public static IMatchmakingService     Matchmaking     { get; private set; }
+        public static IMatchContext           Match           { get; private set; }
 
         public static bool IsInitialized => Settings != null && Ownership != null && Gacha != null && ControlSettings != null;
 
@@ -24,20 +26,25 @@ namespace Enigma.Core
             var settings        = new SettingsService(store, applier);
             var controlSettings = new ControlSettingsService(store);
 
-            Initialize(settings, ownership, gacha, controlSettings);
+            Initialize(settings, ownership, gacha, controlSettings,
+                new MatchmakingService(new SystemRandomSource()), new MatchContext());
         }
 
         /// <summary>テスト・差し替え用。任意の実装を注入できる。</summary>
         public static void Initialize(
-            ISettingsService       settings,
-            ICharacterOwnership    ownership,
-            IGachaService          gacha,
-            IControlSettingsService controlSettings = null)
+            ISettingsService        settings,
+            ICharacterOwnership     ownership,
+            IGachaService           gacha,
+            IControlSettingsService controlSettings = null,
+            IMatchmakingService     matchmaking     = null,
+            IMatchContext           match           = null)
         {
             Settings        = settings;
             Ownership       = ownership;
             Gacha           = gacha;
             ControlSettings = controlSettings;
+            Matchmaking     = matchmaking ?? new MatchmakingService(new SystemRandomSource());
+            Match           = match       ?? new MatchContext();
         }
 
         /// <summary>テスト後のクリーンアップ用。</summary>
@@ -47,6 +54,8 @@ namespace Enigma.Core
             Ownership       = null;
             Gacha           = null;
             ControlSettings = null;
+            Matchmaking     = null;
+            Match           = null;
         }
     }
 }
