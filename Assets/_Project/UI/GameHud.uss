@@ -283,3 +283,196 @@
     -unity-text-align: middle-center;
     display: none;
 }
+
+/* ── 所持金表示（スキルスロット右） ─────────────────── */
+.hud-gold {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: rgb(235, 200, 90);
+    background-color: rgba(10, 12, 22, 0.72);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(235, 200, 90, 0.35);
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    margin-left: 14px;
+    align-self: flex-end;
+    margin-bottom: 8px;
+}
+
+/* ── アイテム枠列（所持金の右） ─────────────────────── */
+.hud-item-slots {
+    flex-direction: row;
+    align-items: flex-end;
+    margin-left: 8px;
+}
+
+/* 各アイテムスロット: 36x36 角丸4 暗背景+薄枠 */
+.hud-item-slot {
+    width: 36px;
+    height: 36px;
+    background-color: rgba(10, 12, 22, 0.60);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    margin-left: 3px;
+    margin-right: 3px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    margin-bottom: 4px;
+}
+
+/* アイテム頭文字（スロット中央） */
+.hud-item-initial {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    -unity-text-align: middle-center;
+}
+
+/* ── ショップ範囲外ヒント（下部中央固定） ────────────── */
+.hud-shop-hint {
+    position: absolute;
+    bottom: 100px;
+    left: 0;
+    right: 0;
+    -unity-text-align: middle-center;
+    font-size: 14px;
+    color: rgba(255, 200, 80, 1);
+    background-color: rgba(10, 12, 22, 0.80);
+    border-radius: 6px;
+    padding: 6px 16px;
+    align-self: center;
+}
+
+/* ── ショップオーバーレイ（全画面・操作遮断） ──────── */
+.shop-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(10, 12, 22, 0.96);
+    flex-direction: column;
+    align-items: stretch;
+}
+
+/* ショップヘッダー行 */
+.shop-header {
+    flex-direction: row;
+    align-items: center;
+    padding-left: 32px;
+    padding-right: 32px;
+    padding-top: 20px;
+    padding-bottom: 16px;
+    border-bottom-width: 1px;
+    border-color: var(--color-divider);
+}
+
+/* ショップタイトル */
+.shop-title {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    flex-grow: 1;
+}
+
+/* ショップ内所持金 */
+.shop-gold {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: rgb(235, 200, 90);
+    margin-right: 24px;
+}
+
+/* 閉じるボタン */
+.shop-close {
+    font-size: 14px;
+    color: var(--color-text);
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.18);
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+/* ショップグリッド（カードを横折り返し） */
+.shop-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 20px 24px;
+    flex-grow: 1;
+}
+
+/* アイテムカード */
+.shop-card {
+    width: 200px;
+    height: 150px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    margin: 8px;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* 購入不可カード（ゴールド不足 or 6枠満杯） */
+.shop-card--disabled {
+    opacity: 0.4;
+}
+
+/* カード上部の色タイル */
+.shop-card-tile {
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+}
+
+/* タイル内頭文字 */
+.shop-card-initial {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.90);
+}
+
+/* カード情報エリア */
+.shop-card-info {
+    flex-grow: 1;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* アイテム名 */
+.shop-card-name {
+    font-size: 13px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+}
+
+/* 効果テキスト（小） */
+.shop-card-effect {
+    font-size: 10px;
+    color: var(--color-text-dim);
+    white-space: normal;
+    overflow: hidden;
+    flex-grow: 1;
+}
+
+/* 価格（金色） */
+.shop-card-price {
+    font-size: 12px;
+    -unity-font-style: bold;
+    color: rgb(235, 200, 90);
+    -unity-text-align: lower-right;
+}

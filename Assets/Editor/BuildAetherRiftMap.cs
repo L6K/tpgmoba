@@ -12,6 +12,7 @@ using Enigma.UI;
 using Enigma.Minimap;
 using Enigma.Minion;
 using Enigma.Core;
+using Enigma.Item;
 
 public static class BuildAetherRiftMap
 {
@@ -19,6 +20,7 @@ public static class BuildAetherRiftMap
     private const string MatDir      = "Assets/_Project/Materials/Map";
     private const string PrefabDir   = "Assets/_Project/Prefabs";
     private const string SkillDir    = "Assets/_Project/Data/Skills";
+    private const string ItemDir     = "Assets/_Project/Data/Items";
 
     public static void Execute()
     {
@@ -26,6 +28,7 @@ public static class BuildAetherRiftMap
         EnsureDir(MatDir);
         EnsureDir(PrefabDir);
         EnsureDir(SkillDir);
+        EnsureDir(ItemDir);
         EnsureDir("Assets/Scenes");
 
         // 1. 空シーン作成
@@ -501,6 +504,10 @@ public static class BuildAetherRiftMap
         // XP・レベル成長コンポーネント
         player.AddComponent<PlayerProgression>();
 
+        // ゴールドとアイテム管理
+        player.AddComponent<PlayerWallet>();
+        player.AddComponent<PlayerItems>();
+
         // MatchBootstrap: ピック済みキャラのスキルを Start 時に注入する
         var bootstrap    = player.AddComponent<MatchBootstrap>();
         var soBootstrap  = new SerializedObject(bootstrap);
@@ -592,6 +599,15 @@ public static class BuildAetherRiftMap
         soHudCtrl.FindProperty("_skillCaster").objectReferenceValue  = skillCaster;
         soHudCtrl.ApplyModifiedPropertiesWithoutUndo();
 
+        // ShopController: ショップオーバーレイ制御・購入処理（catalog 結線はステップ15の後）
+        var shopCtrl   = hudGo.AddComponent<ShopController>();
+        var soShopCtrl = new SerializedObject(shopCtrl);
+        soShopCtrl.FindProperty("_uiDocument").objectReferenceValue = hudDoc;
+        soShopCtrl.FindProperty("_player").objectReferenceValue     = player.transform;
+        // _shopCenter は青本拠地中心 (-56, 0, 0)。デフォルト値と同じだが明示して堅牢化
+        soShopCtrl.FindProperty("_shopCenter").vector3Value         = new Vector3(-56f, 0f, 0f);
+        soShopCtrl.ApplyModifiedPropertiesWithoutUndo();
+
         // MinimapController: ミニマップドットを毎フレーム更新する
         var minimapCtrl   = hudGo.AddComponent<MinimapController>();
         var soMinimapCtrl = new SerializedObject(minimapCtrl);
@@ -602,7 +618,25 @@ public static class BuildAetherRiftMap
         var minionPrefab = CreateMinionPrefab();
         PlaceMinionSpawners(minionPrefab, matBlue, matRed);
 
-        // 15. シーン保存
+        // 15. ItemData 6種生成 & ItemShopCatalog
+        var catalogItems = new System.Collections.Generic.List<ItemData>
+        {
+            GetOrCreateItemData("Item_LongSword",    "ロングソード",    350,  10f, 0f,   0f,   "基本的な攻撃力強化アイテム。",          new Color(0.80f, 0.65f, 0.20f)),
+            GetOrCreateItemData("Item_MagicBlade",   "魔導の刃",        800,  25f, 0f,   0f,   "魔力が宿った刃。攻撃力を大幅に底上げする。", new Color(0.55f, 0.25f, 0.85f)),
+            GetOrCreateItemData("Item_VitalStone",   "体力の石",        400,  0f,  50f,  0f,   "生命力を高める霊石。",                  new Color(0.20f, 0.65f, 0.30f)),
+            GetOrCreateItemData("Item_GiantBelt",    "巨人の帯",        900,  0f,  120f, 0f,   "タイタンの力を宿す大きな帯。",           new Color(0.65f, 0.35f, 0.15f)),
+            GetOrCreateItemData("Item_WindBoots",    "疾風のブーツ",    300,  0f,  0f,   12f,  "風の力で足取りを軽くするブーツ。",       new Color(0.30f, 0.75f, 0.90f)),
+            GetOrCreateItemData("Item_StormSword",   "嵐剣エニグマ",   1500, 35f, 60f,  0f,   "エニグマの力が凝縮された究極の剣。",     new Color(0.90f, 0.30f, 0.40f)),
+        };
+
+        var catalog = GetOrCreateItemShopCatalog(catalogItems);
+
+        // ShopController に catalog を結線（ステップ15でアセット生成後に行う）
+        var soShopCtrlLate = new SerializedObject(shopCtrl);
+        soShopCtrlLate.FindProperty("_catalog").objectReferenceValue = catalog;
+        soShopCtrlLate.ApplyModifiedPropertiesWithoutUndo();
+
+        // 16. シーン保存
         EditorSceneManager.SaveScene(scene, ScenePath);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
@@ -885,6 +919,12 @@ public static class BuildAetherRiftMap
         var soTowerReward = new SerializedObject(towerReward);
         soTowerReward.FindProperty("_amount").floatValue = 100f;
         soTowerReward.ApplyModifiedPropertiesWithoutUndo();
+
+        // タワー撃破で150G付与
+        var towerGold = go.AddComponent<GoldReward>();
+        var soTowerGold = new SerializedObject(towerGold);
+        soTowerGold.FindProperty("_amount").intValue = 150;
+        soTowerGold.ApplyModifiedPropertiesWithoutUndo();
     }
 
     /// <summary>Projectile プレハブ生成後に全タワーの TowerAttack へ結線する。</summary>
@@ -1071,6 +1111,12 @@ public static class BuildAetherRiftMap
         soMinionReward.FindProperty("_amount").floatValue = 20f;
         soMinionReward.ApplyModifiedPropertiesWithoutUndo();
 
+        // ミニオン撃破で20G付与
+        var minionGold = go.AddComponent<GoldReward>();
+        var soMinionGold = new SerializedObject(minionGold);
+        soMinionGold.FindProperty("_amount").intValue = 20;
+        soMinionGold.ApplyModifiedPropertiesWithoutUndo();
+
         var prefab = PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
         Object.DestroyImmediate(go);
         return prefab.GetComponent<MinionAI>();
@@ -1223,6 +1269,12 @@ public static class BuildAetherRiftMap
         var soBossReward = new SerializedObject(bossReward);
         soBossReward.FindProperty("_amount").floatValue = 250f;
         soBossReward.ApplyModifiedPropertiesWithoutUndo();
+
+        // ボス撃破で300G付与
+        var bossGold = boss.AddComponent<GoldReward>();
+        var soBossGold = new SerializedObject(bossGold);
+        soBossGold.FindProperty("_amount").intValue = 300;
+        soBossGold.ApplyModifiedPropertiesWithoutUndo();
     }
 
     // ---- ジャングルパスとキャンプ配置 ----
@@ -1341,6 +1393,12 @@ public static class BuildAetherRiftMap
         soXp.FindProperty("_amount").floatValue = 50f;
         soXp.ApplyModifiedPropertiesWithoutUndo();
 
+        // スライム撃破で35G付与
+        var slimeGold = parent.AddComponent<GoldReward>();
+        var soSlimeGold = new SerializedObject(slimeGold);
+        soSlimeGold.FindProperty("_amount").intValue = 35;
+        soSlimeGold.ApplyModifiedPropertiesWithoutUndo();
+
         // 頭上 HP バー（ミニオンと同じ構成）
         var hpBar = new GameObject("HealthBar");
         hpBar.transform.SetParent(parent.transform, false);
@@ -1412,5 +1470,43 @@ public static class BuildAetherRiftMap
         t = Mathf.Clamp01(t);
         var closest = a + ab * t;
         return Vector3.Distance(p, closest);
+    }
+
+    private static ItemData GetOrCreateItemData(
+        string assetName, string itemName, int price,
+        float attackPercent, float maxHpBonus, float moveSpeedPercent,
+        string description, Color themeColor)
+    {
+        var path     = $"{ItemDir}/{assetName}.asset";
+        var existing = AssetDatabase.LoadAssetAtPath<ItemData>(path);
+        if (existing != null) return existing;
+
+        var so               = ScriptableObject.CreateInstance<ItemData>();
+        so.ItemName          = itemName;
+        so.Price             = price;
+        so.AttackPercent     = attackPercent;
+        so.MaxHpBonus        = maxHpBonus;
+        so.MoveSpeedPercent  = moveSpeedPercent;
+        so.Description       = description;
+        so.ThemeColor        = themeColor;
+        AssetDatabase.CreateAsset(so, path);
+        return so;
+    }
+
+    private static ItemShopCatalog GetOrCreateItemShopCatalog(System.Collections.Generic.List<ItemData> items)
+    {
+        const string catalogPath = ItemDir + "/ItemShopCatalog.asset";
+        var catalog = AssetDatabase.LoadAssetAtPath<ItemShopCatalog>(catalogPath);
+        if (catalog == null)
+        {
+            catalog = ScriptableObject.CreateInstance<ItemShopCatalog>();
+            AssetDatabase.CreateAsset(catalog, catalogPath);
+        }
+
+        // 常に最新の6種に更新
+        catalog.Items.Clear();
+        catalog.Items.AddRange(items);
+        EditorUtility.SetDirty(catalog);
+        return catalog;
     }
 }

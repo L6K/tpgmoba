@@ -25,6 +25,11 @@ namespace Enigma.Combat
             if (progression != null)
                 damage *= progression.DamageMultiplier;
 
+            // アイテムの攻撃力ボーナスを乗算
+            var playerItems = attacker.GetComponent<PlayerItems>();
+            if (playerItems != null)
+                damage *= playerItems.AttackMultiplier;
+
             return damage;
         }
     }

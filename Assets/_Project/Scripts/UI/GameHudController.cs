@@ -40,6 +40,17 @@ namespace Enigma.UI
         private readonly VisualElement[] _skillCdOverlay = new VisualElement[4];
         private readonly Label[]         _skillCdText   = new Label[4];
 
+        // 所持金ラベル
+        private Label _goldLabel;
+
+        // アイテムスロット（6枠）
+        private readonly VisualElement[] _itemSlots    = new VisualElement[6];
+        private readonly Label[]         _itemInitials = new Label[6];
+
+        // Wallet / Items は _playerHealth と同一 GO から取得
+        private PlayerWallet _playerWallet;
+        private PlayerItems  _playerItems;
+
         private void OnEnable()
         {
             // GameServices が未初期化の場合の保険（HomeScreenController と同様）
@@ -54,10 +65,21 @@ namespace Enigma.UI
             _buffLabel  = root.Q<Label>("hud-buff");
             _levelLabel = root.Q<Label>("hud-level");
             _xpFill     = root.Q<VisualElement>("hud-xp-fill");
+            _goldLabel  = root.Q<Label>("hud-gold");
 
-            // SerializedObject を増やさずに playerHealth から取得
+            for (int i = 0; i < 6; i++)
+            {
+                _itemSlots[i]    = root.Q<VisualElement>($"hud-item-slot-{i}");
+                _itemInitials[i] = root.Q<Label>($"hud-item-initial-{i}");
+            }
+
+            // SerializedObject を増やさずに playerHealth と同一 GO から取得（null 安全）
             if (_playerHealth != null)
+            {
                 _playerProgression = _playerHealth.GetComponent<PlayerProgression>();
+                _playerWallet      = _playerHealth.GetComponent<PlayerWallet>();
+                _playerItems       = _playerHealth.GetComponent<PlayerItems>();
+            }
 
             for (int i = 0; i < 4; i++)
             {
@@ -76,6 +98,7 @@ namespace Enigma.UI
             UpdateSkills();
             UpdateBuff();
             UpdateLevelXp();
+            UpdateGoldAndItems();
         }
 
         private void UpdateTimer()
@@ -174,6 +197,41 @@ namespace Enigma.UI
                     ? 1f
                     : (exp.XpToNext > 0f ? Mathf.Clamp01(exp.CurrentXp / exp.XpToNext) : 0f);
                 _xpFill.style.width = Length.Percent(ratio * 100f);
+            }
+        }
+
+        // 所持金ラベルとアイテム6枠を更新する
+        private void UpdateGoldAndItems()
+        {
+            if (_goldLabel != null && _playerWallet != null)
+                _goldLabel.text = $"{_playerWallet.Wallet.Gold} G";
+
+            if (_playerItems == null) return;
+            var items = _playerItems.Inventory.Items;
+
+            for (int i = 0; i < 6; i++)
+            {
+                if (i < items.Count)
+                {
+                    var item = items[i];
+
+                    // スロット背景色をアイテムのテーマカラーに設定
+                    if (_itemSlots[i] != null)
+                        _itemSlots[i].style.backgroundColor = new StyleColor(item.ThemeColor);
+
+                    // 頭文字1文字を表示
+                    if (_itemInitials[i] != null)
+                        _itemInitials[i].text = item.ItemName.Length > 0 ? item.ItemName[..1] : "?";
+                }
+                else
+                {
+                    // 空枠: 背景色をデフォルトに戻して文字をクリア
+                    if (_itemSlots[i] != null)
+                        _itemSlots[i].style.backgroundColor = new StyleColor(new Color(10f / 255f, 12f / 255f, 22f / 255f, 0.60f));
+
+                    if (_itemInitials[i] != null)
+                        _itemInitials[i].text = "";
+                }
             }
         }
 

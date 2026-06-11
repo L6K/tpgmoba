@@ -75,7 +75,52 @@
 
             </ui:VisualElement>
 
+            <!-- スキルスロット右: 所持金 -->
+            <ui:Label name="hud-gold" class="hud-gold" text="500 G" />
+
+            <!-- スキルスロット右: アイテム6枠 -->
+            <ui:VisualElement name="hud-item-slots" class="hud-item-slots">
+                <ui:VisualElement name="hud-item-slot-0" class="hud-item-slot">
+                    <ui:Label name="hud-item-initial-0" class="hud-item-initial" text="" />
+                </ui:VisualElement>
+                <ui:VisualElement name="hud-item-slot-1" class="hud-item-slot">
+                    <ui:Label name="hud-item-initial-1" class="hud-item-initial" text="" />
+                </ui:VisualElement>
+                <ui:VisualElement name="hud-item-slot-2" class="hud-item-slot">
+                    <ui:Label name="hud-item-initial-2" class="hud-item-initial" text="" />
+                </ui:VisualElement>
+                <ui:VisualElement name="hud-item-slot-3" class="hud-item-slot">
+                    <ui:Label name="hud-item-initial-3" class="hud-item-initial" text="" />
+                </ui:VisualElement>
+                <ui:VisualElement name="hud-item-slot-4" class="hud-item-slot">
+                    <ui:Label name="hud-item-initial-4" class="hud-item-initial" text="" />
+                </ui:VisualElement>
+                <ui:VisualElement name="hud-item-slot-5" class="hud-item-slot">
+                    <ui:Label name="hud-item-initial-5" class="hud-item-initial" text="" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
         </ui:VisualElement>
 
+        <!-- ショップ範囲外ヒント（本拠地外で P キー時に表示）-->
+        <ui:Label name="hud-shop-hint" class="hud-shop-hint" text="ショップは本拠地でのみ利用できます"
+                  style="display: none;" />
+
     </ui:VisualElement>
+
+    <!-- ショップオーバーレイ（全画面・通常は非表示） -->
+    <ui:VisualElement name="shop-overlay" class="shop-overlay" style="display: none;">
+
+        <!-- ヘッダー -->
+        <ui:VisualElement class="shop-header">
+            <ui:Label class="shop-title" text="ショップ" />
+            <ui:Label name="shop-gold" class="shop-gold" text="500 G" />
+            <ui:Button name="shop-close" class="shop-close" text="✕ 閉じる" />
+        </ui:VisualElement>
+
+        <!-- アイテムカードグリッド（ShopController がカードを動的生成） -->
+        <ui:VisualElement name="shop-grid" class="shop-grid" />
+
+    </ui:VisualElement>
+
 </ui:UXML>

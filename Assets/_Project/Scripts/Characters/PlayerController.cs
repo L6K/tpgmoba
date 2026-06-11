@@ -18,10 +18,12 @@ namespace Enigma.Character
 
         private CharacterController _cc;
         private float _verticalVelocity;
+        private PlayerItems _playerItems;
 
         private void Awake()
         {
-            _cc = GetComponent<CharacterController>();
+            _cc          = GetComponent<CharacterController>();
+            _playerItems = GetComponent<PlayerItems>();
         }
 
         private void Update()
@@ -44,7 +46,7 @@ namespace Enigma.Character
                 _verticalVelocity = -2f;
             _verticalVelocity += Gravity * Time.deltaTime;
 
-            var motion = moveDir * (_moveSpeed * Time.deltaTime);
+            var motion = moveDir * (_moveSpeed * (_playerItems != null ? _playerItems.MoveSpeedMultiplier : 1f) * Time.deltaTime);
             motion.y = _verticalVelocity * Time.deltaTime;
             _cc.Move(motion);
 

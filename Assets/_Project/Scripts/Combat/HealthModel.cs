@@ -34,6 +34,15 @@ namespace Enigma.Combat
             }
         }
 
+        // MaxHp を増加し、生存中は同量だけ CurrentHp も回復する（アイテム装備時の即時 HP 増加）
+        public void AddMaxHp(float amount)
+        {
+            MaxHp += amount;
+            if (!IsDead)
+                CurrentHp += amount;
+            Changed?.Invoke(CurrentHp, MaxHp);
+        }
+
         public void Revive()
         {
             _diedFired = false;
