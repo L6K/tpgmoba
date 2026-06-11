@@ -79,21 +79,16 @@ public static class BuildAetherRiftMap
         // レーン色を土色に更新
         matLane.SetColor("_BaseColor", new Color(0.62f, 0.55f, 0.42f));
 
-        // レーンアーク: TOP (θ=0..180°) と BOT (θ=180..360°) を 7.5° 刻みで Cube セグメント配置
+        // レーンアーク: Cube 48個を滑らかなリング帯メッシュ1枚に置換（角のはみ出し解消）
         const float R = 45f;
-        const float stepDeg = 7.5f;
-        for (int si = 0; si < 48; si++)
         {
-            float theta = si * stepDeg; // 0..352.5°
-            string laneName = theta < 180f ? "LaneArc_Top" : "LaneArc_Bot";
-            float rad = theta * Mathf.Deg2Rad;
-            float x = R * Mathf.Cos(rad);
-            float z = R * Mathf.Sin(rad);
-            var seg = PlaceCube($"{laneName}_{si:D2}", new Vector3(x, 0.02f, z), new Vector3(6.5f, 0.1f, 10f), matLane);
-            // 接線方向: pos=(Rcosθ,0,Rsinθ) の接線 forward = (-sinθ, 0, cosθ)
-            var forward = new Vector3(-Mathf.Sin(rad), 0f, Mathf.Cos(rad));
-            if (forward != Vector3.zero)
-                seg.transform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+            var laneRing = new GameObject("LaneRing");
+            laneRing.transform.position = new Vector3(0f, 0.02f, 0f);
+            var mf = laneRing.AddComponent<MeshFilter>();
+            mf.sharedMesh = CreateRingBandMesh(40f, 50f, 96);
+            var mr2 = laneRing.AddComponent<MeshRenderer>();
+            mr2.sharedMaterial = matLane;
+            SetStatic(laneRing);
         }
 
         // 中央ベイスン（ボスの足場）: 大円 + 小円、壁なし
@@ -645,7 +640,36 @@ public static class BuildAetherRiftMap
         soSkillCaster.ApplyModifiedPropertiesWithoutUndo();
 
         // XP・レベル成長コンポーネント
-        player.AddComponent<PlayerProgression>();
+        var playerProgression = player.AddComponent<PlayerProgression>();
+
+        // 頭上 HP バー（緑）＋ レベル表示テキスト
+        var matBarGreenPlayer = GetOrCreateBarMat("BarGreen", new Color(0.30f, 0.85f, 0.35f));
+        var playerBarFill     = CreateWorldHealthBar(player.transform, 1.4f, 2.1f, matBarGreenPlayer);
+
+        // LevelText: HealthBar GO の子に配置し、バー左側に添える
+        var healthBarGo = player.transform.Find("HealthBar");
+        if (healthBarGo != null)
+        {
+            var lvTextGo = new GameObject("LevelText");
+            lvTextGo.transform.SetParent(healthBarGo, false);
+            // 親の HealthBar が既に頭上 (y+2.1) にあるためローカル Y は 0
+            lvTextGo.transform.localPosition = new Vector3(-0.95f, 0f, 0f);
+            var lvTm             = lvTextGo.AddComponent<TextMesh>();
+            lvTm.text            = "1";
+            lvTm.color           = Color.white;
+            lvTm.fontSize        = 36;
+            lvTm.characterSize   = 0.06f;
+            lvTm.anchor          = TextAnchor.MiddleCenter;
+            lvTm.alignment       = TextAlignment.Center;
+        }
+
+        // PlayerOverheadUI: HP バー比率とレベル数字を更新するコンポーネント
+        var overheadUi    = player.AddComponent<Enigma.Character.PlayerOverheadUI>();
+        var soOverheadUi  = new SerializedObject(overheadUi);
+        soOverheadUi.FindProperty("_barFill").objectReferenceValue          = playerBarFill;
+        soOverheadUi.FindProperty("_healthComponent").objectReferenceValue  = healthComp;
+        soOverheadUi.FindProperty("_progression").objectReferenceValue      = playerProgression;
+        soOverheadUi.ApplyModifiedPropertiesWithoutUndo();
 
         // ゴールドとアイテム管理
         player.AddComponent<PlayerWallet>();
@@ -667,6 +691,9 @@ public static class BuildAetherRiftMap
 
         // KDA 集積: MatchStatsTracker を同じ GO に追加
         matchFlowGo.AddComponent<Enigma.Core.MatchStatsTracker>();
+
+        // ダメージポップアップ管理（シーン常駐、1秒スキャンで自動購読）
+        matchFlowGo.AddComponent<Enigma.UI.DamagePopupManager>();
 
         // PlayerController のカメラ参照は後で設定
 
@@ -1286,6 +1313,15 @@ public static class BuildAetherRiftMap
         go.name            = "Minion";
         go.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
 
+        // 見た目より大きめのコライダーでクリック判定を取りやすくする
+        var minionCap = go.GetComponent<CapsuleCollider>();
+        if (minionCap != null)
+        {
+            minionCap.radius = 0.9f;
+            minionCap.height = 2.4f;
+            minionCap.center = new Vector3(0f, 0.8f, 0f);
+        }
+
         go.AddComponent<HealthComponent>();
         go.AddComponent<TeamTag>();
         var ai = go.AddComponent<MinionAI>();
@@ -1524,10 +1560,11 @@ public static class BuildAetherRiftMap
         body.transform.localScale = new Vector3(1.6f, 1.1f, 1.6f);
         SetMat(body, GetOrCreateMat("Slime", new Color(0.35f, 0.75f, 0.45f)));
         // 本体の SphereCollider は除去し、親に CapsuleCollider を付与
+        // 見た目より大きめのコライダーでクリック判定を取りやすくする
         Object.DestroyImmediate(body.GetComponent<SphereCollider>());
         var cap = parent.AddComponent<CapsuleCollider>();
-        cap.radius = 0.9f;
-        cap.height = 1.6f;
+        cap.radius = 1.3f;
+        cap.height = 2.0f;
         cap.center = Vector3.zero;
 
         // 目（白）×2
@@ -1698,5 +1735,48 @@ public static class BuildAetherRiftMap
         catalog.Items.AddRange(items);
         EditorUtility.SetDirty(catalog);
         return catalog;
+    }
+
+    /// <summary>
+    /// XZ 平面上の環状帯メッシュを生成する。
+    /// Cube セグメントの角はみ出しを解消するためにレーンリングに使用する。
+    /// UV は不要（単色マテリアル前提）、法線は +Y 固定。
+    /// </summary>
+    private static Mesh CreateRingBandMesh(float innerR, float outerR, int segments)
+    {
+        var mesh      = new Mesh { name = "RingBand" };
+        int vertCount = (segments + 1) * 2;
+        var vertices  = new Vector3[vertCount];
+        var normals   = new Vector3[vertCount];
+        var triangles = new int[segments * 6];
+
+        for (int i = 0; i <= segments; i++)
+        {
+            float angle = i * (2f * Mathf.PI / segments);
+            float cos   = Mathf.Cos(angle);
+            float sin   = Mathf.Sin(angle);
+
+            vertices[i * 2]     = new Vector3(innerR * cos, 0f, innerR * sin);
+            vertices[i * 2 + 1] = new Vector3(outerR * cos, 0f, outerR * sin);
+            normals[i * 2]      = Vector3.up;
+            normals[i * 2 + 1]  = Vector3.up;
+        }
+
+        for (int i = 0; i < segments; i++)
+        {
+            int b         = i * 2;
+            int ti        = i * 6;
+            triangles[ti]     = b;
+            triangles[ti + 1] = b + 2;
+            triangles[ti + 2] = b + 1;
+            triangles[ti + 3] = b + 1;
+            triangles[ti + 4] = b + 2;
+            triangles[ti + 5] = b + 3;
+        }
+
+        mesh.vertices  = vertices;
+        mesh.normals   = normals;
+        mesh.triangles = triangles;
+        return mesh;
     }
 }

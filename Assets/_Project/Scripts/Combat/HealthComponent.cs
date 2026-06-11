@@ -14,6 +14,9 @@ namespace Enigma.Combat
         // 最後にダメージを与えた攻撃者（弾の場合は弾を発射したオーナー GO）
         public GameObject LastAttacker { get; private set; }
 
+        // ダメージポップアップ等の購読者に実ダメージ量を通知する
+        public event System.Action<float> Damaged;
+
         // IDamageable 実装: 帰属なしのダメージ（互換維持のため attacker=null で委譲）
         public void TakeDamage(float amount)
         {
@@ -25,6 +28,8 @@ namespace Enigma.Combat
             if (attacker != null)
                 LastAttacker = attacker;
             Model.TakeDamage(amount);
+            if (amount > 0f)
+                Damaged?.Invoke(amount);
         }
     }
 }

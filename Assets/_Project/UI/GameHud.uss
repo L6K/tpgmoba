@@ -1,12 +1,23 @@
-/* ── デザイントークン（HomeScreen.uss と統一） ───────── */
+/* ── デザイントークン（LoL 風 金縁ダーク） ───────────── */
 :root {
-    --color-bg:        rgb(10, 12, 22);
-    --color-accent:    rgb(46, 107, 242);
-    --color-text:      rgb(255, 255, 255);
-    --color-text-dim:  rgb(170, 180, 205);
-    --color-divider:   rgba(255, 255, 255, 0.08);
-    --color-hud-bg:    rgba(10, 12, 22, 0.72);
-    --color-cd-overlay: rgba(0, 0, 0, 0.62);
+    --color-bg:          rgb(10, 12, 22);
+    --color-accent:      rgb(46, 107, 242);
+    --color-text:        rgb(255, 255, 255);
+    --color-text-dim:    rgb(170, 180, 205);
+    --color-divider:     rgba(255, 255, 255, 0.08);
+    --color-hud-bg:      rgba(8, 10, 18, 0.92);
+    --color-cd-overlay:  rgba(0, 0, 0, 0.65);
+
+    /* LoL ゴールド */
+    --color-gold:        rgb(200, 170, 110);
+    --color-gold-bright: rgb(235, 200, 90);
+    --color-gold-dim:    rgba(200, 170, 110, 0.45);
+
+    /* HP バー */
+    --color-hp:          rgb(60, 180, 75);
+
+    /* XP バー */
+    --color-xp:          rgb(140, 100, 220);
 }
 
 /* ── ルート: 全画面・透明・ゲーム操作を遮らない ─────── */
@@ -27,13 +38,13 @@
     align-self: center;
     margin-top: 12px;
     background-color: var(--color-hud-bg);
-    border-radius: 4px;
+    border-radius: 2px;
     padding-left: 14px;
     padding-right: 14px;
     padding-top: 4px;
     padding-bottom: 4px;
     border-width: 1px;
-    border-color: var(--color-divider);
+    border-color: var(--color-gold);
 }
 
 .hud-timer {
@@ -42,162 +53,6 @@
     -unity-font-style: bold;
     -unity-text-align: middle-center;
     letter-spacing: 3px;
-}
-
-/* ── 下部バー全体 ───────────────────────────────────── */
-.hud-bottom {
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: center;
-    align-self: stretch;
-    margin-bottom: 20px;
-    padding-left: 24px;
-    padding-right: 24px;
-}
-
-/* ── HP パネル（下部左） ────────────────────────────── */
-.hud-hp-panel {
-    flex-direction: column;
-    align-items: flex-start;
-    background-color: var(--color-hud-bg);
-    border-radius: 4px;
-    padding: 8px 12px;
-    border-width: 1px;
-    border-color: var(--color-divider);
-    margin-right: 20px;
-    min-width: 180px;
-}
-
-.hud-hp-label {
-    font-size: 11px;
-    color: var(--color-text-dim);
-    letter-spacing: 2px;
-    margin-bottom: 4px;
-}
-
-.hud-hp-bar-bg {
-    width: 160px;
-    height: 8px;
-    background-color: rgba(255, 255, 255, 0.12);
-    border-radius: 2px;
-    overflow: hidden;
-    margin-bottom: 4px;
-}
-
-/* fill の width は GameHudController が % で制御する */
-.hud-hp-fill {
-    height: 100%;
-    width: 100%;
-    background-color: var(--color-accent);
-    border-radius: 2px;
-}
-
-.hud-hp-text {
-    font-size: 12px;
-    color: var(--color-text-dim);
-}
-
-/* ── レベル行（Lvバッジ + XP バー） ─────────────────── */
-.hud-level-row {
-    flex-direction: row;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-/* アクセント色の小バッジ風ラベル */
-.hud-level {
-    font-size: 11px;
-    -unity-font-style: bold;
-    color: var(--color-text);
-    background-color: var(--color-accent);
-    border-radius: 3px;
-    padding-left: 5px;
-    padding-right: 5px;
-    padding-top: 1px;
-    padding-bottom: 1px;
-    margin-right: 6px;
-}
-
-/* XP バー背景: 細い帯（高さ4px） */
-.hud-xp-bar-bg {
-    flex-grow: 1;
-    height: 4px;
-    background-color: rgba(255, 255, 255, 0.15);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-/* XP fill: 白〜アクセントの控えめなグラデーション風（単色で代替） */
-/* width は GameHudController が % で制御する */
-.hud-xp-fill {
-    height: 100%;
-    width: 100%;
-    background-color: rgba(130, 180, 255, 0.75);
-    border-radius: 2px;
-}
-
-/* ── スキルスロット列（下部中央） ───────────────────── */
-.hud-skills {
-    flex-direction: row;
-    align-items: flex-end;
-}
-
-/* 各スロット: 64x64 の角丸ボックス */
-.hud-skill-slot {
-    width: 64px;
-    height: 64px;
-    background-color: var(--color-hud-bg);
-    border-radius: 4px;
-    border-width: 1px;
-    border-color: var(--color-divider);
-    margin-left: 6px;
-    margin-right: 6px;
-    position: relative;
-    overflow: hidden;
-    align-items: center;
-    justify-content: flex-start;
-    flex-direction: column;
-    padding-top: 6px;
-    padding-bottom: 0;
-}
-
-/* 未設定スロットは彩度・明度を落とす */
-.hud-skill-slot--empty {
-    opacity: 0.38;
-}
-
-/* スキル名（スロット上部・小さい文字） */
-.hud-skill-name {
-    font-size: 9px;
-    color: var(--color-text-dim);
-    -unity-text-align: upper-center;
-    white-space: normal;
-    overflow: hidden;
-    max-width: 60px;
-    flex-shrink: 1;
-    margin-bottom: 2px;
-}
-
-/* キー名（スロット下部固定） */
-.hud-skill-key {
-    position: absolute;
-    bottom: 4px;
-    left: 0;
-    right: 0;
-    font-size: 11px;
-    color: var(--color-text);
-    -unity-font-style: bold;
-    -unity-text-align: lower-center;
-}
-
-/* CD オーバーレイ: 上から height % で覆う（残 CD が多いほど height 大） */
-.hud-skill-cd {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    height: 0%;   /* GameHudController が width/height style で制御 */
-    background-color: var(--color-cd-overlay);
 }
 
 /* ── チームバフ残り時間（ミニマップ上 16px） ─────────── */
@@ -210,7 +65,7 @@
     border-radius: 4px;
 }
 
-/* ── ミニマップパネル（左下固定・160x160 正方形） ─────────── */
+/* ── ミニマップパネル（左下固定・160x160） ─────────── */
 .hud-minimap {
     position: absolute;
     left: 16px;
@@ -219,11 +74,10 @@
     height: 160px;
     background-color: rgba(10, 12, 22, 0.78);
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-gold-dim);
     overflow: hidden;
 }
 
-/* 川帯（縦方向・中央）: 幅 14/150*160 ≈ 15px、left=(160-15)/2=72px */
 .minimap-river {
     position: absolute;
     top: 0;
@@ -233,7 +87,6 @@
     background-color: rgba(46, 107, 242, 0.15);
 }
 
-/* ミニマップドット基本スタイル */
 .minimap-dot {
     position: absolute;
     width: 6px;
@@ -241,19 +94,10 @@
     border-radius: 3px;
 }
 
-.minimap-dot--blue {
-    background-color: rgb(80, 140, 255);
-}
+.minimap-dot--blue    { background-color: rgb(80, 140, 255); }
+.minimap-dot--red     { background-color: rgb(235, 90, 90); }
+.minimap-dot--neutral { background-color: rgb(170, 110, 230); }
 
-.minimap-dot--red {
-    background-color: rgb(235, 90, 90);
-}
-
-.minimap-dot--neutral {
-    background-color: rgb(170, 110, 230);
-}
-
-/* 自分（プレイヤー）: 白・8x8・黒枠1px */
 .minimap-dot--self {
     background-color: rgb(255, 255, 255);
     width: 8px;
@@ -263,87 +107,318 @@
     border-color: rgb(0, 0, 0);
 }
 
-/* タワー・タイタン: 正方形・8x8 */
 .minimap-dot--square {
     width: 8px;
     height: 8px;
     border-radius: 0;
 }
 
-/* CD 残秒テキスト（スロット中央） */
+/* ── 下部統合パネル（LoL 風・幅 820px・高さ 110px） ─── */
+.hud-bottom {
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    align-self: center;
+    margin-bottom: 14px;
+    width: 820px;
+    height: 110px;
+    background-color: var(--color-hud-bg);
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: var(--color-gold);
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+}
+
+/* 上辺の細いハイライトライン */
+.hud-bottom-highlight {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 1px;
+    background-color: rgba(255, 240, 180, 0.30);
+}
+
+/* ── ポートレートセクション（左端） ─────────────────── */
+.hud-portrait-section {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+/* ポートレート外枠（72x72・金縁） */
+.hud-portrait-frame {
+    width: 72px;
+    height: 72px;
+    border-width: 1px;
+    border-color: var(--color-gold);
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ポートレート背景（テーマカラー塗り） */
+.hud-portrait-bg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgb(28, 36, 60);
+    align-items: center;
+    justify-content: center;
+}
+
+/* ポートレート頭文字（装飾のみ） */
+.hud-portrait-initial {
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: var(--color-gold);
+    -unity-text-align: middle-center;
+    letter-spacing: 0;
+}
+
+/* レベルバッジ: ポートレート左下に金色バッジで重ねる */
+.hud-level {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: rgb(15, 15, 20);
+    background-color: var(--color-gold);
+    border-radius: 0;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+}
+
+/* ── HP・XP・スキルセクション（中央） ───────────────── */
+.hud-bars-section {
+    flex-direction: column;
+    align-items: stretch;
+    flex-grow: 1;
+    justify-content: center;
+    margin-right: 8px;
+}
+
+/* HP バー行 */
+.hud-hp-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+/* HP バー背景（高さ 16px） */
+.hud-hp-bar-bg {
+    flex-grow: 1;
+    height: 16px;
+    background-color: rgba(255, 255, 255, 0.10);
+    border-radius: 1px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* HP fill: LoL 風グリーン（width は Controller が % 制御） */
+.hud-hp-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--color-hp);
+    border-radius: 1px;
+}
+
+/* HP テキスト: バー中央に白字で重ねる */
+.hud-hp-text {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    font-size: 11px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    -unity-text-align: middle-center;
+}
+
+/* XP バー背景（高さ 5px） */
+.hud-xp-bar-bg {
+    flex-grow: 1;
+    height: 5px;
+    background-color: rgba(255, 255, 255, 0.10);
+    border-radius: 1px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+/* XP fill: 紫系（width は Controller が % 制御） */
+.hud-xp-fill {
+    height: 100%;
+    width: 100%;
+    background-color: var(--color-xp);
+    border-radius: 1px;
+}
+
+/* ── スキルスロット列 ────────────────────────────────── */
+.hud-skills {
+    flex-direction: row;
+    align-items: flex-end;
+    margin-top: 2px;
+}
+
+/* 各スロット: 56x56・金縁・ほぼ直角 */
+.hud-skill-slot {
+    width: 56px;
+    height: 56px;
+    background-color: rgba(15, 18, 32, 0.90);
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: var(--color-gold);
+    margin-right: 5px;
+    position: relative;
+    overflow: hidden;
+    align-items: center;
+    justify-content: flex-start;
+    flex-direction: column;
+    padding-top: 5px;
+}
+
+/* 未設定スロット */
+.hud-skill-slot--empty {
+    opacity: 0.35;
+    border-color: rgba(200, 170, 110, 0.30);
+}
+
+/* スキル名（スロット上部） */
+.hud-skill-name {
+    font-size: 8px;
+    color: var(--color-text-dim);
+    -unity-text-align: upper-center;
+    white-space: normal;
+    overflow: hidden;
+    max-width: 52px;
+    flex-shrink: 1;
+    margin-bottom: 1px;
+}
+
+/* キー名バッジ（右下・金色） */
+.hud-skill-key {
+    position: absolute;
+    bottom: 2px;
+    right: 3px;
+    font-size: 9px;
+    -unity-font-style: bold;
+    color: rgb(15, 15, 20);
+    background-color: var(--color-gold);
+    border-radius: 1px;
+    padding-left: 2px;
+    padding-right: 2px;
+    padding-top: 0;
+    padding-bottom: 0;
+    -unity-text-align: middle-center;
+}
+
+/* CD オーバーレイ: 上から height % で覆う */
+.hud-skill-cd {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 0%;
+    background-color: var(--color-cd-overlay);
+}
+
+/* CD 残秒テキスト */
 .hud-skill-cdtext {
     position: absolute;
     left: 0;
     right: 0;
     top: 0;
     bottom: 0;
-    font-size: 16px;
+    font-size: 15px;
     -unity-font-style: bold;
     color: var(--color-text);
     -unity-text-align: middle-center;
     display: none;
 }
 
-/* ── 所持金表示（スキルスロット右） ─────────────────── */
-.hud-gold {
-    font-size: 15px;
-    -unity-font-style: bold;
-    color: rgb(235, 200, 90);
-    background-color: rgba(10, 12, 22, 0.72);
-    border-radius: 4px;
-    border-width: 1px;
-    border-color: rgba(235, 200, 90, 0.35);
-    padding-left: 10px;
-    padding-right: 10px;
-    padding-top: 4px;
-    padding-bottom: 4px;
-    margin-left: 14px;
-    align-self: flex-end;
-    margin-bottom: 8px;
-}
-
-/* ── アイテム枠列（所持金の右） ─────────────────────── */
-.hud-item-slots {
-    flex-direction: row;
+/* ── 右セクション（アイテム 3x2 + 所持金） ──────────── */
+.hud-right-section {
+    flex-direction: column;
     align-items: flex-end;
-    margin-left: 8px;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: 4px;
 }
 
-/* 各アイテムスロット: 36x36 角丸4 暗背景+薄枠 */
-.hud-item-slot {
-    width: 36px;
-    height: 36px;
-    background-color: rgba(10, 12, 22, 0.60);
-    border-radius: 4px;
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.18);
-    margin-left: 3px;
-    margin-right: 3px;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
+/* アイテム枠コンテナ（3x2 グリッド） */
+.hud-item-slots {
+    flex-direction: column;
+    align-items: flex-start;
     margin-bottom: 4px;
 }
 
-/* アイテム頭文字（スロット中央） */
+/* アイテム行（3枠 x 2行） */
+.hud-item-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+/* 各アイテムスロット: 28x28・薄い金縁 */
+.hud-item-slot {
+    width: 28px;
+    height: 28px;
+    background-color: rgba(15, 18, 32, 0.80);
+    border-radius: 1px;
+    border-width: 1px;
+    border-color: rgba(200, 170, 110, 0.40);
+    margin-right: 2px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* アイテム頭文字 */
 .hud-item-initial {
-    font-size: 14px;
+    font-size: 12px;
     -unity-font-style: bold;
     color: var(--color-text);
     -unity-text-align: middle-center;
 }
 
-/* ── ショップ範囲外ヒント（下部中央固定） ────────────── */
+/* 所持金（アイテム枠右に金色太字） */
+.hud-gold {
+    font-size: 14px;
+    -unity-font-style: bold;
+    color: var(--color-gold-bright);
+    -unity-text-align: middle-right;
+    letter-spacing: 0;
+    padding-right: 2px;
+}
+
+/* ── ショップ範囲外ヒント ────────────────────────────── */
 .hud-shop-hint {
     position: absolute;
-    bottom: 100px;
+    bottom: 140px;
     left: 0;
     right: 0;
     -unity-text-align: middle-center;
     font-size: 14px;
     color: rgba(255, 200, 80, 1);
-    background-color: rgba(10, 12, 22, 0.80);
-    border-radius: 6px;
+    background-color: rgba(10, 12, 22, 0.85);
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: var(--color-gold-dim);
     padding: 6px 16px;
     align-self: center;
 }
@@ -360,7 +435,6 @@
     align-items: stretch;
 }
 
-/* ショップヘッダー行 */
 .shop-header {
     flex-direction: row;
     align-items: center;
@@ -369,10 +443,9 @@
     padding-top: 20px;
     padding-bottom: 16px;
     border-bottom-width: 1px;
-    border-color: var(--color-divider);
+    border-color: var(--color-gold-dim);
 }
 
-/* ショップタイトル */
 .shop-title {
     font-size: 22px;
     -unity-font-style: bold;
@@ -380,29 +453,26 @@
     flex-grow: 1;
 }
 
-/* ショップ内所持金 */
 .shop-gold {
     font-size: 16px;
     -unity-font-style: bold;
-    color: rgb(235, 200, 90);
+    color: var(--color-gold-bright);
     margin-right: 24px;
 }
 
-/* 閉じるボタン */
 .shop-close {
     font-size: 14px;
     color: var(--color-text);
     background-color: rgba(255, 255, 255, 0.08);
-    border-radius: 4px;
+    border-radius: 2px;
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.18);
+    border-color: var(--color-gold-dim);
     padding-left: 14px;
     padding-right: 14px;
     padding-top: 6px;
     padding-bottom: 6px;
 }
 
-/* ショップグリッド（カードを横折り返し） */
 .shop-grid {
     flex-direction: row;
     flex-wrap: wrap;
@@ -410,39 +480,34 @@
     flex-grow: 1;
 }
 
-/* アイテムカード */
 .shop-card {
     width: 200px;
     height: 150px;
     background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
+    border-radius: 2px;
     border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.15);
+    border-color: var(--color-gold-dim);
     margin: 8px;
     flex-direction: column;
     overflow: hidden;
 }
 
-/* 購入不可カード（ゴールド不足 or 6枠満杯） */
 .shop-card--disabled {
     opacity: 0.4;
 }
 
-/* カード上部の色タイル */
 .shop-card-tile {
     height: 50px;
     align-items: center;
     justify-content: center;
 }
 
-/* タイル内頭文字 */
 .shop-card-initial {
     font-size: 22px;
     -unity-font-style: bold;
     color: rgba(255, 255, 255, 0.90);
 }
 
-/* カード情報エリア */
 .shop-card-info {
     flex-grow: 1;
     padding-left: 10px;
@@ -453,14 +518,12 @@
     justify-content: space-between;
 }
 
-/* アイテム名 */
 .shop-card-name {
     font-size: 13px;
     -unity-font-style: bold;
     color: var(--color-text);
 }
 
-/* 効果テキスト（小） */
 .shop-card-effect {
     font-size: 10px;
     color: var(--color-text-dim);
@@ -469,10 +532,9 @@
     flex-grow: 1;
 }
 
-/* 価格（金色） */
 .shop-card-price {
     font-size: 12px;
     -unity-font-style: bold;
-    color: rgb(235, 200, 90);
+    color: var(--color-gold-bright);
     -unity-text-align: lower-right;
 }
