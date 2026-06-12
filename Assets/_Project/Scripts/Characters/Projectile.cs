@@ -45,6 +45,11 @@ namespace Enigma.Character
             if (other.isTrigger) return;
             if (_owner != null && other.gameObject == _owner) return;
 
+            // 味方には当たらず素通りさせる。ここで Destroy すると味方の体で射線が
+            // 塞がってしまうため、ダメージも消滅もせずそのまま貫通させる。
+            if (!TeamRules.CanDamage(ResolveTeam(_owner), ResolveTeam(other.gameObject)))
+                return;
+
             var damageable = other.GetComponent<IDamageable>();
             if (damageable != null)
             {
@@ -56,6 +61,14 @@ namespace Enigma.Character
             }
 
             Destroy(gameObject);
+        }
+
+        // TeamTag が無い側は中立扱い（誰にでも当たる）。
+        private static TeamId ResolveTeam(GameObject go)
+        {
+            if (go == null) return TeamId.Neutral;
+            var tag = go.GetComponentInParent<TeamTag>();
+            return tag != null ? tag.Team : TeamId.Neutral;
         }
     }
 }

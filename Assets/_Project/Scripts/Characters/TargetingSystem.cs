@@ -92,9 +92,9 @@ namespace Enigma.Character
             if (!Physics.Raycast(ray, out var hit, 200f)) return;
 
             var hc = hit.collider.GetComponentInParent<HealthComponent>();
-            if (hc == null || hc.gameObject == gameObject)
+            if (hc == null || hc.gameObject == gameObject || IsSameTeam(hc))
             {
-                // 地面など：ターゲット解除
+                // 地面・味方など：ターゲット解除（味方は攻撃対象にできない）
                 ClearTarget();
                 return;
             }
@@ -112,10 +112,20 @@ namespace Enigma.Character
             if (!Physics.Raycast(ray, out var hit, 200f)) return;
 
             var hc = hit.collider.GetComponentInParent<HealthComponent>();
-            // 地面など HealthComponent なし → 解除しない（誤爆防止）
-            if (hc == null || hc.gameObject == gameObject) return;
+            // 地面・自分・味方 → 何もしない（既存ターゲットは維持して誤爆防止）
+            if (hc == null || hc.gameObject == gameObject || IsSameTeam(hc)) return;
 
             SetTarget(hc);
+        }
+
+        // 自分と同チームの相手は攻撃対象にできない。TeamTag が無い側は中立扱いで攻撃可。
+        private bool IsSameTeam(HealthComponent hc)
+        {
+            var myTag    = GetComponentInParent<TeamTag>();
+            var otherTag = hc.GetComponentInParent<TeamTag>();
+            var myTeam    = myTag    != null ? myTag.Team    : TeamId.Neutral;
+            var otherTeam = otherTag != null ? otherTag.Team : TeamId.Neutral;
+            return !TeamRules.CanDamage(myTeam, otherTeam);
         }
 
         private void SetTarget(HealthComponent hc)

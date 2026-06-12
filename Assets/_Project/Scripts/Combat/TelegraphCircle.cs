@@ -36,6 +36,10 @@ namespace Enigma.Combat
             {
                 if (_owner != null && col.gameObject == _owner) continue;
 
+                // 味方には地点 AoE のダメージを与えない
+                if (!TeamRules.CanDamage(ResolveTeam(_owner), ResolveTeam(col.gameObject)))
+                    continue;
+
                 var damageable = col.GetComponentInParent<IDamageable>();
                 if (damageable != null && damaged.Add(damageable))
                 {
@@ -50,6 +54,14 @@ namespace Enigma.Combat
             // 演出のために少し待ってから消滅
             yield return new WaitForSeconds(0.15f);
             Destroy(gameObject);
+        }
+
+        // TeamTag が無い側は中立扱い（誰にでも当たる）。
+        private static TeamId ResolveTeam(GameObject go)
+        {
+            if (go == null) return TeamId.Neutral;
+            var tag = go.GetComponentInParent<TeamTag>();
+            return tag != null ? tag.Team : TeamId.Neutral;
         }
     }
 }

@@ -645,6 +645,12 @@ public static class BuildAetherRiftMap
         soAutoAttack.FindProperty("_muzzle").objectReferenceValue           = muzzle.transform;
         soAutoAttack.ApplyModifiedPropertiesWithoutUndo();
 
+        // A キー長押しで AA 射程リングを表示するインジケーター
+        var rangeIndicator = player.AddComponent<AttackRangeIndicator>();
+        var soRangeIndicator = new SerializedObject(rangeIndicator);
+        soRangeIndicator.FindProperty("_autoAttack").objectReferenceValue = autoAttack;
+        soRangeIndicator.ApplyModifiedPropertiesWithoutUndo();
+
         // SkillCaster
         var skillCaster = player.AddComponent<SkillCaster>();
 

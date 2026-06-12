@@ -348,6 +348,9 @@ namespace Enigma.Ability
             float dist = Vector3.Distance(transform.position, target.transform.position);
             if (dist > def.Range) return;
 
+            // 味方は対象指定スキルでダメージを受けない
+            if (!CanDamageTarget(target.gameObject)) return;
+
             float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage * scale, gameObject);
             target.TakeDamage(finalDamage, gameObject);
 
@@ -382,6 +385,16 @@ namespace Enigma.Ability
         private static Color SlotColor(int slot)
         {
             return (slot >= 0 && slot < _slotColors.Length) ? _slotColors[slot] : Color.white;
+        }
+
+        // 味方（同チーム）にはスキルダメージを与えない。TeamTag が無い側は中立扱いで攻撃可。
+        private bool CanDamageTarget(GameObject target)
+        {
+            var myTag     = GetComponentInParent<TeamTag>();
+            var otherTag  = target != null ? target.GetComponentInParent<TeamTag>() : null;
+            var myTeam    = myTag    != null ? myTag.Team    : TeamId.Neutral;
+            var otherTeam = otherTag != null ? otherTag.Team : TeamId.Neutral;
+            return TeamRules.CanDamage(myTeam, otherTeam);
         }
 
         private static Key GetFallbackKey(int slot)

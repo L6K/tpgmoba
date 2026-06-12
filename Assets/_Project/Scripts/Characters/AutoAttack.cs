@@ -16,6 +16,10 @@ namespace Enigma.Character
         [SerializeField] private float _attackCooldown = 1.5f;
         [SerializeField] private float _attackRange    = 12f;
 
+        // 射程リング表示など外部が現在の AA 射程を参照するための公開プロパティ。
+        // ピックや Configure で変動するため都度読み取りたい。
+        public float AttackRange => _attackRange;
+
         private const float AutoWindup   = 0.15f;
         private const float AutoRecovery = 0.25f;
 

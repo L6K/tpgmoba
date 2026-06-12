@@ -39,6 +39,10 @@ namespace Enigma.Character
         private const float StuckSeconds      = 2f;
         private const float StuckMoveEpsilon  = 0.3f;
 
+        // 前方障害物の SphereCast 設定（胸高から水平に飛ばして迂回方向を求める）
+        private const float ObstacleProbeRadius   = 0.5f;
+        private const float ObstacleProbeDistance = 2.5f;
+
         private const float SenseRadius   = 16f;
         private const float SenseInterval = 0.3f;
 
@@ -254,6 +258,10 @@ namespace Enigma.Character
             else if (move == LaneMove.Backward)
                 horizontal = StepAlongPath(forward: false);
 
+            // 前方の障害物（タワー等）を検知して回り込む方向へスライドさせる
+            if (horizontal.sqrMagnitude > 0.0001f)
+                horizontal = AvoidObstacles(horizontal);
+
             if (horizontal.sqrMagnitude > 0.0001f)
             {
                 var look = Quaternion.LookRotation(horizontal);
@@ -322,6 +330,37 @@ namespace Enigma.Character
             }
 
             return flat.normalized;
+        }
+
+        // 望みの水平方向 dir で進む前に前方を SphereCast で確認し、障害物（タワーの
+        // 円柱など）にぶつかるならヒット法線に沿って横滑りする方向へ補正する。
+        // これにより静止した障害物を滑らかに迂回できる。スタック検知は保険として残す。
+        private Vector3 AvoidObstacles(Vector3 dir)
+        {
+            // 地面に当たらないよう胸高から水平に飛ばす
+            var origin = transform.position + Vector3.up * 0.5f;
+
+            if (!Physics.SphereCast(origin, ObstacleProbeRadius, dir, out var hit,
+                                    ObstacleProbeDistance, ~0, QueryTriggerInteraction.Ignore))
+                return dir;
+
+            // 自分自身のコライダーは無視（CharacterController を持つ動体は滑って避けてよいので除外しない）
+            if (hit.collider.gameObject == gameObject) return dir;
+
+            // 法線（水平成分）に沿って dir を投影し、壁沿いに滑る方向を得る
+            var normal = hit.normal;
+            normal.y = 0f;
+            if (normal.sqrMagnitude < 0.0001f) return dir;
+            normal.Normalize();
+
+            var slide = dir - normal * Vector3.Dot(dir, normal);
+            slide.y = 0f;
+
+            // 正面衝突などで slide がほぼゼロになる場合は法線と直交する接線方向へ逃がす
+            if (slide.sqrMagnitude < 0.0001f)
+                slide = Vector3.Cross(Vector3.up, normal);
+
+            return slide.normalized;
         }
 
         private void FaceAndAttack(HealthComponent target)
