@@ -19,8 +19,12 @@ namespace Enigma.Character
         private const float AutoWindup   = 0.15f;
         private const float AutoRecovery = 0.25f;
 
+        // AA モーション中(準備〜後隙)にターゲットへ向き直る速度
+        private const float FaceTurnSpeed = 14f;
+
         private AttackCooldown  _cooldown;
         private TargetingSystem _targeting;
+        private Transform       _faceTarget;
 
         // MatchBootstrap など composition root からピック済みステータスを反映する。
         // Awake 済みなら CD インスタンスも作り直す
@@ -41,6 +45,8 @@ namespace Enigma.Character
 
         private void Update()
         {
+            FaceTargetDuringMotion();
+
             if (_targeting == null) return;
 
             var target = _targeting.CurrentTarget;
@@ -59,6 +65,7 @@ namespace Enigma.Character
             {
                 // Strike 時点のターゲット位置を使うためキャプチャ
                 HealthComponent capturedTarget = target;
+                _faceTarget = capturedTarget.transform;
                 _motor.RequestAttack(AutoWindup, AutoRecovery, () =>
                 {
                     _motor.SnapToLunge();
@@ -70,6 +77,28 @@ namespace Enigma.Character
                 // _motor 未設定時は従来どおり即時発射（後方互換）
                 FireProjectile(target);
             }
+        }
+
+        // AA モーション中(準備〜後隙)はターゲットの方向へ滑らかに向き直る。
+        // 移動入力による向きは PlayerController が担うが、Windup 中は移動がロックされるため競合しない
+        private void FaceTargetDuringMotion()
+        {
+            if (_motor == null || _faceTarget == null) return;
+
+            if (_motor.Motion.Phase == AttackPhase.None)
+            {
+                _faceTarget = null;
+                return;
+            }
+
+            var flat = _faceTarget.position - transform.position;
+            flat.y = 0f;
+            if (flat.sqrMagnitude < 0.01f) return;
+
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                Quaternion.LookRotation(flat),
+                FaceTurnSpeed * Time.deltaTime);
         }
 
         private void FireProjectile(HealthComponent target)
