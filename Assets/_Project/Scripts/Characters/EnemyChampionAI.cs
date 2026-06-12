@@ -17,6 +17,7 @@ namespace Enigma.Character
         [SerializeField] private Projectile _projectilePrefab;
         [SerializeField] private Transform _muzzle;
         [SerializeField] private Transform _barFill;
+        [SerializeField] private LocomotionClipSwitcher _clipSwitcher;
 
         private const float MoveSpeed   = 5.5f;
         private const float Gravity     = -20f;
@@ -301,8 +302,10 @@ namespace Enigma.Character
 
             // PlayerAttackMotor は使わず即時発射
             var dir = (target.transform.position - _muzzle.position).normalized;
-            var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.identity);
+            // ビーム見た目を進行方向へ向けるため LookRotation を与える
+            var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, ProjectileSpeed, AttackDamage, gameObject);
+            _clipSwitcher?.PlayAttack(0.45f);
         }
 
         private void OnHealthChanged(float current, float max)

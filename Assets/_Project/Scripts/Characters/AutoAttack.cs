@@ -105,7 +105,8 @@ namespace Enigma.Character
         {
             if (target == null || _projectilePrefab == null || _muzzle == null) return;
             var dir = (target.transform.position - _muzzle.position).normalized;
-            var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.identity);
+            // ビーム見た目を進行方向へ向けるため LookRotation を与える
+            var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, _projectileSpeed, _attackDamage, gameObject);
         }
     }

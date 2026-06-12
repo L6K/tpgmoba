@@ -501,6 +501,9 @@ public static class BuildAetherRiftMap
         var projPrefab     = PrefabUtility.SaveAsPrefabAsset(projGo, projPrefabPath);
         Object.DestroyImmediate(projGo);
 
+        // 5c. AaBeam プレハブ（エズリアル風シアンビーム）
+        var aaBeamPrefab = CreateAaBeamPrefab();
+
         // 6. TargetRing プレハブ（半径1.2 の薄い円柱、半透明黄、コライダーなし）
         var ringGo  = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         ringGo.name = "TargetRing";
@@ -637,7 +640,8 @@ public static class BuildAetherRiftMap
         muzzle.transform.SetParent(player.transform, false);
         muzzle.transform.localPosition = new Vector3(0f, 0.6f, 0.6f);
         var soAutoAttack = new SerializedObject(autoAttack);
-        soAutoAttack.FindProperty("_projectilePrefab").objectReferenceValue = projPrefab.GetComponent<Projectile>();
+        // AA はエズリアル風ビーム（AaBeam）を撃つ。スキル弾・タワーは従来の Projectile のまま
+        soAutoAttack.FindProperty("_projectilePrefab").objectReferenceValue = aaBeamPrefab.GetComponent<Projectile>();
         soAutoAttack.FindProperty("_muzzle").objectReferenceValue           = muzzle.transform;
         soAutoAttack.ApplyModifiedPropertiesWithoutUndo();
 
@@ -805,7 +809,8 @@ public static class BuildAetherRiftMap
         CreateEnemyDummy("EnemyDummy_River", new Vector3(3.5f,   1.1f, -28f),  matRed, matBarRed);
 
         // 11c. 赤チーム レーナー AI チャンピオン（TOPレーンを北回りに進軍）
-        CreateEnemyChampion(matRed, matBarRed, projPrefab.GetComponent<Projectile>());
+        // AA はプレイヤー同様 AaBeam ビームを撃つ
+        CreateEnemyChampion(matRed, matBarRed, aaBeamPrefab.GetComponent<Projectile>());
 
         // 7b. TelegraphSector プレハブ（空 GO + MeshFilter + MeshRenderer + TelegraphSector）
         var sectorGo   = new GameObject("TelegraphSector");
@@ -963,10 +968,18 @@ public static class BuildAetherRiftMap
         // ポケット弧のセグメント数（弧長を 3.75° 相当で割る）
         int pocketSegs = Mathf.Max(1, Mathf.RoundToInt((blueEnd - blueStart) / RingStepDeg));
 
+        // 描画弧は 5° 延長前の範囲（衝突は延長維持=すり抜け防止、描画は延長なし=リング壁内側への出っ張り解消）
+        float blueVisualStart = phi0Deg;
+        float blueVisualEnd   = 360f - phi0Deg;
+        float redVisualStart  = 180f + phi0Deg;
+        float redVisualEnd    = 180f - phi0Deg + 360f;
+
         PlaceWallBandAt(parent, "BoundaryTubePocket_Blue", new Vector3(-56f, 0f, 0f),
-            TubePocketInnerR, TubePocketOuterR, TubeHeight, pocketSegs, blueStart, blueEnd, matBoundary);
+            TubePocketInnerR, TubePocketOuterR, TubeHeight, pocketSegs, blueStart, blueEnd, matBoundary,
+            blueVisualStart, blueVisualEnd);
         PlaceWallBandAt(parent, "BoundaryTubePocket_Red", new Vector3(56f, 0f, 0f),
-            TubePocketInnerR, TubePocketOuterR, TubeHeight, pocketSegs, redStart, redEnd, matBoundary);
+            TubePocketInnerR, TubePocketOuterR, TubeHeight, pocketSegs, redStart, redEnd, matBoundary,
+            redVisualStart, redVisualEnd);
     }
 
     /// <summary>
@@ -983,9 +996,16 @@ public static class BuildAetherRiftMap
     /// 衝突は両面三角形メッシュ(共有頂点)、描画は面ごとに頂点を分離した片面メッシュを子に持つ。
     /// 両面メッシュは RecalculateNormals が平均化でゼロ化し真っ黒に描画されるため、描画用を分離する。
     /// </summary>
+    // visualStartDeg/visualEndDeg を NaN にすると衝突弧（startDeg/endDeg）と同じ範囲で描画する。
+    // ベースポケット壁のみ、すり抜け防止の 5° 延長を衝突には残しつつ描画弧だけ延長前範囲を渡すことで
+    // リング壁内側への出っ張りを解消する。
     private static void PlaceWallBandAt(GameObject parent, string name, Vector3 center,
-        float innerR, float outerR, float height, int segments, float startDeg, float endDeg, Material mat)
+        float innerR, float outerR, float height, int segments, float startDeg, float endDeg, Material mat,
+        float visualStartDeg = float.NaN, float visualEndDeg = float.NaN)
     {
+        if (float.IsNaN(visualStartDeg)) visualStartDeg = startDeg;
+        if (float.IsNaN(visualEndDeg))   visualEndDeg   = endDeg;
+
         var go = new GameObject(name);
         go.transform.position = center;
         var mf = go.AddComponent<MeshFilter>();
@@ -998,7 +1018,7 @@ public static class BuildAetherRiftMap
         var visual = new GameObject("Visual");
         visual.transform.SetParent(go.transform, false);
         var vmf = visual.AddComponent<MeshFilter>();
-        vmf.sharedMesh = CreateWallBandRenderMesh(innerR, outerR, height, segments, startDeg, endDeg);
+        vmf.sharedMesh = CreateWallBandRenderMesh(innerR, outerR, height, segments, visualStartDeg, visualEndDeg);
         var vmr = visual.AddComponent<MeshRenderer>();
         vmr.sharedMaterial = mat;
         SetStatic(visual);
@@ -1320,6 +1340,63 @@ public static class BuildAetherRiftMap
     // UnityChan モデルをプレイヤーの見た目として取り付ける。
     // 物理・操作はゲーム側（CharacterController/PlayerController）が持つため、
     // プレハブ付属の制御系コンポーネントは除去し、揺れもの・瞬きのみ残す
+    /// <summary>
+    /// エズリアル風シアンビームの飛翔体プレハブを生成する。
+    /// ルート: 空 GO + SphereCollider(trigger) + キネマティック RB + Projectile。
+    /// 見た目子 "Beam": Cylinder を +Z 向きに倒して細長くしたシアン発光風メッシュ。
+    /// ルートに TrailRenderer で尾を引かせる。発射側が LookRotation で +Z を進行方向へ向ける前提。
+    /// </summary>
+    private static GameObject CreateAaBeamPrefab()
+    {
+        var beamPrefabPath = PrefabDir + "/AaBeam.prefab";
+        AssetDatabase.DeleteAsset(beamPrefabPath);
+
+        // ルート（空 GO + コリジョン + Projectile）
+        var root = new GameObject("AaBeam");
+        var col = root.AddComponent<SphereCollider>();
+        col.radius    = 0.25f;
+        col.isTrigger = true;
+        var rb = root.AddComponent<Rigidbody>();
+        rb.isKinematic = true;
+        rb.useGravity  = false;
+        root.AddComponent<Projectile>();
+
+        // シアン発光風マテリアル（URP/Unlit、_BaseColor をシアン×2 で明るく）
+        var beamColor = new Color(0.4f, 0.9f, 1.0f);
+        var beamMat   = GetOrCreateMat("AaBeamCyan", beamColor * 2f);
+        // GetOrCreateMat は Enigma/Toon を優先するため、ビームは無条件で URP/Unlit へ上書きして発光風にする
+        var unlit = Shader.Find("Universal Render Pipeline/Unlit");
+        if (unlit != null) beamMat.shader = unlit;
+        beamMat.SetColor("_BaseColor", beamColor * 2f);
+
+        // 見た目子 "Beam": Cylinder(Y軸向き高さ2)を回転90°で +Z 向きに倒し、細長くする
+        var beam = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        beam.name = "Beam";
+        var beamCol = beam.GetComponent<Collider>();
+        if (beamCol != null) Object.DestroyImmediate(beamCol);
+        beam.transform.SetParent(root.transform, false);
+        beam.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+        // 直径0.16(=半径0.08)・長さ0.9(=高さ2×0.45)
+        beam.transform.localScale = new Vector3(0.08f, 0.45f, 0.08f);
+        SetMat(beam, beamMat);
+
+        // ルートにトレイル（同系シアン、幅 0.12→0、time 0.25）。alpha 減衰で尾を消す
+        var trail = root.AddComponent<TrailRenderer>();
+        trail.time       = 0.25f;
+        trail.startWidth = 0.12f;
+        trail.endWidth   = 0f;
+        trail.numCapVertices = 2;
+        trail.material   = GetOrCreateTransparentMat("AaBeamTrail", new Color(0.4f, 0.9f, 1.0f, 0.8f));
+        var trailStart = beamColor; trailStart.a = 0.8f;
+        var trailEnd   = beamColor; trailEnd.a   = 0f;
+        trail.startColor = trailStart;
+        trail.endColor   = trailEnd;
+
+        var prefab = PrefabUtility.SaveAsPrefabAsset(root, beamPrefabPath);
+        Object.DestroyImmediate(root);
+        return prefab;
+    }
+
     private static void AttachUnityChanModel(GameObject player)
     {
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -1370,19 +1447,55 @@ public static class BuildAetherRiftMap
             var soPc = new SerializedObject(pc);
             soPc.FindProperty("_animator").objectReferenceValue = animator;
             soPc.ApplyModifiedPropertiesWithoutUndo();
+        }
 
-            // ゼフ用のアニメ切替機: Idle=WAIT00 / 走り=RUN00_F / 攻撃=HANDUP00_R(詠唱風)。
-            // 切替機は Start で runtimeAnimatorController を切り離して Playables 再生に統一する
-            var switcher = model.AddComponent<Enigma.Character.LocomotionClipSwitcher>();
-            var soSw = new SerializedObject(switcher);
-            soSw.FindProperty("_idle").objectReferenceValue   = LoadFirstClip("Assets/UnityChan/Animations/unitychan_WAIT00.fbx");
-            soSw.FindProperty("_walk").objectReferenceValue   = LoadFirstClip("Assets/UnityChan/Animations/unitychan_RUN00_F.fbx");
-            soSw.FindProperty("_attack").objectReferenceValue = LoadFirstClip("Assets/UnityChan/Animations/unitychan_HANDUP00_R.fbx");
-            soSw.FindProperty("_controller").objectReferenceValue = player.GetComponent<CharacterController>();
-            soSw.ApplyModifiedPropertiesWithoutUndo();
+        // アニメ切替機: Idle=WAIT00 / 走り=RUN00_F / 攻撃=HANDUP00_R(詠唱風)。
+        // プレイヤー・敵チャンピオン双方の UnityChan モデルへ付与する（敵分岐でも歩行/攻撃モーションが必要）。
+        // 切替機は Start で runtimeAnimatorController を切り離して Playables 再生に統一する
+        var switcher = model.AddComponent<Enigma.Character.LocomotionClipSwitcher>();
+        var soSw = new SerializedObject(switcher);
+        soSw.FindProperty("_idle").objectReferenceValue   = LoadFirstClip("Assets/UnityChan/Animations/unitychan_WAIT00.fbx");
+        soSw.FindProperty("_walk").objectReferenceValue   = LoadFirstClip("Assets/UnityChan/Animations/unitychan_RUN00_F.fbx");
+        soSw.FindProperty("_attack").objectReferenceValue = LoadFirstClip("Assets/UnityChan/Animations/unitychan_HANDUP00_R.fbx");
+        // _controller はホスト（player 引数の GameObject）の CharacterController。velocity で歩行判定する
+        soSw.FindProperty("_controller").objectReferenceValue = player.GetComponent<CharacterController>();
+        soSw.ApplyModifiedPropertiesWithoutUndo();
+
+        // プレイヤー分岐のみ: マズルを右手ボーンへ付け替えてビーム発射点を手元に寄せる。
+        // 見つからなければ現状維持（player 直下のまま）
+        if (pc != null)
+        {
+            var hand = FindRightHandBone(model.transform);
+            if (hand != null)
+            {
+                var muzzle = player.transform.Find("Muzzle");
+                if (muzzle != null)
+                {
+                    muzzle.SetParent(hand, false);
+                    muzzle.localPosition = Vector3.zero;
+                }
+            }
         }
 
         ApplyToonMaterials(model);
+    }
+
+    /// <summary>
+    /// モデル階層から右手ボーンと思しき Transform を探す（大小無視）。
+    /// 名前に "RightHand" を含むものを優先し、無ければ "Hand.R"/"HandR"/"Hand_R" 系を探す。
+    /// </summary>
+    private static Transform FindRightHandBone(Transform root)
+    {
+        Transform fallback = null;
+        foreach (var t in root.GetComponentsInChildren<Transform>(true))
+        {
+            string n = t.name.ToLowerInvariant();
+            if (n.Contains("righthand")) return t;
+            if (fallback == null &&
+                (n.Contains("hand.r") || n.Contains("handr") || n.Contains("hand_r")))
+                fallback = t;
+        }
+        return fallback;
     }
 
     /// <summary>FBX サブアセットから最初の AnimationClip(__preview__ 除外)を返す。</summary>
@@ -2045,10 +2158,14 @@ public static class BuildAetherRiftMap
         // 12°刻みでアーク → 青ベース開口(-50,0,10)。
         var waypoints = BuildTopLaneWaypoints();
 
+        // AttachUnityChanModel が敵モデルへ付けた切替機を取得して攻撃モーション結線する
+        var enemySwitcher = go.GetComponentInChildren<Enigma.Character.LocomotionClipSwitcher>();
+
         var soAi = new SerializedObject(ai);
         soAi.FindProperty("_projectilePrefab").objectReferenceValue = projPrefab;
         soAi.FindProperty("_muzzle").objectReferenceValue           = muzzle.transform;
         soAi.FindProperty("_barFill").objectReferenceValue          = wrapper;
+        soAi.FindProperty("_clipSwitcher").objectReferenceValue     = enemySwitcher;
 
         var wpProp = soAi.FindProperty("_waypoints");
         wpProp.arraySize = waypoints.Length;

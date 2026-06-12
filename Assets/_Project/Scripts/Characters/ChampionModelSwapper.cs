@@ -53,8 +53,34 @@ namespace Enigma.Character
             ApplyToonMaterials(model, data);
             var switcher = SetupLocomotion(model, player, data);
             RewireAttackMotor(player, model.transform, switcher);
+            ReparentMuzzleToHand(player, model.transform);
 
             return model;
+        }
+
+        // スワップ後モデルの右手ボーンへ player の "Muzzle" を付け替える（ビーム発射点を手元へ）。
+        // 名前候補（大小無視）: "RightHand" / "Hand.R" / "HandR" / "Hand_R"。見つからなければ現状維持。
+        private static void ReparentMuzzleToHand(GameObject player, Transform modelRoot)
+        {
+            var muzzle = player.transform.Find("Muzzle");
+            if (muzzle == null) return;
+
+            Transform hand = null;
+            Transform fallback = null;
+            foreach (var t in modelRoot.GetComponentsInChildren<Transform>(true))
+            {
+                string n = t.name.ToLowerInvariant();
+                if (!n.Contains("hand")) continue;
+                if (n.Contains("righthand")) { hand = t; break; }
+                if (fallback == null &&
+                    (n.Contains("hand.r") || n.Contains("handr") || n.Contains("hand_r")))
+                    fallback = t;
+            }
+            hand ??= fallback;
+            if (hand == null) return;
+
+            muzzle.SetParent(hand, false);
+            muzzle.localPosition = Vector3.zero;
         }
 
         // モデル付属の物理・当たり判定・制御スクリプトを除去（Animator は残す）。
