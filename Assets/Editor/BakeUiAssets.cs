@@ -142,9 +142,13 @@ namespace Enigma.EditorTools
             RenderTexture rt = null;
             Texture2D tex = null;
             RenderTexture prevActive = RenderTexture.active;
+            var hidden = new List<GameObject>();
 
             try
             {
+                // スポーンがベースポケット壁の至近にあるため、壁が写り込まないよう一時非表示
+                HideObjects(hidden, go => go.name == "OuterBoundary" || go.name == "HealthBar");
+
                 Vector3 playerPos = player.transform.position;
                 Vector3 f = player.transform.forward;
 
@@ -181,6 +185,7 @@ namespace Enigma.EditorTools
             }
             finally
             {
+                RestoreObjects(hidden);
                 RenderTexture.active = prevActive;
                 if (rt != null)
                 {

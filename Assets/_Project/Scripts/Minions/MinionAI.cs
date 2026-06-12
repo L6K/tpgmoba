@@ -24,6 +24,7 @@ namespace Enigma.Minion
         private HealthComponent   _health;
         private TeamTag           _teamTag;
         private AttackCooldown    _attackCooldown;
+        private CharacterController _controller;
 
         private IReadOnlyList<Vector3> _waypoints;
         private int                    _waypointIndex;
@@ -40,6 +41,7 @@ namespace Enigma.Minion
             _health         = GetComponent<HealthComponent>();
             _teamTag        = GetComponent<TeamTag>();
             _attackCooldown = new AttackCooldown(_attackInterval);
+            _controller     = GetComponent<CharacterController>();
         }
 
         private void Start()
@@ -215,15 +217,29 @@ namespace Enigma.Minion
 
         private void MoveToward(Vector3 target)
         {
-            // y は固定してレーン表面を維持
-            var flatTarget = new Vector3(target.x, _fixedY, target.z);
-            var pos        = transform.position;
+            var pos = transform.position;
+            // 水平方向のみで向き・移動方向を決める（y は接地に委ねる/固定する）
+            var flatDir = new Vector3(target.x - pos.x, 0f, target.z - pos.z);
 
-            transform.position = Vector3.MoveTowards(pos, flatTarget, _moveSpeed * Time.deltaTime);
+            if (_controller != null)
+            {
+                // CharacterController で実体衝突しながら移動（タワー・壁をすり抜けない）。
+                // Vector3.down は軽い接地押し付けでスロープ/段差に追従させる。
+                float dt   = Time.deltaTime;
+                var   step = flatDir.sqrMagnitude > 0.0001f
+                    ? flatDir.normalized * _moveSpeed * dt
+                    : Vector3.zero;
+                _controller.Move(step + Vector3.down * 2f * dt);
+            }
+            else
+            {
+                // フォールバック: 従来の transform 直接移動（y を固定してレーン表面を維持）
+                var flatTarget = new Vector3(target.x, _fixedY, target.z);
+                transform.position = Vector3.MoveTowards(pos, flatTarget, _moveSpeed * Time.deltaTime);
+            }
 
-            var dir = flatTarget - pos;
-            if (dir.sqrMagnitude > 0.001f)
-                transform.rotation = Quaternion.LookRotation(dir);
+            if (flatDir.sqrMagnitude > 0.001f)
+                transform.rotation = Quaternion.LookRotation(flatDir);
         }
 
         private void OnHealthChanged(float current, float max)
@@ -239,6 +255,8 @@ namespace Enigma.Minion
             // コライダーを無効にして物理干渉を止める（移動停止は Update の IsDead 早期 return）
             var col = GetComponent<Collider>();
             if (col != null) col.enabled = false;
+            // CharacterController も無効化して死体の押し合いを止める
+            if (_controller != null) _controller.enabled = false;
 
             // 見た目と破棄は DeathPresenter に委譲。無ければ従来どおり自前で破棄する
             if (GetComponent<DeathPresenter>() == null)

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Skill_MagicSlash
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u30A2\u30FC\u30B1\u30A4\u30F3\u30DC\u30EB\u30C8"
-  Description: "\u9B54\u529B\u306E\u5F3E\u3092\u30AB\u30FC\u30BD\u30EB\u65B9\u5411\u3078\u653E\u3064\u3002\u6700\u521D\u306B\u547D\u4E2D\u3057\u305F\u6575\u306B\u30C0\u30E1\u30FC\u30B8"
+  Description: "\u6307\u5B9A\u65B9\u5411\u3078\u9B54\u529B\u306E\u65AC\u6483\u3092\u98DB\u3070\u3057\u3001\u76F4\u7DDA\u4E0A\u306E\u6575\u306B\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u308B\u3002"
   Targeting: 0
   Damage: 32
   Range: 18
@@ -21,4 +21,4 @@ MonoBehaviour:
   CooldownSeconds: 5
   ProjectileSpeed: 32
   WindupSeconds: 0.2
-  RecoverySeconds: 0.35
+  RecoverySeconds: 0.3
