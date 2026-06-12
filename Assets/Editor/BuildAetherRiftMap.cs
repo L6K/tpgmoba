@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -1800,31 +1801,118 @@ public static class BuildAetherRiftMap
         return list.ToArray();
     }
 
+    private const float MinionHeight = 1.6f;
+
+    /// <summary>
+    /// Enigma/Toon のミニオン/中立用フラットカラーマテリアルを GetOrCreate する。
+    /// テクスチャ無しの Quaternius モデルをチーム色で塗るため _BaseColor/_ShadeColor/_RampSmoothing を設定。
+    /// </summary>
+    private static Material GetOrCreateToonUnitMat(string name, Color baseColor)
+    {
+        var path     = $"{MatDir}/{name}.mat";
+        var shadeCol = new Color(0.58f, 0.62f, 0.80f);
+
+        var existing = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (existing != null)
+        {
+            existing.SetColor("_BaseColor", baseColor);
+            existing.SetColor("_ShadeColor", shadeCol);
+            existing.SetFloat("_RampSmoothing", 0.18f);
+            return existing;
+        }
+
+        var shader = Shader.Find("Enigma/Toon") ?? Shader.Find("Universal Render Pipeline/Lit");
+        var mat    = new Material(shader);
+        mat.SetColor("_BaseColor", baseColor);
+        mat.SetColor("_ShadeColor", shadeCol);
+        mat.SetFloat("_RampSmoothing", 0.18f);
+        AssetDatabase.CreateAsset(mat, path);
+        return mat;
+    }
+
     private static MinionAI CreateMinionPrefab()
     {
         // 既存プレハブの再利用は旧構造・一時マテリアル参照を残すため毎回作り直す
         var prefabPath = PrefabDir + "/Minion.prefab";
         AssetDatabase.DeleteAsset(prefabPath);
 
-        // 小さめカプセル
-        var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        go.name            = "Minion";
-        go.transform.localScale = new Vector3(0.6f, 0.6f, 0.6f);
+        // ルート GO（ゲームロジック保持側）。見た目は子 "Visual"(Skeleton.fbx) に分離する
+        var go = new GameObject("Minion");
 
-        // 見た目より大きめのコライダーでクリック判定を取りやすくする
-        var minionCap = go.GetComponent<CapsuleCollider>();
-        if (minionCap != null)
+        // 見た目より大きめのコライダーでクリック判定を取りやすくする（旧カプセル踏襲）
+        var minionCap = go.AddComponent<CapsuleCollider>();
+        minionCap.radius = 0.9f;
+        minionCap.height = 2.4f;
+        minionCap.center = new Vector3(0f, 0.8f, 0f);
+
+        // 見た目: Skeleton.fbx を子 "Visual" としてインスタンス化
+        var skeletonModel = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/External/Units/Skeleton.fbx");
+        var matMinionRed  = GetOrCreateToonUnitMat("MinionRed",  new Color(0.95f, 0.50f, 0.45f));
+        var matMinionBlue = GetOrCreateToonUnitMat("MinionBlue", new Color(0.55f, 0.66f, 0.95f));
+
+        if (skeletonModel != null)
         {
-            minionCap.radius = 0.9f;
-            minionCap.height = 2.4f;
-            minionCap.center = new Vector3(0f, 0.8f, 0f);
+            var visual = (GameObject)PrefabUtility.InstantiatePrefab(skeletonModel);
+            visual.name = "Visual";
+            visual.transform.SetParent(go.transform, false);
+            visual.transform.localPosition = Vector3.zero;
+
+            // FBX 由来のコライダーは除去（ルートのクリック用コライダーに一本化）
+            foreach (var c in visual.GetComponentsInChildren<Collider>())
+                Object.DestroyImmediate(c);
+
+            // 高さ正規化: bounds 計測 → 相対乗算（FBX ルートの単位変換スケールを壊さない）
+            var rends = visual.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                var b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                float measuredH = b.size.y;
+                if (measuredH > 0.0001f)
+                    visual.transform.localScale =
+                        visual.transform.localScale * (MinionHeight / measuredH);
+
+                Physics.SyncTransforms();
+
+                // 接地補正: スケール後に再計測して最下端を y=0 に合わせる
+                var b2 = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b2.Encapsulate(rends[i].bounds);
+                float footOffset = b2.min.y - go.transform.position.y;
+                visual.transform.localPosition -= new Vector3(0f, footOffset, 0f);
+            }
+
+            // プレハブ既定は Red（敵）。Blue は MinionAI.Initialize で全 Renderer を差し替える
+            foreach (var r in rends) r.sharedMaterial = matMinionRed;
+
+            // Animator を1つだけ残す（重複は除去）。無ければ Visual ルートに付与
+            var animators = visual.GetComponentsInChildren<Animator>(true);
+            Animator animator = animators.Length > 0 ? animators[0] : null;
+            for (int i = 1; i < animators.Length; i++) Object.DestroyImmediate(animators[i]);
+            if (animator == null) animator = visual.AddComponent<Animator>();
+
+            // 歩行アニメ: FBX サブアセットから "Walk"（無ければ先頭）を選び AutoPlayClip に結線
+            var clips = AssetDatabase
+                .LoadAllAssetsAtPath("Assets/External/Units/Skeleton.fbx")
+                .OfType<AnimationClip>()
+                .Where(c => c != null && !c.name.StartsWith("__preview__"))
+                .ToArray();
+
+            var apc   = visual.AddComponent<AutoPlayClip>();
+            var soApc = new SerializedObject(apc);
+            soApc.FindProperty("_clipNameContains").stringValue = "Walk";
+            var clipArr = soApc.FindProperty("_clips");
+            clipArr.arraySize = clips.Length;
+            for (int i = 0; i < clips.Length; i++)
+                clipArr.GetArrayElementAtIndex(i).objectReferenceValue = clips[i];
+            soApc.ApplyModifiedPropertiesWithoutUndo();
         }
 
         go.AddComponent<HealthComponent>();
         go.AddComponent<TeamTag>();
         var ai = go.AddComponent<MinionAI>();
 
-        // プレハブのデフォルト色は BarRed（敵チーム）。Blue のときは MinionAI.Initialize で差し替える
+        // 頭上 HP バー。デフォルト色は BarRed（敵チーム）。Blue のときは Initialize で BarGreen に差し替える
         var matBarRed   = GetOrCreateBarMat("BarRed",   new Color(0.92f, 0.30f, 0.25f));
         var matBarGreen = GetOrCreateBarMat("BarGreen",  new Color(0.30f, 0.85f, 0.35f));
         var wrapper     = CreateWorldHealthBar(go.transform, 1.2f, 1.6f, matBarRed, 50f);
@@ -1857,8 +1945,13 @@ public static class BuildAetherRiftMap
         return prefab.GetComponent<MinionAI>();
     }
 
-    private static void PlaceMinionSpawners(MinionAI minionPrefab, Material matBlue, Material matRed)
+    private static void PlaceMinionSpawners(MinionAI minionPrefab, Material matBlueUnused, Material matRedUnused)
     {
+        // ミニオン専用のトゥーンチーム色（プレハブ既定=Red、Initialize で Blue を全 Visual Renderer に適用）。
+        // タワー等の TeamBlue/TeamRed ではなく MinionBlue/MinionRed を使う。
+        var matBlue = GetOrCreateToonUnitMat("MinionBlue", new Color(0.55f, 0.66f, 0.95f));
+        var matRed  = GetOrCreateToonUnitMat("MinionRed",  new Color(0.95f, 0.50f, 0.45f));
+
         // アーク半径 R=45 上のウェイポイント計算ヘルパー
         static Vector3 ArcPt(float deg) {
             float r = deg * Mathf.Deg2Rad;
@@ -2163,44 +2256,76 @@ public static class BuildAetherRiftMap
     /// </summary>
     private static void CreateSlime(string name, Vector3 campCenter)
     {
-        // 親 GO（地面 y=0.8 に配置）
+        // 親 GO（地面 y=0.8 に配置）。クリック判定は親の CapsuleCollider に一本化（不変）
         var parent = new GameObject(name);
         parent.transform.position = new Vector3(campCenter.x, 0.8f, campCenter.z);
 
-        // 本体 Sphere
-        var body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        body.name = "Body";
-        body.transform.SetParent(parent.transform, false);
-        body.transform.localScale = new Vector3(1.6f, 1.1f, 1.6f);
-        SetMat(body, GetOrCreateMat("Slime", new Color(0.35f, 0.75f, 0.45f)));
-        // 本体の SphereCollider は除去し、親に CapsuleCollider を付与
-        // 見た目より大きめのコライダーでクリック判定を取りやすくする
-        Object.DestroyImmediate(body.GetComponent<SphereCollider>());
         var cap = parent.AddComponent<CapsuleCollider>();
         cap.radius = 1.3f;
         cap.height = 2.0f;
         cap.center = Vector3.zero;
 
-        // 目（白）×2
-        Vector3[] eyeOffsets = { new Vector3(-0.28f, 0.25f, 0.62f), new Vector3(0.28f, 0.25f, 0.62f) };
-        foreach (var eo in eyeOffsets)
-        {
-            var eye = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            eye.name = "Eye";
-            eye.transform.SetParent(body.transform, false);
-            eye.transform.localPosition = eo;
-            eye.transform.localScale    = Vector3.one * 0.22f;
-            SetMat(eye, GetOrCreateMat("SlimeEye", Color.white));
-            Object.DestroyImmediate(eye.GetComponent<SphereCollider>());
+        // 見た目: Slime.fbx を子 "Visual" としてインスタンス化（高さ正規化 1.4m・接地）
+        var slimeModel = AssetDatabase.LoadAssetAtPath<GameObject>(
+            "Assets/External/Units/Slime.fbx");
+        var matSlime = GetOrCreateToonUnitMat("JungleSlime", new Color(0.40f, 0.72f, 0.42f));
 
-            // 瞳（黒）
-            var pupil = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            pupil.name = "Pupil";
-            pupil.transform.SetParent(eye.transform, false);
-            pupil.transform.localPosition = new Vector3(0f, 0f, 0.5f);
-            pupil.transform.localScale    = Vector3.one * 0.45f; // 親の 0.22 * 0.45 ≒ 0.1
-            SetMat(pupil, GetOrCreateMat("SlimePupil", Color.black));
-            Object.DestroyImmediate(pupil.GetComponent<SphereCollider>());
+        if (slimeModel != null)
+        {
+            const float slimeHeight = 1.4f;
+            var visual = (GameObject)PrefabUtility.InstantiatePrefab(slimeModel);
+            visual.name = "Visual";
+            visual.transform.SetParent(parent.transform, false);
+            visual.transform.localPosition = Vector3.zero;
+
+            // FBX 由来のコライダーは除去（親のクリック用コライダーに一本化）
+            foreach (var c in visual.GetComponentsInChildren<Collider>())
+                Object.DestroyImmediate(c);
+
+            // 高さ正規化: bounds 計測 → 相対乗算（FBX ルートの単位変換スケールを壊さない）
+            var rends = visual.GetComponentsInChildren<Renderer>();
+            if (rends.Length > 0)
+            {
+                var b = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
+                float measuredH = b.size.y;
+                if (measuredH > 0.0001f)
+                    visual.transform.localScale =
+                        visual.transform.localScale * (slimeHeight / measuredH);
+
+                Physics.SyncTransforms();
+
+                // 接地補正: スケール後に再計測して最下端を親の足元(y=0)に合わせる
+                var b2 = rends[0].bounds;
+                for (int i = 1; i < rends.Length; i++) b2.Encapsulate(rends[i].bounds);
+                float footOffset = b2.min.y - parent.transform.position.y;
+                visual.transform.localPosition -= new Vector3(0f, footOffset, 0f);
+            }
+
+            // 緑トゥーン色を全 Renderer に適用
+            foreach (var r in rends) r.sharedMaterial = matSlime;
+
+            // Animator を1つだけ残す。無ければ Visual ルートに付与
+            var animators = visual.GetComponentsInChildren<Animator>(true);
+            Animator animator = animators.Length > 0 ? animators[0] : null;
+            for (int i = 1; i < animators.Length; i++) Object.DestroyImmediate(animators[i]);
+            if (animator == null) animator = visual.AddComponent<Animator>();
+
+            // アニメ: "Idle"（無ければ先頭）を AutoPlayClip に結線
+            var clips = AssetDatabase
+                .LoadAllAssetsAtPath("Assets/External/Units/Slime.fbx")
+                .OfType<AnimationClip>()
+                .Where(c => c != null && !c.name.StartsWith("__preview__"))
+                .ToArray();
+
+            var apc   = visual.AddComponent<AutoPlayClip>();
+            var soApc = new SerializedObject(apc);
+            soApc.FindProperty("_clipNameContains").stringValue = "Idle";
+            var clipArr = soApc.FindProperty("_clips");
+            clipArr.arraySize = clips.Length;
+            for (int i = 0; i < clips.Length; i++)
+                clipArr.GetArrayElementAtIndex(i).objectReferenceValue = clips[i];
+            soApc.ApplyModifiedPropertiesWithoutUndo();
         }
 
         // HealthComponent (120 HP)

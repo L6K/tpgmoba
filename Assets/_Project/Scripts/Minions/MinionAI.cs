@@ -73,8 +73,18 @@ namespace Enigma.Minion
 
             if (teamMaterial != null)
             {
-                var rend = GetComponent<Renderer>();
-                if (rend != null) rend.sharedMaterial = teamMaterial;
+                // 見た目は子の "Visual"(FBX) 配下の複数 Renderer。HP バー等の Renderer を
+                // 巻き込まないよう、Visual サブツリーが存在すればそこに限定して適用する。
+                var visual = transform.Find("Visual");
+                var rends  = visual != null
+                    ? visual.GetComponentsInChildren<Renderer>(true)
+                    : GetComponentsInChildren<Renderer>(true);
+
+                foreach (var rend in rends)
+                {
+                    if (rend == null) continue;
+                    rend.sharedMaterial = teamMaterial;
+                }
             }
 
             // Blue チーム（味方）のときは Fill Renderer を BarGreen に差し替える

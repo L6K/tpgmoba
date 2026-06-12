@@ -80,6 +80,22 @@
 
 ---
 
+## Unit Assets — CC0 ミニオンモデルパック (OpenGameArt.org)
+
+クレジット表記: **不要**（CC0 1.0 パブリックドメイン）。任意で "Animated Monsters by Quaternius" と表記可
+ライセンス全文: https://creativecommons.org/publicdomain/zero/1.0/
+ライセンスファイル: `Assets/External/Units/LICENSE.txt`
+
+### Animated Monster Pack by Quaternius
+
+- 提供: Quaternius (https://www.patreon.com/quaternius)
+- ライセンス: CC0 1.0 (Public Domain)
+- 出典: https://opengameart.org/content/lowpoly-animated-monsters
+- 配置ファイル: `Skeleton.fbx`（歩兵型スケルトン）、`Slime.fbx`（汎用雑魚スライム）、`Bat.fbx`（飛行ユニット候補）
+- 内容: ローポリアニメーション付きモンスター3種。パック内 Dragon.fbx はボス級サイズのため除外
+
+---
+
 ## Tower Assets — CC0 防衛タワーパック (OpenGameArt.org)
 
 クレジット表記: **不要**（すべて CC0 1.0 パブリックドメイン）
