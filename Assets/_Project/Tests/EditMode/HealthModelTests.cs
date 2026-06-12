@@ -101,5 +101,30 @@ namespace Enigma.Tests
 
             Assert.AreEqual(100f, firedCurrent, 0.001f);
         }
+
+        [Test]
+        public void Revived_FiresOnRevive()
+        {
+            var model = new HealthModel(100f);
+            model.TakeDamage(100f);
+
+            int count = 0;
+            model.Revived += () => count++;
+            model.Revive();
+
+            Assert.AreEqual(1, count);
+        }
+
+        [Test]
+        public void Revived_FiresEvenWhenNotDead()
+        {
+            var model = new HealthModel(100f);
+
+            int count = 0;
+            model.Revived += () => count++;
+            model.Revive(); // 未死亡からの Revive でも発火してよい
+
+            Assert.AreEqual(1, count);
+        }
     }
 }

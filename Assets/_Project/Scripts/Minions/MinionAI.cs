@@ -236,11 +236,13 @@ namespace Enigma.Minion
 
         private void OnDied()
         {
-            // コライダーを無効にして物理干渉を止める
+            // コライダーを無効にして物理干渉を止める（移動停止は Update の IsDead 早期 return）
             var col = GetComponent<Collider>();
             if (col != null) col.enabled = false;
 
-            StartCoroutine(DestroyAfterDelay(2f));
+            // 見た目と破棄は DeathPresenter に委譲。無ければ従来どおり自前で破棄する
+            if (GetComponent<DeathPresenter>() == null)
+                StartCoroutine(DestroyAfterDelay(2f));
         }
 
         private IEnumerator DestroyAfterDelay(float delay)

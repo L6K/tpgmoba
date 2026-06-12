@@ -315,8 +315,8 @@ namespace Enigma.Character
 
         private void OnDied()
         {
+            // 見た目（フェード/転倒）は DeathPresenter に委譲。AI 側は当たり/移動だけ止める
             _isDead = true;
-            SetVisible(false);
             _controller.enabled = false;
             StartCoroutine(RespawnRoutine());
         }
@@ -334,14 +334,8 @@ namespace Enigma.Character
             _verticalVelocity = 0f;
 
             _controller.enabled = true;
-            SetVisible(true);
+            // Revive 経由で HealthModel.Revived が発火し DeathPresenter が見た目を復元する
             _isDead = false;
-        }
-
-        private void SetVisible(bool visible)
-        {
-            foreach (var r in GetComponentsInChildren<Renderer>(true))
-                r.enabled = visible;
         }
     }
 }

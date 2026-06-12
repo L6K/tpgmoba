@@ -916,7 +916,7 @@ public static class BuildAetherRiftMap
 
         float laneStepDeg  = 360f / LaneSegments;
         float laneChordLen = 2f * LaneRadius * Mathf.Sin(laneStepDeg * 0.5f * Mathf.Deg2Rad);
-        float laneSegW     = laneChordLen + 0.15f;
+        float laneSegW     = laneChordLen + 0.6f;  // +0.6: 曲率楔形隙間・継ぎ目を確実に塞ぐ
 
         for (int i = 0; i < LaneSegments; i++)
         {
@@ -931,7 +931,7 @@ public static class BuildAetherRiftMap
             float rad = angleDeg * Mathf.Deg2Rad;
             var   pos = new Vector3(LaneRadius * Mathf.Cos(rad), LaneWallH * 0.5f, LaneRadius * Mathf.Sin(rad));
 
-            var seg = PlaceCube($"LaneWall_{i:D3}", pos, new Vector3(laneSegW, LaneWallH, LaneWallDepth), matBoundary);
+            var seg = PlaceCube($"BoundaryLaneWall_{i:D3}", pos, new Vector3(laneSegW, LaneWallH, LaneWallDepth), matBoundary);
             // 円周接線方向に回転（法線が中心を向くように +90°）
             seg.transform.rotation = Quaternion.Euler(0f, -(angleDeg + 90f), 0f);
             seg.transform.SetParent(parent.transform, true);
@@ -945,7 +945,7 @@ public static class BuildAetherRiftMap
 
         float baseStepDeg  = 360f / BaseSegments;
         float baseChordLen = 2f * BaseRadius * Mathf.Sin(baseStepDeg * 0.5f * Mathf.Deg2Rad);
-        float baseSegW     = baseChordLen + 0.15f;
+        float baseSegW     = baseChordLen + 0.6f;  // +0.6: 外周壁との継ぎ目隙間を塞ぐ
 
         var baseCenters = new (Vector3 center, string label)[]
         {
@@ -961,16 +961,66 @@ public static class BuildAetherRiftMap
                 float rad      = angleDeg * Mathf.Deg2Rad;
                 var   segWorld = center + new Vector3(BaseRadius * Mathf.Cos(rad), 0f, BaseRadius * Mathf.Sin(rad));
 
-                // マップ中心からの距離 < 51 はレーン側開口 → スキップ
-                if (segWorld.magnitude < LaneRadius) continue;
+                // マップ中心からの距離 < 50.2 はレーン側開口 → スキップ（重なり側に緩めて隙間を防ぐ）
+                if (segWorld.magnitude < 50.2f) continue;
 
                 var pos = new Vector3(segWorld.x, BaseWallH * 0.5f, segWorld.z);
-                var seg = PlaceCube($"BaseWall_{label}_{i:D2}", pos,
+                var seg = PlaceCube($"BoundaryBaseWall_{label}_{i:D2}", pos,
                     new Vector3(baseSegW, BaseWallH, BaseWallDepth), matBoundary);
                 seg.transform.rotation = Quaternion.Euler(0f, -(angleDeg + 90f), 0f);
                 seg.transform.SetParent(parent.transform, true);
             }
         }
+    }
+
+    /// <summary>
+    /// 境界壁の連続性を検証する。
+    /// 中心 (0, 0.75, 0) から 0.5° 刻み 720 本の水平レイ（半径 48 起点、外向き長さ 6）を飛ばし、
+    /// "Boundary" を名前に含む壁に当たらず かつ ベース開口（0°/180° ±11°）でもない角度を列挙する。
+    /// 素通り角度がなければ "OK" を返す。
+    /// </summary>
+    public static string VerifyBoundary()
+    {
+        const float RayOriginR  = 48f;
+        const float RayLength   = 6f;
+        const float StepDeg     = 0.5f;
+        const float BaseOpenHalf = 11f;
+        var origin = new Vector3(0f, 0.75f, 0f);
+        var gaps = new System.Text.StringBuilder();
+
+        // エディタモードでは生成直後のコライダーが物理ワールド未反映のことがある
+        Physics.SyncTransforms();
+
+        for (int i = 0; i < 720; i++)
+        {
+            float angleDeg = i * StepDeg;
+
+            // ベース開口（0° / 180° ±11°）はスキップ
+            float diff0   = Mathf.Abs(Mathf.DeltaAngle(angleDeg, 0f));
+            float diff180 = Mathf.Abs(Mathf.DeltaAngle(angleDeg, 180f));
+            if (diff0 <= BaseOpenHalf || diff180 <= BaseOpenHalf) continue;
+
+            float rad = angleDeg * Mathf.Deg2Rad;
+            var dir   = new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad));
+            var start = origin + dir * RayOriginR;
+
+            bool hit = false;
+            foreach (var h in Physics.RaycastAll(start, dir, RayLength))
+            {
+                if (h.collider.gameObject.name.Contains("Boundary"))
+                {
+                    hit = true;
+                    break;
+                }
+            }
+            if (!hit)
+            {
+                if (gaps.Length > 0) gaps.Append(", ");
+                gaps.Append(angleDeg.ToString("F1") + "°");
+            }
+        }
+
+        return gaps.Length == 0 ? "OK" : "GAP at: " + gaps;
     }
 
     // ---- ヘルパー ----
@@ -1489,6 +1539,9 @@ public static class BuildAetherRiftMap
         var soTowerGold = new SerializedObject(towerGold);
         soTowerGold.FindProperty("_amount").intValue = 150;
         soTowerGold.ApplyModifiedPropertiesWithoutUndo();
+
+        // 死亡演出: 沈下（倒壊後は沈んだまま）。見た目は Visual 子
+        AddDeathPresenter(go, mode: 1, destroyWhenDone: false, visualRoot: go.transform.Find("Visual"));
     }
 
     /// <summary>
@@ -1650,6 +1703,19 @@ public static class BuildAetherRiftMap
         soTd.ApplyModifiedPropertiesWithoutUndo();
     }
 
+    // 共通の死亡演出 DeathPresenter を付与・結線する。
+    // mode: 0=Topple(倒れる) / 1=Sink(沈む)。visualRoot が null なら自身を対象にする。
+    private static void AddDeathPresenter(GameObject go, int mode, bool destroyWhenDone, Transform visualRoot)
+    {
+        var dp  = go.AddComponent<DeathPresenter>();
+        var so  = new SerializedObject(dp);
+        so.FindProperty("_mode").enumValueIndex          = mode;
+        so.FindProperty("_destroyWhenDone").boolValue    = destroyWhenDone;
+        if (visualRoot != null)
+            so.FindProperty("_visualRoot").objectReferenceValue = visualRoot;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
     private static void CreateEnemyDummy(string name, Vector3 pos, Material matCapsule, Material matBarRed)
     {
         var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
@@ -1688,6 +1754,9 @@ public static class BuildAetherRiftMap
         var soReward = new SerializedObject(reward);
         soReward.FindProperty("_amount").floatValue = 50f;
         soReward.ApplyModifiedPropertiesWithoutUndo();
+
+        // 死亡演出: 倒れる。リスポーン型なので破棄しない（見た目はカプセル自身）
+        AddDeathPresenter(go, mode: 0, destroyWhenDone: false, visualRoot: null);
     }
 
     // 赤チームのレーナー AI チャンピオン1体を生成する。
@@ -1781,6 +1850,10 @@ public static class BuildAetherRiftMap
             wpProp.GetArrayElementAtIndex(i).vector3Value = waypoints[i];
 
         soAi.ApplyModifiedPropertiesWithoutUndo();
+
+        // 死亡演出: 倒れる。リスポーン型なので破棄しない（見た目は UnityChanModel 子）
+        var champVisual = go.transform.Find("UnityChanModel");
+        AddDeathPresenter(go, mode: 0, destroyWhenDone: false, visualRoot: champVisual);
     }
 
     // TOPレーン経路を赤ベース→青ベース方向（角度 20°→160°、12°刻み）で構築する。
@@ -1940,6 +2013,9 @@ public static class BuildAetherRiftMap
         soMinionGold.FindProperty("_amount").intValue = 20;
         soMinionGold.ApplyModifiedPropertiesWithoutUndo();
 
+        // 死亡演出: 倒れて消滅（リスポーンしない使い捨てユニット）。見た目は Visual 子
+        AddDeathPresenter(go, mode: 0, destroyWhenDone: true, visualRoot: go.transform.Find("Visual"));
+
         var prefab = PrefabUtility.SaveAsPrefabAsset(go, prefabPath);
         Object.DestroyImmediate(go);
         return prefab.GetComponent<MinionAI>();
@@ -2087,6 +2163,9 @@ public static class BuildAetherRiftMap
         var soBossGold = new SerializedObject(bossGold);
         soBossGold.FindProperty("_amount").intValue = 300;
         soBossGold.ApplyModifiedPropertiesWithoutUndo();
+
+        // 死亡演出: 沈下。見た目は CoreVisual 子（BuildBossCoreVisual が生成）
+        AddDeathPresenter(boss, mode: 1, destroyWhenDone: false, visualRoot: boss.transform.Find("CoreVisual"));
     }
 
     /// <summary>
@@ -2359,6 +2438,9 @@ public static class BuildAetherRiftMap
         // JungleMonster コンポーネント: Initialize で campCenter と barFill（FillWrapper）を渡す
         var jm = parent.AddComponent<JungleMonster>();
         jm.Initialize(campCenter, wrapper);
+
+        // 死亡演出: 倒れる。リスポーン型なので破棄しない（見た目は Visual 子）
+        AddDeathPresenter(parent, mode: 0, destroyWhenDone: false, visualRoot: parent.transform.Find("Visual"));
     }
 
     // ---- ジャングルパス/キャンプ判定ヘルパー ----
@@ -2662,7 +2744,38 @@ public static class BuildAetherRiftMap
         {
             treeGo = (GameObject)PrefabUtility.InstantiatePrefab(sp.Prefab);
             treeGo.transform.position = new Vector3(tx, 0f, tz);
-            treeGo.transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+            // yaw は後から World-Y 回転として適用するため、ここでは無回転で配置する
+            treeGo.transform.rotation = Quaternion.identity;
+
+            // --- 横倒し FBX の直立補正 ---
+            // インスタンス化直後に bounds の最長軸を調べ、Y 軸でない場合は立て直す。
+            // 最長軸 Z → X 軸周りに -90° / 最長軸 X → Z 軸周りに +90°
+            {
+                var rawBounds = new Bounds(Vector3.zero, Vector3.zero);
+                bool rawInit  = false;
+                foreach (var r in treeGo.GetComponentsInChildren<Renderer>())
+                {
+                    if (!rawInit) { rawBounds = r.bounds; rawInit = true; }
+                    else rawBounds.Encapsulate(r.bounds);
+                }
+                if (rawInit)
+                {
+                    var sz = rawBounds.size;
+                    // 最長軸が Y でない (横幅 or 奥行が高さより大) → 倒れている
+                    if (sz.z > sz.y && sz.z >= sz.x)
+                    {
+                        // 幹が Z 方向 → X 軸 -90° で起こす
+                        treeGo.transform.localRotation *= Quaternion.Euler(-90f, 0f, 0f);
+                        Physics.SyncTransforms();
+                    }
+                    else if (sz.x > sz.y && sz.x > sz.z)
+                    {
+                        // 幹が X 方向 → Z 軸 +90° で起こす
+                        treeGo.transform.localRotation *= Quaternion.Euler(0f, 0f, 90f);
+                        Physics.SyncTransforms();
+                    }
+                }
+            }
 
             // --- 原寸差の吸収: ローカル bounds の高さを測り目標樹高へ正規化 ---
             // 目標樹高 4.5〜7m の乱数 + スタイル用に 0.9〜1.4 のランダム倍率を掛ける。
@@ -2672,6 +2785,9 @@ public static class BuildAetherRiftMap
             // FBX ルートはファイル単位変換のスケール(例: 100)を持つことがあるため、
             // 上書きでなく現在値への乗算で正規化する(計測 bounds は現在スケール込みのため)
             treeGo.transform.localScale = treeGo.transform.localScale * normScale;
+
+            // --- yaw をワールド Y 軸回転として適用（直立補正・正規化の後） ---
+            treeGo.transform.rotation = Quaternion.AngleAxis(yaw, Vector3.up) * treeGo.transform.rotation;
 
             // --- マテリアル差し替え: 葉トーンをシード固定で抽選し、幹/葉を判定して割当 ---
             int leafTone = rng.Next(0, 3);

@@ -10,14 +10,12 @@ namespace Enigma.Character
         [SerializeField] private Transform _barFill;
 
         private HealthComponent _health;
-        private Renderer[] _renderers;
         private Collider _col;
         private Vector3 _spawnPos;
 
         private void Awake()
         {
             _health = GetComponent<HealthComponent>();
-            _renderers = GetComponentsInChildren<Renderer>();
             _col = GetComponent<Collider>();
             _spawnPos = transform.position;
         }
@@ -53,7 +51,7 @@ namespace Enigma.Character
 
         private void OnDied()
         {
-            SetVisible(false);
+            // 見た目（フェード/転倒）は DeathPresenter に委譲。ここでは当たり判定だけ止める
             if (_col != null) _col.enabled = false;
             StartCoroutine(RespawnRoutine());
         }
@@ -63,16 +61,10 @@ namespace Enigma.Character
             yield return new WaitForSeconds(8f);
 
             transform.position = _spawnPos;
+            // Revive 経由で HealthModel.Revived が発火し DeathPresenter が見た目を復元する
             _health.Model.Revive();
 
             if (_col != null) _col.enabled = true;
-            SetVisible(true);
-        }
-
-        private void SetVisible(bool visible)
-        {
-            foreach (var r in _renderers)
-                r.enabled = visible;
         }
     }
 }

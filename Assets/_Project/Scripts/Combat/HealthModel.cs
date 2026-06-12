@@ -11,6 +11,7 @@ namespace Enigma.Combat
         // current, max
         public event Action<float, float> Changed;
         public event Action Died;
+        public event Action Revived;
 
         private bool _diedFired;
 
@@ -58,6 +59,7 @@ namespace Enigma.Combat
             _diedFired = false;
             CurrentHp = MaxHp;
             Changed?.Invoke(CurrentHp, MaxHp);
+            Revived?.Invoke();
         }
     }
 }

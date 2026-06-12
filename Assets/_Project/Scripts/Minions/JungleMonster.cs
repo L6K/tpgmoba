@@ -174,10 +174,7 @@ namespace Enigma.Minion
 
         private void OnDied()
         {
-            // 見た目を潰してコライダーを止める
-            var s = transform.localScale;
-            transform.localScale = new Vector3(s.x, 0.3f, s.z);
-
+            // 見た目（フェード/転倒）は DeathPresenter に委譲。コライダーだけ止める
             var col = GetComponent<Collider>();
             if (col != null) col.enabled = false;
 
@@ -188,14 +185,13 @@ namespace Enigma.Minion
         {
             yield return new WaitForSeconds(_respawnDelay);
 
-            // 位置・外見をリセットして復帰
-            transform.position   = new Vector3(_campCenter.x, _fixedY, _campCenter.z);
-            var s                = transform.localScale;
-            transform.localScale = new Vector3(s.x, 1f, s.z);
+            // 位置をリセットして復帰
+            transform.position = new Vector3(_campCenter.x, _fixedY, _campCenter.z);
 
             var col = GetComponent<Collider>();
             if (col != null) col.enabled = true;
 
+            // Revive 経由で HealthModel.Revived が発火し DeathPresenter が見た目を復元する
             _health.Model.Revive();
             UpdateBar(1f);
 
