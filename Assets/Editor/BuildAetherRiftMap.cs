@@ -803,14 +803,36 @@ public static class BuildAetherRiftMap
         CreateDummy("Dummy_A", new Vector3(-32f, 1f, 30f), matDummy);
         CreateDummy("Dummy_B", new Vector3(-26f, 1f, 36f), matDummy);
 
-        // 11b. デバッグ用ダミー敵プレイヤー 2体（Red チーム、HP500、リスポーン付き）
-        var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
-        CreateEnemyDummy("EnemyDummy_Lane",  new Vector3(-31.8f, 1.1f, 31.8f), matRed, matBarRed);
-        CreateEnemyDummy("EnemyDummy_River", new Vector3(3.5f,   1.1f, -28f),  matRed, matBarRed);
+        // 11c. 3v3 フルボット編成（敵=Red 3体 / 味方=Blue 2体）。
+        // AA はプレイヤー同様 AaBeam ビームを撃つ。各ボットへ BotChampionBootstrap が
+        // ピックキャラを適用する。
+        var matBarRed   = GetOrCreateBarMat("BarRed",   new Color(0.92f, 0.30f, 0.25f));
+        var matBarGreen = GetOrCreateBarMat("BarGreen", new Color(0.30f, 0.85f, 0.35f));
+        var aaProj      = aaBeamPrefab.GetComponent<Projectile>();
+        var redRing     = new Color(0.9f, 0.15f, 0.15f, 0.5f);
+        var blueRing    = new Color(0.15f, 0.35f, 0.9f, 0.5f);
 
-        // 11c. 赤チーム レーナー AI チャンピオン（TOPレーンを北回りに進軍）
-        // AA はプレイヤー同様 AaBeam ビームを撃つ
-        CreateEnemyChampion(matRed, matBarRed, aaBeamPrefab.GetComponent<Projectile>());
+        // 敵チーム（Red）3体: TOP / BOT / Jungle
+        var redTop = CreateBotChampion("RedBot_Top", TeamId.Red,
+            new Vector3(52f, 1.1f, -6f), BuildTopLaneWaypoints(),
+            matRed, matBarRed, redRing, aaProj);
+        var redBot = CreateBotChampion("RedBot_Bot", TeamId.Red,
+            new Vector3(52f, 1.1f, 6f), BuildBotLaneWaypoints(),
+            matRed, matBarRed, redRing, aaProj);
+        var redJungle = CreateBotChampion("RedBot_Jungle", TeamId.Red,
+            new Vector3(52f, 1.1f, 0f), BuildJungleWaypoints(),
+            matRed, matBarRed, redRing, aaProj);
+
+        // 味方チーム（Blue）2体: TOP / BOT。経路は各レーンの逆順（青ベース開口スタート）。
+        var blueTop = CreateBotChampion("BlueBot_Top", TeamId.Blue,
+            new Vector3(-52f, 1.1f, -6f), Reverse(BuildTopLaneWaypoints()),
+            matBlue, matBarGreen, blueRing, aaProj);
+        var blueBot = CreateBotChampion("BlueBot_Bot", TeamId.Blue,
+            new Vector3(-52f, 1.1f, 6f), Reverse(BuildBotLaneWaypoints()),
+            matBlue, matBarGreen, blueRing, aaProj);
+
+        // BotChampionBootstrap（シーンに1個）: CharacterDatabase と5体を結線する
+        WireBotBootstrap(new[] { redTop, redBot, redJungle, blueTop, blueBot });
 
         // 7b. TelegraphSector プレハブ（空 GO + MeshFilter + MeshRenderer + TelegraphSector）
         var sectorGo   = new GameObject("TelegraphSector");
@@ -2111,16 +2133,24 @@ public static class BuildAetherRiftMap
         AddDeathPresenter(go, mode: 0, destroyWhenDone: false, visualRoot: null);
     }
 
-    // 赤チームのレーナー AI チャンピオン1体を生成する。
-    // CharacterController + HealthComponent(500) + TeamTag(Red) + EnemyChampionAI +
+    // レーナー AI チャンピオン1体を生成する（チーム一般化版）。
+    // CharacterController + HealthComponent(500) + TeamTag(team) + EnemyChampionAI +
     // XpReward(100)/GoldReward(300)。UnityChan モデル・足元リング・頭上バーを結線する。
-    private static void CreateEnemyChampion(Material matBody, Material matBarRed, Projectile projPrefab)
+    // 泉中心・リスポーン位置は spawnPos（=自ベース側）に合わせる。戻り値は結線済み AI。
+    private static EnemyChampionAI CreateBotChampion(
+        string name, TeamId team, Vector3 spawnPos, Vector3[] waypoints,
+        Material matBody, Material matBar, Color ringColor, Projectile projPrefab)
     {
-        var spawnPos = new Vector3(52f, 1.1f, -6f);
+        // 経路先頭にスポーン地点(=泉中心)を挿入する。後退(Backward)が index 0 まで
+        // 戻ったとき開口部でなく泉の回復圏(半径10)内で止まるようにするため
+        var route = new Vector3[waypoints.Length + 1];
+        route[0] = new Vector3(spawnPos.x, 0f, spawnPos.z);
+        System.Array.Copy(waypoints, 0, route, 1, waypoints.Length);
+        waypoints = route;
 
         // ベースはカプセル（モデルが乗るまでの当たり/フォールバック表示）
         var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        go.name = "EnemyChampion";
+        go.name = name;
         go.transform.position = spawnPos;
         SetMat(go, matBody);
 
@@ -2145,10 +2175,10 @@ public static class BuildAetherRiftMap
 
         var tt = go.AddComponent<TeamTag>();
         var soTt = new SerializedObject(tt);
-        soTt.FindProperty("_team").enumValueIndex = (int)TeamId.Red;
+        soTt.FindProperty("_team").enumValueIndex = (int)team;
         soTt.ApplyModifiedPropertiesWithoutUndo();
 
-        // 泉回復(赤ベースの泉=リスポーン地点付近で毎秒回復)
+        // 泉回復(自ベースの泉=リスポーン地点付近で毎秒回復)
         var botFountain   = go.AddComponent<Enigma.Combat.FountainRegen>();
         var soBotFountain = new SerializedObject(botFountain);
         soBotFountain.FindProperty("_fountainCenter").vector3Value = spawnPos;
@@ -2165,17 +2195,17 @@ public static class BuildAetherRiftMap
         soGold.ApplyModifiedPropertiesWithoutUndo();
 
         // 頭上 HPバー（レベル表示なし）
-        var wrapper = CreateWorldHealthBar(go.transform, 1.05f, 0.65f, matBarRed, 500f);
+        var wrapper = CreateWorldHealthBar(go.transform, 1.05f, 0.65f, matBar, 500f);
 
         // 銃口 Transform（攻撃弾の発射点）。胸高・前方
         var muzzle = new GameObject("Muzzle");
         muzzle.transform.SetParent(go.transform, false);
         muzzle.transform.localPosition = new Vector3(0f, 0.4f, 0.6f);
 
-        // 識別用の赤い半透明リング（半径1.2 の薄い円柱、コライダーなし）
-        var ringMat = GetOrCreateTransparentMat("EnemyChampionRing", new Color(0.9f, 0.15f, 0.15f, 0.5f));
+        // 識別用の半透明リング（半径1.2 の薄い円柱、コライダーなし）。チーム色で識別。
+        var ringMat = GetOrCreateTransparentMat($"BotRing_{name}", ringColor);
         var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        ring.name = "EnemyRing";
+        ring.name = "TeamRing";
         ring.transform.SetParent(go.transform, false);
         ring.transform.localPosition = new Vector3(0f, -0.98f, 0f); // 足元
         ring.transform.localScale    = new Vector3(2.4f, 0.02f, 2.4f); // 直径2.4 = 半径1.2
@@ -2187,11 +2217,7 @@ public static class BuildAetherRiftMap
 
         var ai = go.AddComponent<EnemyChampionAI>();
 
-        // TOPレーン（z>0 側）の経路: 赤ベース開口(50,0,10) → 半径45 を北回りに
-        // 12°刻みでアーク → 青ベース開口(-50,0,10)。
-        var waypoints = BuildTopLaneWaypoints();
-
-        // AttachUnityChanModel が敵モデルへ付けた切替機を取得して攻撃モーション結線する
+        // AttachUnityChanModel がモデルへ付けた切替機を取得して攻撃モーション結線する
         var enemySwitcher = go.GetComponentInChildren<Enigma.Character.LocomotionClipSwitcher>();
 
         var soAi = new SerializedObject(ai);
@@ -2199,6 +2225,7 @@ public static class BuildAetherRiftMap
         soAi.FindProperty("_muzzle").objectReferenceValue           = muzzle.transform;
         soAi.FindProperty("_barFill").objectReferenceValue          = wrapper;
         soAi.FindProperty("_clipSwitcher").objectReferenceValue     = enemySwitcher;
+        soAi.FindProperty("_respawnPos").vector3Value               = spawnPos;
 
         var wpProp = soAi.FindProperty("_waypoints");
         wpProp.arraySize = waypoints.Length;
@@ -2210,10 +2237,12 @@ public static class BuildAetherRiftMap
         // 死亡演出: 倒れる。リスポーン型なので破棄しない（見た目は UnityChanModel 子）
         var champVisual = go.transform.Find("UnityChanModel");
         AddDeathPresenter(go, mode: 0, destroyWhenDone: false, visualRoot: champVisual);
+
+        return ai;
     }
 
     // TOPレーン経路を赤ベース→青ベース方向（角度 20°→160°、12°刻み）で構築する。
-    // ミニオンの ArcPt と同じ半径45・角度系。
+    // ミニオンの ArcPt と同じ半径45・角度系。z>0 側（北回り）。
     private static Vector3[] BuildTopLaneWaypoints()
     {
         Vector3 ArcPt(float deg)
@@ -2223,11 +2252,91 @@ public static class BuildAetherRiftMap
         }
 
         var list = new List<Vector3>();
-        list.Add(new Vector3(50f, 0f, 10f)); // 赤ベース開口
+        // 開口点はポケット壁帯(中心±56, 半径11.4-12.8)の外かつ開口セクター内に置く。
+        // (±50,±10) は壁帯内部に埋まりボットが壁をよじ登ってスタックする
+        list.Add(new Vector3(45.5f, 0f, 8f)); // 赤ベース開口
         for (float deg = 20f; deg <= 160f + 0.01f; deg += 12f)
             list.Add(ArcPt(deg));
-        list.Add(new Vector3(-50f, 0f, 10f)); // 青ベース開口
+        list.Add(new Vector3(-45.5f, 0f, 8f)); // 青ベース開口
         return list.ToArray();
+    }
+
+    // BOTレーン経路を赤ベース→青ベース方向（角度 -20°→-160°、-12°刻み）で構築する。
+    // TOP の z>0 ミラー。z<0 側（南回り）。開口は z=-10 側。
+    private static Vector3[] BuildBotLaneWaypoints()
+    {
+        Vector3 ArcPt(float deg)
+        {
+            float r = deg * Mathf.Deg2Rad;
+            return new Vector3(45f * Mathf.Cos(r), 0f, 45f * Mathf.Sin(r));
+        }
+
+        var list = new List<Vector3>();
+        // 開口点は壁帯の外かつ開口セクター内(TOP と同様の理由)
+        list.Add(new Vector3(45.5f, 0f, -8f)); // 赤ベース開口（南側）
+        for (float deg = -20f; deg >= -160f - 0.01f; deg -= 12f)
+            list.Add(ArcPt(deg));
+        list.Add(new Vector3(-45.5f, 0f, -8f)); // 青ベース開口（南側）
+        return list.ToArray();
+    }
+
+    // ジャングル片道ルート（赤ベース開口→北側ジャングル→青ベース開口）。
+    // 木のない歩行可能コリドーのみを通る: レーン帯(r40-50) → 45°ジャングルパス
+    // (外端r45→キャンプr30→内端r18) → ベイスン北縁(r≈15.5、ボスピットr8の外) →
+    // 135°ジャングルパス → レーン帯。パス幅6・木はパス中心4.5m内に生えない前提。
+    private static Vector3[] BuildJungleWaypoints()
+    {
+        Vector3 Polar(float deg, float radius)
+        {
+            float r = deg * Mathf.Deg2Rad;
+            return new Vector3(radius * Mathf.Cos(r), 0f, radius * Mathf.Sin(r));
+        }
+
+        return new[]
+        {
+            new Vector3(45.5f, 0f, 8f),  // 赤ベース開口（TOP側、壁帯の外）
+            Polar(32f,  45f),            // レーン帯を45°方向へ
+            Polar(45f,  45f),            // 45°パス外端（レーン接続点）
+            Polar(45f,  30f),            // 右上キャンプ空き地
+            Polar(45f,  18f),            // 45°パス内端（ベイスン縁）
+            new Vector3(0f, 0f, 15.5f),  // ベイスン北縁（ボスピット外周）
+            Polar(135f, 18f),            // 135°パス内端
+            Polar(135f, 30f),            // 左上キャンプ空き地
+            Polar(135f, 45f),            // 135°パス外端
+            Polar(148f, 45f),            // レーン帯を青ベースへ
+            new Vector3(-45.5f, 0f, 8f), // 青ベース開口（TOP側、壁帯の外）
+        };
+    }
+
+    // 経路を逆順にした新配列を返す（味方=青ベース開口スタート用）。元配列は変更しない。
+    private static Vector3[] Reverse(Vector3[] src)
+    {
+        var dst = new Vector3[src.Length];
+        for (int i = 0; i < src.Length; i++)
+            dst[i] = src[src.Length - 1 - i];
+        return dst;
+    }
+
+    // BotChampionBootstrap GO をシーンに生成し、CharacterDatabase と5体の AI を結線する。
+    private static void WireBotBootstrap(EnemyChampionAI[] bots)
+    {
+        var go = new GameObject("BotBootstrap");
+        var bootstrap = go.AddComponent<Enigma.GameMode.BotChampionBootstrap>();
+
+        var db = AssetDatabase.LoadAssetAtPath<CharacterDatabase>(
+            "Assets/_Project/Data/Characters/CharacterDatabase.asset");
+        if (db == null)
+            Debug.LogWarning("[BuildAetherRiftMap] CharacterDatabase.asset が見つからないため BotBootstrap は未結線");
+
+        var so = new SerializedObject(bootstrap);
+        so.FindProperty("_database").objectReferenceValue = db;
+
+        var botsProp = so.FindProperty("_bots");
+        botsProp.arraySize = bots.Length;
+        for (int i = 0; i < bots.Length; i++)
+            botsProp.GetArrayElementAtIndex(i).objectReferenceValue = bots[i];
+
+        so.ApplyModifiedPropertiesWithoutUndo();
     }
 
     private const float MinionHeight = 1.6f;

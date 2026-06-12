@@ -19,7 +19,16 @@ namespace Enigma.Character
         [SerializeField] private Transform _barFill;
         [SerializeField] private LocomotionClipSwitcher _clipSwitcher;
 
-        private const float MoveSpeed   = 5.5f;
+        // リスポーン地点（=自ベースの泉付近）。チームごとに異なるためビルダーが結線する。
+        [SerializeField] private Vector3 _respawnPos = new Vector3(52f, 1.1f, -6f);
+
+        // ステータスは ApplyCharacter でピックキャラ値に上書きされうるため SerializeField 化。
+        // 既定値は旧 const 値を踏襲する。
+        [SerializeField] private float _moveSpeed       = 5.5f;
+        [SerializeField] private float _attackCdSeconds = 1.6f;
+        [SerializeField] private float _attackRange     = 11f;
+        [SerializeField] private float _attackDamage    = 16f;
+
         private const float Gravity     = -20f;
         private const float TurnSpeed   = 10f;
         // タワー等がウェイポイント上に立つことがあるため、コライダー越しでも「到達」と
@@ -33,16 +42,13 @@ namespace Enigma.Character
         private const float SenseRadius   = 16f;
         private const float SenseInterval = 0.3f;
 
-        private const float AttackCdSeconds  = 1.6f;
-        private const float AttackRange      = 11f;
-        private const float AttackDamage     = 16f;
         private const float ProjectileSpeed  = 30f;
 
         private const float RespawnDelay = 8f;
-        private static readonly Vector3 RespawnPos = new Vector3(52f, 1.1f, -6f);
 
         private CharacterController _controller;
         private HealthComponent _health;
+        private TeamTag _teamTag;
 
         private LaneBotState _state = LaneBotState.Push;
         private int _waypointIndex;
@@ -64,7 +70,39 @@ namespace Enigma.Character
         {
             _controller     = GetComponent<CharacterController>();
             _health         = GetComponent<HealthComponent>();
-            _attackCooldown = new AttackCooldown(AttackCdSeconds);
+            _teamTag        = GetComponent<TeamTag>();
+            _attackCooldown = new AttackCooldown(_attackCdSeconds);
+        }
+
+        /// <summary>
+        /// ピックキャラの値で移動・攻撃ステータスと HP を上書きする。
+        /// HP は MatchBootstrap と同様、現 MaxHp との差分を AddMaxHp で寄せて全回復する。
+        /// 攻撃間隔が変わるため AttackCooldown は作り直す。
+        /// </summary>
+        public void ApplyCharacter(CharacterData data)
+        {
+            if (data == null) return;
+
+            if (data.MoveSpeed > 0f)       _moveSpeed       = data.MoveSpeed;
+            if (data.AttackDamage > 0f)    _attackDamage    = data.AttackDamage;
+            if (data.AttackRange > 0f)     _attackRange     = data.AttackRange;
+            if (data.AttackCooldown > 0f)  _attackCdSeconds = data.AttackCooldown;
+
+            _attackCooldown = new AttackCooldown(_attackCdSeconds);
+
+            // Awake が走っていれば即時生成済み。Start 前に呼ばれても Awake で再生成されるため安全。
+            if (_health != null && data.BaseHp > 0f)
+            {
+                float delta = data.BaseHp - _health.Model.MaxHp;
+                if (Mathf.Abs(delta) > 0.001f)
+                    _health.Model.AddMaxHp(delta);
+            }
+        }
+
+        /// <summary>モデルスワップ後、新モデルの LocomotionClipSwitcher へ再結線する。</summary>
+        public void SetClipSwitcher(LocomotionClipSwitcher switcher)
+        {
+            _clipSwitcher = switcher;
         }
 
         private void Start()
@@ -112,8 +150,9 @@ namespace Enigma.Character
             ApplyMovement(decision.Move);
         }
 
-        // 0.3 秒ごとに OverlapSphere で Blue チームの敵を収集し、
+        // 0.3 秒ごとに OverlapSphere で敵チームのユニットを収集し、
         // 知覚スナップショットを組み立てる。判断は持たない。
+        // チームは TeamTag.Team を基準に判定する（同チーム=味方、それ以外=攻撃対象）。
         private void Sense()
         {
             _nearestEnemy = null;
@@ -124,6 +163,8 @@ namespace Enigma.Character
             float towerDist = float.MaxValue;
             float attackerDist = float.MaxValue;
             bool allyMinionNearby = false;
+
+            TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Red;
 
             // 直近の攻撃者（弾オーナー）の GO を取得
             var lastAttacker = _health.LastAttacker;
@@ -139,15 +180,16 @@ namespace Enigma.Character
                 var pos = col.transform.position;
                 float dist = Vector3.Distance(transform.position, pos);
 
-                if (tag.Team == TeamId.Red)
+                // 同チーム（味方）: ミニオン近接のみ拾い、攻撃対象にはしない
+                if (tag.Team == myTeam)
                 {
-                    // 味方ミニオン（同チーム）の近接判定。アタックゾーン進入可否に使う
-                    if (col.GetComponent<Enigma.Minion.MinionAI>() != null && dist <= AttackRange)
+                    if (col.GetComponent<Enigma.Minion.MinionAI>() != null && dist <= _attackRange)
                         allyMinionNearby = true;
                     continue;
                 }
 
-                if (tag.Team != TeamId.Blue) continue;
+                // 中立は攻撃対象にしない（敵チームのみ交戦）
+                if (tag.Team == TeamId.Neutral) continue;
 
                 var hc = col.GetComponent<HealthComponent>();
                 if (hc == null || hc.Model.IsDead) continue;
@@ -224,7 +266,7 @@ namespace Enigma.Character
                 _verticalVelocity = -1f;
             _verticalVelocity += Gravity * Time.deltaTime;
 
-            var motion = horizontal * MoveSpeed;
+            var motion = horizontal * _moveSpeed;
             motion.y = _verticalVelocity;
             _controller.Move(motion * Time.deltaTime);
 
@@ -296,7 +338,7 @@ namespace Enigma.Character
             }
 
             float dist = Vector3.Distance(transform.position, target.transform.position);
-            if (dist > AttackRange) return;
+            if (dist > _attackRange) return;
             if (!_attackCooldown.TryConsume(Time.time)) return;
             if (_projectilePrefab == null || _muzzle == null) return;
 
@@ -304,7 +346,7 @@ namespace Enigma.Character
             var dir = (target.transform.position - _muzzle.position).normalized;
             // ビーム見た目を進行方向へ向けるため LookRotation を与える
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
-            proj.Init(dir, ProjectileSpeed, AttackDamage, gameObject);
+            proj.Init(dir, ProjectileSpeed, _attackDamage, gameObject);
             _clipSwitcher?.PlayAttack(0.45f);
         }
 
@@ -329,7 +371,7 @@ namespace Enigma.Character
             yield return new WaitForSeconds(RespawnDelay);
 
             // 物理移動前に CharacterController を切ってからテレポートする
-            transform.position = RespawnPos;
+            transform.position = _respawnPos;
             _health.Model.Revive();
 
             _state            = LaneBotState.Push;

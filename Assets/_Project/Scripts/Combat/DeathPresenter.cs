@@ -92,6 +92,25 @@ namespace Enigma.Combat
             return null;
         }
 
+        /// <summary>
+        /// モデルスワップ後、死亡演出の対象となる見た目ルートを差し替える。
+        /// 旧ルートの Renderer/初期姿勢キャッシュを破棄して新ルートで取り直す。
+        /// 演出中の呼び出しは想定しない（試合開始時の1回のみ）。
+        /// </summary>
+        public void SetVisualRoot(Transform visualRoot)
+        {
+            if (visualRoot == null) return;
+
+            // 演出中のフェードマテリアルが残っていれば破棄しておく
+            DestroyFadeMaterials();
+
+            _visualRoot = visualRoot;
+            _initialLocalPos = _visualRoot.localPosition;
+            _initialLocalRot = _visualRoot.localRotation;
+
+            CacheRenderers();
+        }
+
         private void OnDied()
         {
             // 二重再生ガード（多段ヒット等で Died が想定外に再入しても安全に）

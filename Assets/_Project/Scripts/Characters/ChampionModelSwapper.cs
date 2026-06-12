@@ -54,6 +54,7 @@ namespace Enigma.Character
             var switcher = SetupLocomotion(model, player, data);
             RewireAttackMotor(player, model.transform, switcher);
             ReparentMuzzleToHand(player, model.transform);
+            RewireDeathPresenter(player, model.transform);
 
             return model;
         }
@@ -201,6 +202,15 @@ namespace Enigma.Character
             if (motor == null) return;
             motor.SetModelRoot(modelRoot);
             motor.SetClipSwitcher(switcher);
+        }
+
+        // 死亡演出の見た目ルートを新モデルへ差し替える（存在する場合のみ）。
+        // 旧 visualRoot（無効化済み UnityChanModel）のままだと死亡時に見た目が消えない/破綻するため。
+        private static void RewireDeathPresenter(GameObject player, Transform modelRoot)
+        {
+            var presenter = player.GetComponent<Enigma.Combat.DeathPresenter>();
+            if (presenter == null) return;
+            presenter.SetVisualRoot(modelRoot);
         }
     }
 }
