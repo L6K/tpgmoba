@@ -602,6 +602,9 @@ public static class BuildAetherRiftMap
 
         player.AddComponent<PlayerController>();
 
+        // 場外レスキュー: 2秒間隔で場外判定し、最寄りレーン地点へ瞬間移動
+        player.AddComponent<OutOfBoundsRescue>();
+
         // プレイヤーは Blue チーム
         var playerTeamTag = player.AddComponent<TeamTag>();
         var soPlayerTeam  = new SerializedObject(playerTeamTag);
@@ -895,9 +898,22 @@ public static class BuildAetherRiftMap
 
     // ---- 境界壁 ----
 
+    // 衝突チューブの半径帯・高さ（視覚壁とは独立した「物理的な真の境界」）
+    private const float TubeLaneInnerR = 50.0f;
+    private const float TubeLaneOuterR = 51.8f;
+    private const float TubeHeight     = 2.0f;
+    private const float TubePocketInnerR = 11.4f;
+    private const float TubePocketOuterR = 12.8f;
+    // ポケット弧をレーン弧の壁体内部へ食い込ませる延長角（継ぎ目スリットを構造的に排除）
+    private const float PocketEndExtendDeg = 5f;
+    // レーン側開口を切り出す閾値: ベース円周上でマップ中心距離がこの値となる角を境界とする
+    private const float PocketOpeningDistThreshold = 49.6f;
+
     /// <summary>
-    /// レーン外縁リング壁 + 各ベースポケット壁を生成し "OuterBoundary" 親 GO にまとめる。
-    /// BoxCollider はプリミティブ既定のものを使用（追加設定不要）。
+    /// 視覚用の石壁セグメント（Cube・見た目専用、コライダーなし）と、
+    /// 滑らかな衝突チューブ（MeshCollider のみ）を生成し "OuterBoundary" 親 GO にまとめる。
+    /// 箱の重なりが作る V 字ノッチや継ぎ目スリットを構造的に排除するため、当たり判定は
+    /// 視覚壁から分離した連続円弧帯メッシュ（CreateWallBandMesh）が担う。
     /// </summary>
     private static void CreateOuterBoundary()
     {
@@ -907,7 +923,11 @@ public static class BuildAetherRiftMap
         var parent = new GameObject("OuterBoundary");
         SetStatic(parent);
 
-        // --- 1. レーン外縁リング壁 (半径 51、96 セグメント) ---
+        // ============================================================
+        // A. 視覚用の石壁セグメント（Cube・Renderer のみ、BoxCollider 除去）
+        // ============================================================
+
+        // --- A1. レーン外縁リング壁 (半径 51、96 セグメント) ---
         const int   LaneSegments   = 96;
         const float LaneRadius     = 51.0f;
         const float LaneWallH      = 1.5f;
@@ -917,7 +937,7 @@ public static class BuildAetherRiftMap
 
         float laneStepDeg  = 360f / LaneSegments;
         float laneChordLen = 2f * LaneRadius * Mathf.Sin(laneStepDeg * 0.5f * Mathf.Deg2Rad);
-        float laneSegW     = laneChordLen + 0.6f;  // +0.6: 曲率楔形隙間・継ぎ目を確実に塞ぐ
+        float laneSegW     = laneChordLen + 0.3f;  // +0.3: 見た目専用なので最小限の重なりで足りる
 
         for (int i = 0; i < LaneSegments; i++)
         {
@@ -932,13 +952,14 @@ public static class BuildAetherRiftMap
             float rad = angleDeg * Mathf.Deg2Rad;
             var   pos = new Vector3(LaneRadius * Mathf.Cos(rad), LaneWallH * 0.5f, LaneRadius * Mathf.Sin(rad));
 
-            var seg = PlaceCube($"BoundaryLaneWall_{i:D3}", pos, new Vector3(laneSegW, LaneWallH, LaneWallDepth), matBoundary);
+            var seg = PlaceCube($"BoundaryLaneVis_{i:D3}", pos, new Vector3(laneSegW, LaneWallH, LaneWallDepth), matBoundary);
             // 円周接線方向に回転（法線が中心を向くように +90°）
             seg.transform.rotation = Quaternion.Euler(0f, -(angleDeg + 90f), 0f);
+            StripCollider(seg);  // 見た目専用化: BoxCollider 除去
             seg.transform.SetParent(parent.transform, true);
         }
 
-        // --- 2. ベースポケット壁 (各ベース中心 ±56、半径 12、32 セグメント) ---
+        // --- A2. ベースポケット視覚壁 (各ベース中心 ±56、半径 12、32 セグメント) ---
         const int   BaseSegments  = 32;
         const float BaseRadius    = 12.0f;
         const float BaseWallH     = 1.5f;
@@ -946,7 +967,7 @@ public static class BuildAetherRiftMap
 
         float baseStepDeg  = 360f / BaseSegments;
         float baseChordLen = 2f * BaseRadius * Mathf.Sin(baseStepDeg * 0.5f * Mathf.Deg2Rad);
-        float baseSegW     = baseChordLen + 0.6f;  // +0.6: 外周壁との継ぎ目隙間を塞ぐ
+        float baseSegW     = baseChordLen + 0.3f;
 
         var baseCenters = new (Vector3 center, string label)[]
         {
@@ -962,16 +983,88 @@ public static class BuildAetherRiftMap
                 float rad      = angleDeg * Mathf.Deg2Rad;
                 var   segWorld = center + new Vector3(BaseRadius * Mathf.Cos(rad), 0f, BaseRadius * Mathf.Sin(rad));
 
-                // マップ中心からの距離 < 50.2 はレーン側開口 → スキップ（重なり側に緩めて隙間を防ぐ）
+                // マップ中心からの距離 < 50.2 はレーン側開口 → スキップ
                 if (segWorld.magnitude < 50.2f) continue;
 
                 var pos = new Vector3(segWorld.x, BaseWallH * 0.5f, segWorld.z);
-                var seg = PlaceCube($"BoundaryBaseWall_{label}_{i:D2}", pos,
+                var seg = PlaceCube($"BoundaryBaseVis_{label}_{i:D2}", pos,
                     new Vector3(baseSegW, BaseWallH, BaseWallDepth), matBoundary);
                 seg.transform.rotation = Quaternion.Euler(0f, -(angleDeg + 90f), 0f);
+                StripCollider(seg);
                 seg.transform.SetParent(parent.transform, true);
             }
         }
+
+        // ============================================================
+        // B. 衝突チューブ（MeshCollider のみ、Renderer なし、static）
+        //    名前に "Boundary" を含め VerifyBoundary のヒット判定に乗せる
+        // ============================================================
+
+        // --- B1. リング2弧: [50.0, 51.8]・高さ2.0・弧 12°→168° / 192°→348° ---
+        // セグメント数 = 弧長 / 3.75°（角度幅 156° → 約 42 セグメント）
+        const float RingStepDeg = 3.75f;
+        int ringSegs = Mathf.Max(1, Mathf.RoundToInt(156f / RingStepDeg));
+        PlaceWallBand(parent, "BoundaryTubeRing_North", TubeLaneInnerR, TubeLaneOuterR, TubeHeight, ringSegs, 12f, 168f);
+        PlaceWallBand(parent, "BoundaryTubeRing_South", TubeLaneInnerR, TubeLaneOuterR, TubeHeight, ringSegs, 192f, 348f);
+
+        // --- B2. ベースポケット2つ: [11.4, 12.8]・高さ2.0 ---
+        // レーン側開口（マップ中心距離 >= 49.6）を除いた外側区間 + 両端 5° 延長。
+        // ベース円（中心±56・半径12）周上で中心距離 = 49.6 となる角を余弦定理で逆算:
+        //   d^2 = 56^2 + 12^2 + 2*56*12*cos(φ)  （φ は base-local 角、+x 基準）
+        //   Blue: 中心は -56、レーン側(=+x, 原点方向)は φ≈0 → 開口は |φ| < φ0
+        //   Red : 中心は +56、レーン側(=-x)は φ≈180 → 開口は |φ-180| < φ0
+        float cosPhi0 = (3136f + 144f - PocketOpeningDistThreshold * PocketOpeningDistThreshold) / 1344f;
+        cosPhi0 = Mathf.Clamp(cosPhi0, -1f, 1f);
+        float phi0Deg = Mathf.Acos(cosPhi0) * Mathf.Rad2Deg;  // ≈ 52.41°（開口の半角）
+
+        // Blue: 壁弧 = [phi0, 360 - phi0]、両端 5° 延長
+        float blueStart = phi0Deg - PocketEndExtendDeg;
+        float blueEnd   = 360f - phi0Deg + PocketEndExtendDeg;
+        // Red: 開口が 180° 中心 → 壁弧 = [180 + phi0, 180 - phi0 + 360]、両端 5° 延長
+        float redStart  = 180f + phi0Deg - PocketEndExtendDeg;
+        float redEnd    = 180f - phi0Deg + 360f + PocketEndExtendDeg;
+
+        // ポケット弧のセグメント数（弧長を 3.75° 相当で割る）
+        int pocketSegs = Mathf.Max(1, Mathf.RoundToInt((blueEnd - blueStart) / RingStepDeg));
+
+        PlaceWallBandAt(parent, "BoundaryTubePocket_Blue", new Vector3(-56f, 0f, 0f),
+            TubePocketInnerR, TubePocketOuterR, TubeHeight, pocketSegs, blueStart, blueEnd);
+        PlaceWallBandAt(parent, "BoundaryTubePocket_Red", new Vector3(56f, 0f, 0f),
+            TubePocketInnerR, TubePocketOuterR, TubeHeight, pocketSegs, redStart, redEnd);
+    }
+
+    /// <summary>
+    /// 衝突チューブ片を原点中心で生成し OuterBoundary 親に追加する（MeshCollider のみ）。
+    /// </summary>
+    private static void PlaceWallBand(GameObject parent, string name,
+        float innerR, float outerR, float height, int segments, float startDeg, float endDeg)
+    {
+        PlaceWallBandAt(parent, name, Vector3.zero, innerR, outerR, height, segments, startDeg, endDeg);
+    }
+
+    /// <summary>
+    /// 衝突チューブ片を指定中心に生成する。Renderer は付けず MeshCollider のみ。
+    /// </summary>
+    private static void PlaceWallBandAt(GameObject parent, string name, Vector3 center,
+        float innerR, float outerR, float height, int segments, float startDeg, float endDeg)
+    {
+        var go = new GameObject(name);
+        go.transform.position = center;
+        var mf = go.AddComponent<MeshFilter>();
+        mf.sharedMesh = CreateWallBandMesh(innerR, outerR, height, segments, startDeg, endDeg);
+        var mc = go.AddComponent<MeshCollider>();
+        mc.sharedMesh = mf.sharedMesh;
+        SetStatic(go);
+        go.transform.SetParent(parent.transform, true);
+    }
+
+    /// <summary>
+    /// コライダー（プリミティブ既定の BoxCollider）を除去して見た目専用化する。
+    /// </summary>
+    private static void StripCollider(GameObject go)
+    {
+        var col = go.GetComponent<Collider>();
+        if (col != null) Object.DestroyImmediate(col);
     }
 
     /// <summary>
@@ -1022,6 +1115,66 @@ public static class BuildAetherRiftMap
         }
 
         return gaps.Length == 0 ? "OK" : "GAP at: " + gaps;
+    }
+
+    /// <summary>
+    /// 場外脱出が不可能であることを検証する（エディタ用）。
+    /// VerifyBoundary（放射レイ）に加え、開口端付近で接線スリットを検査する:
+    /// 開口端の各角度で半径 50.9 の点から接線方向（両回り）に長さ 4 のレイを飛ばし、
+    /// "Boundary" 非ヒットで素通りする角度を列挙する。全て塞がっていれば "OK"。
+    /// </summary>
+    public static string VerifyEscapeProof()
+    {
+        // 生成直後のコライダーを物理ワールドへ反映
+        Physics.SyncTransforms();
+
+        var radial = VerifyBoundary();
+        var slits  = new System.Text.StringBuilder();
+
+        // 開口端付近の検査帯（度）: 各開口の両肩を 0.5° 刻みで走査
+        var ranges = new (float from, float to)[]
+        {
+            (9f, 15f), (165f, 171f), (189f, 195f), (345f, 351f),
+        };
+
+        const float ProbeR    = 50.9f;
+        const float TangentLen = 4f;
+
+        foreach (var (from, to) in ranges)
+        {
+            for (float a = from; a <= to + 1e-4f; a += 0.5f)
+            {
+                float rad = a * Mathf.Deg2Rad;
+                var pt = new Vector3(ProbeR * Mathf.Cos(rad), 1.0f, ProbeR * Mathf.Sin(rad));
+                // 接線方向（半径方向に直交）。両回りを走査する
+                var tangent = new Vector3(-Mathf.Sin(rad), 0f, Mathf.Cos(rad));
+
+                foreach (var dir in new[] { tangent, -tangent })
+                {
+                    bool hit = false;
+                    foreach (var h in Physics.RaycastAll(pt, dir, TangentLen))
+                    {
+                        if (h.collider.gameObject.name.Contains("Boundary")) { hit = true; break; }
+                    }
+                    if (!hit)
+                    {
+                        if (slits.Length > 0) slits.Append(", ");
+                        slits.Append(a.ToString("F1") + "°" + (dir == tangent ? "+" : "-"));
+                    }
+                }
+            }
+        }
+
+        if (radial == "OK" && slits.Length == 0) return "OK";
+
+        var sb = new System.Text.StringBuilder();
+        if (radial != "OK") sb.Append("RADIAL ").Append(radial);
+        if (slits.Length > 0)
+        {
+            if (sb.Length > 0) sb.Append(" | ");
+            sb.Append("TANGENT SLIT at: ").Append(slits);
+        }
+        return sb.ToString();
     }
 
     // ---- ヘルパー ----
@@ -2968,5 +3121,85 @@ public static class BuildAetherRiftMap
         mesh.normals   = normals;
         mesh.triangles = triangles;
         return mesh;
+    }
+
+    /// <summary>
+    /// XZ 平面の円弧帯 [innerR, outerR] を高さ方向 [0, height] へ押し出した「閉じたチューブ片」を生成する。
+    /// 面: 内周面・外周面・上面・両端面（startDeg/endDeg を塞ぐ）。底面は地中のため省略。
+    /// MeshCollider（非凸=片面判定）専用のため、内周面・外周面は両向きの三角形を張って両面化する。
+    /// 角度は度・CCW、円弧は origin 中心の XZ 平面上に置く（GO 位置でベース中心へ移す）。
+    /// </summary>
+    private static Mesh CreateWallBandMesh(float innerR, float outerR, float height,
+        int segments, float startDeg, float endDeg)
+    {
+        if (segments < 1) segments = 1;
+
+        var mesh  = new Mesh { name = "WallBand" };
+        int rings = segments + 1;
+
+        // 各角度ステップで 4 頂点: 0=内下 1=内上 2=外下 3=外上
+        var verts = new Vector3[rings * 4];
+        for (int i = 0; i < rings; i++)
+        {
+            float t   = (float)i / segments;
+            float deg = Mathf.Lerp(startDeg, endDeg, t);
+            float rad = deg * Mathf.Deg2Rad;
+            float c   = Mathf.Cos(rad);
+            float s   = Mathf.Sin(rad);
+
+            int b = i * 4;
+            verts[b + 0] = new Vector3(innerR * c, 0f,     innerR * s); // 内下
+            verts[b + 1] = new Vector3(innerR * c, height, innerR * s); // 内上
+            verts[b + 2] = new Vector3(outerR * c, 0f,     outerR * s); // 外下
+            verts[b + 3] = new Vector3(outerR * c, height, outerR * s); // 外上
+        }
+
+        var tris = new List<int>();
+
+        // --- 内周面・外周面（両面化）---
+        for (int i = 0; i < segments; i++)
+        {
+            int b0 = i * 4;       // 当該ステップ
+            int b1 = (i + 1) * 4; // 次ステップ
+
+            // 内周面: 内下/内上 の 4 頂点 (b0+0,b0+1,b1+0,b1+1) を両面で張る
+            AddQuadDoubleSided(tris, b0 + 0, b0 + 1, b1 + 1, b1 + 0);
+            // 外周面: 外下/外上 の 4 頂点 (b0+2,b0+3,b1+2,b1+3) を両面で張る
+            AddQuadDoubleSided(tris, b0 + 2, b0 + 3, b1 + 3, b1 + 2);
+
+            // 上面: 内上/外上 を結ぶ（法線が +Y を向くよう CCW 弧に対し内→次内→次外→外の順で張る）
+            AddQuad(tris, b0 + 1, b1 + 1, b1 + 3, b0 + 3);
+        }
+
+        // --- 端面（startDeg 側 i=0、endDeg 側 i=segments）---
+        // 端面は内下/内上/外上/外下 の 4 頂点で塞ぐ。両端で外向きが逆になるよう巻き順を分ける。
+        {
+            int s = 0;            // 始端
+            int e = segments * 4; // 終端
+            // 始端: 弧の開始方向を外向きとして張る
+            AddQuad(tris, s + 0, s + 2, s + 3, s + 1);
+            // 終端: 逆巻き
+            AddQuad(tris, e + 0, e + 1, e + 3, e + 2);
+        }
+
+        mesh.vertices  = verts;
+        mesh.triangles = tris.ToArray();
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    // 四角形 (a,b,c,d) を 2 三角形で張る（a→b→c, a→c→d）。
+    private static void AddQuad(List<int> tris, int a, int b, int c, int d)
+    {
+        tris.Add(a); tris.Add(b); tris.Add(c);
+        tris.Add(a); tris.Add(c); tris.Add(d);
+    }
+
+    // 四角形を表裏両面に張る（非凸 MeshCollider の片面判定対策）。
+    private static void AddQuadDoubleSided(List<int> tris, int a, int b, int c, int d)
+    {
+        AddQuad(tris, a, b, c, d);
+        AddQuad(tris, a, d, c, b);
     }
 }
