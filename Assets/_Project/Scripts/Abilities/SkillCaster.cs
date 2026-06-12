@@ -316,10 +316,9 @@ namespace Enigma.Ability
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.identity);
             proj.Init(dir, def.ProjectileSpeed, def.Damage * scale, gameObject, lifetime);
 
-            // マズルバースト + 弾にトレイル
+            // 発光コア + トレイル + 二段バースト（白コア小 + スロット色大）
             var color = SlotColor(slot);
-            SkillVfx.SpawnBurst(_muzzle.position, color, 0.3f, 1.2f, 0.25f);
-            SkillVfx.AddTrail(proj.gameObject, color, 0.15f, 0.25f);
+            SkillVfx.FireDirectionalVisuals(proj.gameObject, _muzzle.position, dir, color);
         }
 
         private void CastGroundAoe(int slot, SkillDefinition def, Vector3 groundCursorPos, float scale)
@@ -354,10 +353,18 @@ namespace Enigma.Ability
             float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage * scale, gameObject);
             target.TakeDamage(finalDamage, gameObject);
 
-            // マズルバースト + 対象位置にバースト
+            // 胸元→対象へビーム一閃 + 対象位置にバースト+小リング
             var color = SlotColor(slot);
-            SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : transform.position, color, 0.3f, 1.2f, 0.25f);
-            SkillVfx.SpawnBurst(target.transform.position, color, 0.3f, 1.2f, 0.25f);
+            var from  = ChestPoint(transform);
+            var to    = ChestPoint(target.transform);
+            SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : from, color, 0.3f, 1.2f, 0.25f);
+            SkillVfx.TargetedHitVisuals(from, to, color);
+        }
+
+        // キャスター/対象の「胸元」高さ(足元 +1.2m)を返す。ビームの見栄え用。
+        private static Vector3 ChestPoint(Transform t)
+        {
+            return t.position + Vector3.up * 1.2f;
         }
 
         private void SetIndicatorActive(SkillDefinition armedDef)

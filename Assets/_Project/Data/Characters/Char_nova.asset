@@ -37,5 +37,13 @@ MonoBehaviour:
   ModelPrefab: {fileID: 919132149155446097, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
   IdleClip: {fileID: -3791702293125983140, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
   WalkClip: {fileID: -5599002979973759676, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
+  RunClip: {fileID: -8950003587403112357, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
   AttackClip: {fileID: 5649889755142943411, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
+  AttackClips:
+  - {fileID: 5649889755142943411, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
+  - {fileID: -4592842328519117816, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
+  - {fileID: 6424556952190030419, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
+  IdleVariantClips:
+  - {fileID: 9061338213343248790, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
+  - {fileID: 6730081373776484235, guid: 5aad72d0f60b11c4d89608a68ab45c3a, type: 3}
   BodyTexture: {fileID: 2800000, guid: ddb96da9a0657104a991fd70594fb294, type: 3}

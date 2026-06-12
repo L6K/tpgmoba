@@ -174,11 +174,14 @@ namespace Enigma.EditorTools
         // "UnityChan"（特別扱い）や空モデル、FBX 不在時は全て null のまま（フォールバック=UnityChan）。
         private static void WireModelAssets(CharacterData character, string model)
         {
-            character.ModelPrefab = null;
-            character.IdleClip    = null;
-            character.WalkClip    = null;
-            character.AttackClip  = null;
-            character.BodyTexture = null;
+            character.ModelPrefab      = null;
+            character.IdleClip         = null;
+            character.WalkClip         = null;
+            character.RunClip          = null;
+            character.AttackClip       = null;
+            character.AttackClips      = System.Array.Empty<AnimationClip>();
+            character.IdleVariantClips = System.Array.Empty<AnimationClip>();
+            character.BodyTexture      = null;
 
             if (string.IsNullOrEmpty(model) || model == "UnityChan") return;
 
@@ -208,19 +211,42 @@ namespace Enigma.EditorTools
             AnimationClip first  = null;
             AnimationClip idle   = null;
             AnimationClip walk   = null;
+            // Run は "Run_Weapon" を最優先、無ければ "Run"。"Gun" 等の誤マッチを避けるため
+            // 単語境界（"Run" の直後が英字でない or 末尾）でのみ採用する。
+            AnimationClip runWeapon = null;
+            AnimationClip run       = null;
+            // アイドルバリアント: "Idle" を含むがベース Idle 以外（"Idle_Weapon" 等）を収集
+            var idleVariants = new System.Collections.Generic.List<AnimationClip>();
+            // 攻撃クリップは優先度順に最大 3 本収集（AttackFast 等を含めて AA コンボ用）
             var attackCandidates = new AnimationClip[attackPriority.Length];
             foreach (var sub in AssetDatabase.LoadAllAssetRepresentationsAtPath(fbxPath))
             {
                 if (!(sub is AnimationClip clip)) continue;
                 if (clip.name.StartsWith("__preview__")) continue;
                 if (first == null) first = clip;
-                if (idle == null && clip.name.IndexOf("Idle", System.StringComparison.OrdinalIgnoreCase) >= 0)
-                    idle = clip;
+
+                bool isIdle = clip.name.IndexOf("Idle", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                if (isIdle)
+                {
+                    if (idle == null) idle = clip;            // 最初の Idle をベースに
+                    else idleVariants.Add(clip);             // 2 本目以降はバリアント候補
+                }
+
                 if (walk == null && clip.name.IndexOf("Walk", System.StringComparison.OrdinalIgnoreCase) >= 0)
                     walk = clip;
 
+                // Run 検出（"Gun"/"Around" 等の部分一致を避ける単語境界判定）
+                if (ContainsWord(clip.name, "Run"))
+                {
+                    if (runWeapon == null &&
+                        clip.name.IndexOf("Run_Weapon", System.StringComparison.OrdinalIgnoreCase) >= 0)
+                        runWeapon = clip;
+                    else if (run == null)
+                        run = clip;
+                }
+
                 bool excluded =
-                    clip.name.IndexOf("Idle", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    isIdle ||
                     clip.name.IndexOf("Recieve", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
                     clip.name.IndexOf("Receive", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
                     clip.name.IndexOf("Hit", System.StringComparison.OrdinalIgnoreCase) >= 0;
@@ -239,13 +265,40 @@ namespace Enigma.EditorTools
             }
             character.IdleClip = idle != null ? idle : first;
             character.WalkClip = walk;
+            character.RunClip  = runWeapon != null ? runWeapon : run;
+            character.IdleVariantClips = idleVariants.ToArray();
 
-            AnimationClip attack = null;
+            // 優先度順に最大 3 本を AA コンボへ。先頭は従来どおり単発 AttackClip にも入れる。
+            var attacks = new System.Collections.Generic.List<AnimationClip>();
             foreach (var candidate in attackCandidates)
-                if (candidate != null) { attack = candidate; break; }
-            character.AttackClip = attack;
+            {
+                if (candidate == null) continue;
+                attacks.Add(candidate);
+                if (attacks.Count >= 3) break;
+            }
+            character.AttackClip  = attacks.Count > 0 ? attacks[0] : null;
+            character.AttackClips = attacks.ToArray();
 
-            Debug.Log($"[Enigma] {character.CharId}: attack={(attack != null ? attack.name : "なし")}");
+            Debug.Log($"[Enigma] {character.CharId}: attack={(character.AttackClip != null ? character.AttackClip.name : "なし")}" +
+                      $" combo={attacks.Count} run={(character.RunClip != null ? character.RunClip.name : "なし")}" +
+                      $" idleVariants={idleVariants.Count}");
+        }
+
+        // name の中に word が「単語境界付き」で含まれるか（大小無視）。
+        // "Gun"/"Around" を "Run" と誤マッチさせないため、直前・直後が英字なら不一致扱いにする。
+        private static bool ContainsWord(string name, string word)
+        {
+            int from = 0;
+            while (true)
+            {
+                int idx = name.IndexOf(word, from, System.StringComparison.OrdinalIgnoreCase);
+                if (idx < 0) return false;
+                bool leftOk  = idx == 0 || !char.IsLetter(name[idx - 1]);
+                int after    = idx + word.Length;
+                bool rightOk = after >= name.Length || !char.IsLetter(name[after]);
+                if (leftOk && rightOk) return true;
+                from = idx + 1;
+            }
         }
 
         private static SkillTargeting ParseTargeting(string value)

@@ -190,8 +190,12 @@ namespace Enigma.Character
         {
             var switcher = model.AddComponent<LocomotionClipSwitcher>();
             var controller = player.GetComponent<CharacterController>();
-            // IdleClip 未結線時は何も再生されないため、最低限 Idle が無いと静止する点に留意
-            switcher.Configure(data.IdleClip, data.WalkClip, data.AttackClip, controller);
+            // IdleClip 未結線時は何も再生されないため、最低限 Idle が無いと静止する点に留意。
+            // Run/IdleVariants/AttackClips を渡してなめらか切替・アイドルバリエーション・AA コンボを有効化。
+            // attackMask は Generic リグでは結線しない（全身攻撃想定）ため null。
+            switcher.Configure(
+                data.IdleClip, data.WalkClip, data.RunClip, data.IdleVariantClips,
+                data.AttackClip, data.AttackClips, controller, attackMask: null);
             return switcher;
         }
 

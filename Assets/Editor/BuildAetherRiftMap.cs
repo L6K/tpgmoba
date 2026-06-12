@@ -805,9 +805,7 @@ public static class BuildAetherRiftMap
         soCam.FindProperty("_target").objectReferenceValue = player.transform;
         soCam.ApplyModifiedPropertiesWithoutUndo();
 
-        // 11. ターゲットダミー 2体
-        CreateDummy("Dummy_A", new Vector3(-32f, 1f, 30f), matDummy);
-        CreateDummy("Dummy_B", new Vector3(-26f, 1f, 36f), matDummy);
+        // (旧: ターゲットダミー2体はフルボット編成の導入で廃止)
 
         // 11c. 3v3 フルボット編成（敵=Red 3体 / 味方=Blue 2体）。
         // AA はプレイヤー同様 AaBeam ビームを撃つ。各ボットへ BotChampionBootstrap が
@@ -1477,14 +1475,30 @@ public static class BuildAetherRiftMap
             soPc.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        // アニメ切替機: Idle=WAIT00 / 走り=RUN00_F / 攻撃=HANDUP00_R(詠唱風)。
+        // アニメ切替機: Idle=WAIT00 / 歩行=WALK00_F / 走り=RUN00_F / 攻撃=HANDUP00_R(詠唱風)。
         // プレイヤー・敵チャンピオン双方の UnityChan モデルへ付与する（敵分岐でも歩行/攻撃モーションが必要）。
         // 切替機は Start で runtimeAnimatorController を切り離して Playables 再生に統一する
         var switcher = model.AddComponent<Enigma.Character.LocomotionClipSwitcher>();
         var soSw = new SerializedObject(switcher);
+        // なめらか切替（クロスフェード）+ アイドルバリエーション用に Idle/Walk/Run/IdleVariants を結線。
+        // Idle=WAIT00、歩行=WALK00_F、走り=RUN00_F、アイドルバリアント=WAIT01/02/03、攻撃=HANDUP00_R(詠唱風・単発)。
         soSw.FindProperty("_idle").objectReferenceValue   = LoadFirstClip("Assets/UnityChan/Animations/unitychan_WAIT00.fbx");
-        soSw.FindProperty("_walk").objectReferenceValue   = LoadFirstClip("Assets/UnityChan/Animations/unitychan_RUN00_F.fbx");
+        soSw.FindProperty("_walk").objectReferenceValue   = LoadFirstClip("Assets/UnityChan/Animations/unitychan_WALK00_F.fbx");
+        soSw.FindProperty("_run").objectReferenceValue    = LoadFirstClip("Assets/UnityChan/Animations/unitychan_RUN00_F.fbx");
         soSw.FindProperty("_attack").objectReferenceValue = LoadFirstClip("Assets/UnityChan/Animations/unitychan_HANDUP00_R.fbx");
+
+        // アイドルバリアント配列（棒立ち回避）。存在するクリップのみ詰める。
+        var idleVariantClips = new System.Collections.Generic.List<AnimationClip>();
+        foreach (var p in new[] { "WAIT01", "WAIT02", "WAIT03" })
+        {
+            var c = LoadFirstClip($"Assets/UnityChan/Animations/unitychan_{p}.fbx");
+            if (c != null) idleVariantClips.Add(c);
+        }
+        var ivProp = soSw.FindProperty("_idleVariants");
+        ivProp.arraySize = idleVariantClips.Count;
+        for (int i = 0; i < idleVariantClips.Count; i++)
+            ivProp.GetArrayElementAtIndex(i).objectReferenceValue = idleVariantClips[i];
+
         // _controller はホスト（player 引数の GameObject）の CharacterController。velocity で歩行判定する
         soSw.FindProperty("_controller").objectReferenceValue = player.GetComponent<CharacterController>();
         // 攻撃は上半身レイヤーのみへ適用し、下半身は移動アニメ（Idle/Walk）を継続させる。
@@ -1765,6 +1779,9 @@ public static class BuildAetherRiftMap
         var soTa = new SerializedObject(ta);
         soTa.FindProperty("_projectilePrefab").objectReferenceValue = projPrefab;
         soTa.FindProperty("_muzzle").objectReferenceValue           = muzzleGo.transform;
+        // チャージ予兆用に頂部クリスタルを結線（ランタイムの名前検索フォールバックより確実）
+        var crystalProp = soTa.FindProperty("_crystal");
+        if (crystalProp != null) crystalProp.objectReferenceValue = crystalTransform;
         soTa.ApplyModifiedPropertiesWithoutUndo();
 
         // 頭上 HP バー（クリスタル新位置 y6.1 の上に出すよう yOffset 7.6）。味方=緑/敵=赤 の規約に合わせる

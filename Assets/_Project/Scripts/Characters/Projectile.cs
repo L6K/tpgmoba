@@ -1,4 +1,5 @@
 using UnityEngine;
+using Enigma.Ability;
 using Enigma.Combat;
 
 namespace Enigma.Character
@@ -60,7 +61,18 @@ namespace Enigma.Character
                     damageable.TakeDamage(finalDamage);
             }
 
+            // 着弾の小バースト。AA 連射のスパムに耐えるよう小さく短命(0.25s)に。
+            // 色はトレイルがあればその色、無ければ白
+            var hitColor = TryGetTrailColor();
+            SkillVfx.SpawnBurst(transform.position, hitColor, 0.15f, 0.7f, 0.25f);
+
             Destroy(gameObject);
+        }
+
+        // 弾に付いたトレイル色をヒット演出色として流用する。無ければ白。
+        private Color TryGetTrailColor()
+        {
+            return TryGetComponent<TrailRenderer>(out var trail) ? trail.startColor : Color.white;
         }
 
         // TeamTag が無い側は中立扱い（誰にでも当たる）。

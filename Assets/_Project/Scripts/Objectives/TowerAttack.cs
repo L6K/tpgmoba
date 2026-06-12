@@ -1,5 +1,7 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Enigma.Ability;
 using Enigma.Character;
 using Enigma.Combat;
 using Enigma.Minion;
@@ -13,18 +15,22 @@ namespace Enigma.Objective
     {
         [SerializeField] private Projectile _projectilePrefab;
         [SerializeField] private Transform  _muzzle;
+        [SerializeField] private Transform  _crystal; // チャージ予兆を出す頂部クリスタル（ビルダーで結線）
 
         private const float Range         = 14f;
         private const float AttackInterval = 1.2f;
         private const float Damage        = 20f;
         private const float ProjectileSpeed = 25f;
         private const float ScanInterval  = 0.4f;
+        private const float ChargeLead    = 0.45f; // 発射の何秒前からチャージ予兆を出すか
 
         private AttackCooldown _attackCd;
         private float          _scanTimer;
         private HealthComponent _health;
         private TeamTag         _teamTag;
         private bool            _dead;
+        private bool            _charging;       // チャージ中は新規発射を受け付けない
+        private Vector3         _crystalBaseScale = Vector3.one;
 
         private void Awake()
         {
@@ -32,8 +38,34 @@ namespace Enigma.Objective
             _teamTag   = GetComponent<TeamTag>();
             _attackCd  = new AttackCooldown(AttackInterval);
 
+            // クリスタル未結線なら名前で探索フォールバック（"TowerCrystalLarge" メッシュ or "Crystal" GO）
+            if (_crystal == null)
+                _crystal = FindCrystal();
+            if (_crystal != null)
+                _crystalBaseScale = _crystal.localScale;
+
             // 撃破されたら倒れる演出と攻撃停止
             _health.Model.Died += OnDied;
+        }
+
+        // 子階層から発光クリスタルを名前ベースで探す。ビルダー結線が無い場合のフォールバック。
+        private Transform FindCrystal()
+        {
+            foreach (var t in GetComponentsInChildren<Transform>(includeInactive: true))
+            {
+                if (t == transform) continue;
+                if (t.name.Contains("Crystal")) return t;
+            }
+            return null;
+        }
+
+        // チーム色（青/赤）をチャージ発光色に使う
+        private Color ChargeColor()
+        {
+            var team = _teamTag != null ? _teamTag.Team : TeamId.Neutral;
+            return team == TeamId.Red
+                ? new Color(1f, 0.4f, 0.35f, 1f)
+                : new Color(0.35f, 0.65f, 1f, 1f);
         }
 
         private void OnDestroy()
@@ -45,7 +77,7 @@ namespace Enigma.Objective
 
         private void Update()
         {
-            if (_dead) return;
+            if (_dead || _charging) return;
 
             _scanTimer += Time.deltaTime;
             if (_scanTimer < ScanInterval) return;
@@ -56,7 +88,52 @@ namespace Enigma.Objective
             int idx = FindTarget();
             if (idx < 0) return;
 
-            FireAt(_cachedPositions[idx]);
+            // CD をここで消費して発射時刻の基準を確定し、チャージ予兆を前倒しで再生する。
+            // チャージ分だけ発射が遅れるが、CD 消費が一定間隔なのでファイアレートは変わらない。
+            if (!_attackCd.TryConsume(Time.time)) return;
+            StartCoroutine(ChargeThenFire(_cachedPositions[idx]));
+        }
+
+        // ChargeLead 秒かけてクリスタルを発光+スケールパルスさせ、その後に発射する。
+        private IEnumerator ChargeThenFire(Vector3 targetPos)
+        {
+            _charging = true;
+
+            var color = ChargeColor();
+            // チャージ中に小バーストを2回（前半と中盤）
+            if (_crystal != null)
+                SkillVfx.SpawnBurst(_crystal.position, color, 0.2f, 0.9f, 0.25f);
+
+            float elapsed = 0f;
+            bool secondBurstDone = false;
+            while (elapsed < ChargeLead)
+            {
+                elapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(elapsed / ChargeLead);
+
+                // localScale を 1→1.15→1 へパルス（中央でピーク）
+                if (_crystal != null)
+                {
+                    float pulse = 1f + 0.15f * Mathf.Sin(t * Mathf.PI);
+                    _crystal.localScale = _crystalBaseScale * pulse;
+                }
+
+                if (!secondBurstDone && t >= 0.5f && _crystal != null)
+                {
+                    SkillVfx.SpawnBurst(_crystal.position, color, 0.25f, 1.1f, 0.25f);
+                    secondBurstDone = true;
+                }
+
+                yield return null;
+            }
+
+            if (_crystal != null)
+                _crystal.localScale = _crystalBaseScale;
+
+            // チャージ中に撃破されたら発射しない
+            if (!_dead)
+                FireAt(targetPos);
+            _charging = false;
         }
 
         // OverlapSphere で候補を収集し MinionLogic.ChooseTarget で最近敵を決定する
@@ -89,7 +166,7 @@ namespace Enigma.Objective
         private void FireAt(Vector3 targetPos)
         {
             if (_projectilePrefab == null || _muzzle == null) return;
-            if (!_attackCd.TryConsume(Time.time)) return;
+            // CD は ChargeThenFire 開始時に消費済み（ここでは消費しない）
 
             // 銃口が高所(クリスタル)にあるため、対象の胴体高さを狙う3D方向で撃つ
             var dir = (targetPos + Vector3.up * 0.9f - _muzzle.position);
@@ -99,6 +176,12 @@ namespace Enigma.Objective
             float lifetime = ProjectileSpeed > 0f ? Range / ProjectileSpeed : 2f;
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.identity);
             proj.Init(dir, ProjectileSpeed, Damage, gameObject, lifetime);
+
+            // ボルト演出: チーム色トレイル + 細長い発光コア + 発射バースト
+            var color = ChargeColor();
+            SkillVfx.AddTrail(proj.gameObject, color, 0.18f, 0.3f);
+            SkillVfx.AttachGlowCore(proj.gameObject, dir, color, 0.3f, 1.1f);
+            SkillVfx.SpawnBurst(_muzzle.position, color, 0.25f, 1.0f, 0.2f);
         }
 
         private void OnDied()

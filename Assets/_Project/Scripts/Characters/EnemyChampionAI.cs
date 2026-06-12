@@ -656,9 +656,9 @@ namespace Enigma.Character
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, def.ProjectileSpeed, def.Damage, gameObject, lifetime);
 
+            // 発光コア + トレイル + 二段バースト（プレイヤー側と共通化）
             var color = SkillSlotColor(slot);
-            SkillVfx.SpawnBurst(_muzzle.position, color, 0.3f, 1.2f, 0.25f);
-            SkillVfx.AddTrail(proj.gameObject, color, 0.15f, 0.25f);
+            SkillVfx.FireDirectionalVisuals(proj.gameObject, _muzzle.position, dir, color);
         }
 
         private void CastBotGroundAoe(int slot, SkillDefinition def, HealthComponent target)
@@ -693,9 +693,12 @@ namespace Enigma.Character
             float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage, gameObject);
             target.TakeDamage(finalDamage, gameObject);
 
+            // 胸元→対象へビーム一閃 + バースト+小リング（プレイヤー側と共通化）
             var color = SkillSlotColor(slot);
-            SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : transform.position, color, 0.3f, 1.2f, 0.25f);
-            SkillVfx.SpawnBurst(target.transform.position, color, 0.3f, 1.2f, 0.25f);
+            var from  = transform.position + Vector3.up * 1.2f;
+            var to    = target.transform.position + Vector3.up * 1.2f;
+            SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : from, color, 0.3f, 1.2f, 0.25f);
+            SkillVfx.TargetedHitVisuals(from, to, color);
         }
 
         // スロット色（プレイヤー SkillCaster と同系: Q=シアン, E=マゼンタ, R=ゴールド）

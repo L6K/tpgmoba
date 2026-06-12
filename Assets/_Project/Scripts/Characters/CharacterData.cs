@@ -71,8 +71,14 @@ namespace Enigma.Character
         // FBX サブアセットの AnimationClip。ランタイムでは FBX サブアセットへアクセスできないため事前結線が必要
         public AnimationClip IdleClip;
         public AnimationClip WalkClip;
+        // Run 系クリップ。Move 状態で WalkClip より優先使用される（null なら Walk へフォールバック）
+        public AnimationClip RunClip;
         // 攻撃ワンショット用クリップ。AA/スキル発射時に LocomotionClipSwitcher.PlayAttack で再生する
         public AnimationClip AttackClip;
+        // AA コンボ用の複数攻撃クリップ（順繰り再生）。空なら AttackClip 単発へフォールバック
+        public AnimationClip[] AttackClips;
+        // 棒立ち回避用のアイドルバリアント（ベース Idle 以外）。null/空可
+        public AnimationClip[] IdleVariantClips;
         // FBX リネームで内部のテクスチャ参照が切れるため、ボディテクスチャも明示結線する
         public Texture2D BodyTexture;
 
