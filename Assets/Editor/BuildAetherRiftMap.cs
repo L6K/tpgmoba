@@ -723,10 +723,13 @@ public static class BuildAetherRiftMap
         soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-52f, 1.1f, 10f);
         soPlayerFountain.ApplyModifiedPropertiesWithoutUndo();
 
-        // MatchBootstrap: ピック済みキャラのスキルを Start 時に注入する
+        // MatchBootstrap: ピック済みキャラのスキル・ステータスを Start 時に注入する
         var bootstrap    = player.AddComponent<MatchBootstrap>();
         var soBootstrap  = new SerializedObject(bootstrap);
-        soBootstrap.FindProperty("_skillCaster").objectReferenceValue = skillCaster;
+        soBootstrap.FindProperty("_skillCaster").objectReferenceValue      = skillCaster;
+        soBootstrap.FindProperty("_health").objectReferenceValue           = healthComp;
+        soBootstrap.FindProperty("_autoAttack").objectReferenceValue       = autoAttack;
+        soBootstrap.FindProperty("_playerController").objectReferenceValue  = player.GetComponent<PlayerController>();
         soBootstrap.ApplyModifiedPropertiesWithoutUndo();
 
         // MatchFlowController: タイタン死亡を監視して試合終了フローを起動する

@@ -21,6 +21,12 @@ namespace Enigma.Character
         private float _verticalVelocity;
         private PlayerItems _playerItems;
 
+        // characters.json を正とするピック済み移動速度を反映する（composition root から呼ぶ）
+        public void SetMoveSpeed(float moveSpeed)
+        {
+            _moveSpeed = moveSpeed;
+        }
+
         private void Awake()
         {
             _cc          = GetComponent<CharacterController>();

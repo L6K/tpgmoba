@@ -15,8 +15,8 @@ MonoBehaviour:
   CharId: garon
   DisplayName: "\u30AC\u30ED\u30F3"
   Role: 0
-  Description: "\u907A\u8DE1\u5B88\u8B77\u306E\u91CD\u88C5\u9A0E\u58EB\u3002"
-  ThemeColor: {r: 0.27, g: 0.43, b: 0.78, a: 1}
+  Description: "LoL: \u30AC\u30EC\u30F3/\u30C0\u30EA\u30A6\u30B9\u7CFB\u306E\u524D\u7DDA\u30D5\u30A1\u30A4\u30BF\u30FC"
+  ThemeColor: {r: 0.78431374, g: 0.6666667, b: 0.43137255, a: 1}
   Icon: {fileID: 0}
   Skills:
   - {fileID: 11400000, guid: 724eef02b2d83de4ba0131ec9e08ffc5, type: 2}
@@ -24,3 +24,17 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 8f6d7a9569512024e8fa1bfdcf654380, type: 2}
   - {fileID: 0}
   OwnedByDefault: 1
+  RoleLabelRaw: "\u30BF\u30F3\u30AF/\u30D5\u30A1\u30A4\u30BF\u30FC"
+  Theme: "\u6EC5\u3073\u305F\u738B\u56FD\u306E\u6700\u5F8C\u306E\u91CD\u88C5\u9A0E\u58EB\u3002\u8A93\u3044\u306E\u5927\u5263\u3092\u632F\u308B\u3046"
+  BaseHp: 320
+  HpPerLevel: 28
+  MoveSpeed: 5.2
+  AttackDamage: 18
+  AttackRange: 3.5
+  AttackCooldown: 1.7
+  TintColor: {r: 0.78431374, g: 0.6666667, b: 0.43137255, a: 1}
+  ModelName: Knight
+  ModelPrefab: {fileID: 919132149155446097, guid: 33e80f59d416f1540a5e3542ad0f166a, type: 3}
+  IdleClip: {fileID: 9061338213343248790, guid: 33e80f59d416f1540a5e3542ad0f166a, type: 3}
+  WalkClip: {fileID: -5599002979973759676, guid: 33e80f59d416f1540a5e3542ad0f166a, type: 3}
+  BodyTexture: {fileID: 2800000, guid: df70b34640ef74a4eb7addc5d66a63f6, type: 3}

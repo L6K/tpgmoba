@@ -14,9 +14,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Enigma.Character.CharacterData
   CharId: zeph
   DisplayName: "\u30BC\u30D5"
-  Role: 1
-  Description: "\u9B54\u5C0E\u30D6\u30EC\u30FC\u30C9\u3092\u64CD\u308B\u50AD\u5175\u3002"
-  ThemeColor: {r: 0.82, g: 0.31, b: 0.31, a: 1}
+  Role: 2
+  Description: "LoL: \u30EB\u30D6\u30E9\u30F3/\u30A2\u30FC\u30EA\u7CFB\u306E\u30D0\u30FC\u30B9\u30C8\u30E1\u30A4\u30B8"
+  ThemeColor: {r: 0.47843137, g: 0.36078432, b: 0.9411765, a: 1}
   Icon: {fileID: 0}
   Skills:
   - {fileID: 11400000, guid: cb95fe916798a0642ad3875db3d13866, type: 2}
@@ -24,3 +24,17 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 911431c6071ff5f4eb2563caa534ec35, type: 2}
   - {fileID: 0}
   OwnedByDefault: 1
+  RoleLabelRaw: "\u30E1\u30A4\u30B8"
+  Theme: "\u30A2\u30FC\u30B1\u30A4\u30F3\u30B3\u30FC\u30C9\u3092\u64CD\u308B\u5929\u624D\u9B54\u5C0E\u58EB\u3002\u9B54\u6CD5\u3092\u30D7\u30ED\u30B0\u30E9\u30E0\u3068\u3057\u3066\u518D\u8A18\u8FF0\u3059\u308B"
+  BaseHp: 200
+  HpPerLevel: 16
+  MoveSpeed: 5.5
+  AttackDamage: 15
+  AttackRange: 12
+  AttackCooldown: 1.5
+  TintColor: {r: 0.47843137, g: 0.36078432, b: 0.9411765, a: 1}
+  ModelName: UnityChan
+  ModelPrefab: {fileID: 0}
+  IdleClip: {fileID: 0}
+  WalkClip: {fileID: 0}
+  BodyTexture: {fileID: 0}

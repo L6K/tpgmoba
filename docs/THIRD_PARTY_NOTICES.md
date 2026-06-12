@@ -96,6 +96,29 @@
 
 ---
 
+## Champion Assets — CC0 プレイアブルキャラクターパック (OpenGameArt.org)
+
+クレジット表記: **不要**（CC0 1.0 パブリックドメイン）。任意で "LowPoly Models by @Quaternius" と表記可
+ライセンス全文: https://creativecommons.org/publicdomain/zero/1.0/
+ライセンスファイル: `Assets/External/Champions/LICENSE.txt`
+
+### LowPoly RPG Characters by Quaternius
+
+- 提供: Quaternius (https://www.patreon.com/quaternius)
+- ライセンス: CC0 1.0 (Public Domain)
+- 出典: https://opengameart.org/content/lowpoly-rpg-characters
+- ダウンロード: https://opengameart.org/sites/default/files/rpg_characters_-_nov_2020.zip
+- 配置ファイル:
+  - `Champ_Mage.fbx` (元: Wizard.fbx), `Champ_Mage_Texture.png`
+  - `Champ_Knight.fbx` (元: Warrior.fbx), `Champ_Knight_Texture.png`
+  - `Champ_Rogue.fbx` (元: Rogue.fbx), `Champ_Rogue_Texture.png`
+  - `Champ_Ranger.fbx` (元: Ranger.fbx), `Champ_Ranger_Texture.png`
+  - `Champ_Cleric.fbx` (元: Cleric.fbx), `Champ_Cleric_Texture.png`
+  - `Champ_Barbarian.fbx` (元: Monk.fbx), `Champ_Barbarian_Texture.png`
+- 内容: 6体のローポリRPGキャラクター。ヒューマノイドリグ・アニメーション・個別テクスチャ付き。FBX 形式
+
+---
+
 ## Tower Assets — CC0 防衛タワーパック (OpenGameArt.org)
 
 クレジット表記: **不要**（すべて CC0 1.0 パブリックドメイン）

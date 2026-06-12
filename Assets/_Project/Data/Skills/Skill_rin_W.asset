@@ -12,12 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02ef13925d091ff45bc1e79bb27c7770, type: 3}
   m_Name: Skill_rin_W
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
-  SkillName: "\u77E2\u306E\u96E8"
+  SkillName: "\u30B9\u30AD\u30E3\u30C3\u30BF\u30FC\u30DC\u30E0"
   Description: "\u6307\u5B9A\u5730\u70B9\u3078\u7121\u6570\u306E\u77E2\u3092\u964D\u3089\u305B\u3001\u7BC4\u56F2\u5185\u306E\u6575\u306B\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u308B\u3002"
   Targeting: 1
-  Damage: 35
-  Range: 25
-  Radius: 4.5
+  Damage: 38
+  Range: 13
+  Radius: 3
   CooldownSeconds: 9
   ProjectileSpeed: 0
   WindupSeconds: 0.35

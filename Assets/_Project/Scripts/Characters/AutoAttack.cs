@@ -10,10 +10,11 @@ namespace Enigma.Character
         [SerializeField] private Transform         _muzzle;
         [SerializeField] private PlayerAttackMotor _motor;
 
-        private const float Damage          = 15f;
-        private const float ProjectileSpeed = 30f;
-        private const float CooldownSeconds = 1.5f;
-        private const float Range           = 12f;
+        // characters.json を正としてランタイム/インポータから上書きできるよう、定数からフィールドへ昇格（既定値は従来の定数値）
+        [SerializeField] private float _attackDamage   = 15f;
+        [SerializeField] private float _projectileSpeed = 30f;
+        [SerializeField] private float _attackCooldown = 1.5f;
+        [SerializeField] private float _attackRange    = 12f;
 
         private const float AutoWindup   = 0.15f;
         private const float AutoRecovery = 0.25f;
@@ -21,9 +22,20 @@ namespace Enigma.Character
         private AttackCooldown  _cooldown;
         private TargetingSystem _targeting;
 
+        // MatchBootstrap など composition root からピック済みステータスを反映する。
+        // Awake 済みなら CD インスタンスも作り直す
+        public void Configure(float damage, float range, float cooldownSeconds)
+        {
+            _attackDamage   = damage;
+            _attackRange    = range;
+            _attackCooldown = cooldownSeconds;
+            if (_cooldown != null)
+                _cooldown = new AttackCooldown(_attackCooldown);
+        }
+
         private void Awake()
         {
-            _cooldown  = new AttackCooldown(CooldownSeconds);
+            _cooldown  = new AttackCooldown(_attackCooldown);
             _targeting = GetComponent<TargetingSystem>();
         }
 
@@ -35,7 +47,7 @@ namespace Enigma.Character
             if (target == null) return;
 
             float dist = Vector3.Distance(transform.position, target.transform.position);
-            if (dist > Range) return;
+            if (dist > _attackRange) return;
 
             // Windup 中はクールダウンを消費しない
             if (_motor != null && _motor.Motion.Phase == AttackPhase.Windup) return;
@@ -65,7 +77,7 @@ namespace Enigma.Character
             if (target == null || _projectilePrefab == null || _muzzle == null) return;
             var dir = (target.transform.position - _muzzle.position).normalized;
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.identity);
-            proj.Init(dir, ProjectileSpeed, Damage, gameObject);
+            proj.Init(dir, _projectileSpeed, _attackDamage, gameObject);
         }
     }
 }

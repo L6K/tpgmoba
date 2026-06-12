@@ -12,9 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 213d89a4cfa2d35468345b3bdc477f66, type: 3}
   m_Name: CharacterDatabase
   m_EditorClassIdentifier: Assembly-CSharp::Enigma.Character.CharacterDatabase
-  characters:
-  - {fileID: 11400000, guid: 28a74d353bdd95e4ca8ab137cfcb2697, type: 2}
+  Characters:
   - {fileID: 11400000, guid: 21fb1b5408d84f74d9723e2096c81377, type: 2}
+  - {fileID: 11400000, guid: 28a74d353bdd95e4ca8ab137cfcb2697, type: 2}
   - {fileID: 11400000, guid: aa75073eb6e22c84698aea5b5c6d9fa9, type: 2}
   - {fileID: 11400000, guid: 773bebf87e89fb24aa700e4d056e78f4, type: 2}
   - {fileID: 11400000, guid: 97622b1c55fa10d4fb92f3d87d4fc1b8, type: 2}
+  - {fileID: 11400000, guid: a46c58fc1d36ac74397e56b714653b97, type: 2}

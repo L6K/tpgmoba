@@ -48,6 +48,32 @@ namespace Enigma.Character
         [FormerlySerializedAs("ownedByDefault")]
         public bool OwnedByDefault = false;
 
+        // characters.json を正としてインポータが書き込むステータス（既存フィールドは不変、ここから追加）
+        [Header("ステータス（characters.json 由来）")]
+        // CharacterRole enum に対応しない自由記述ロール（"ジャングラー/ブルーザー" 等）も保持するための原文
+        public string RoleLabelRaw = "";
+        [TextArea]
+        public string Theme = "";
+        public float BaseHp = 200f;
+        public float HpPerLevel = 0f;
+        public float MoveSpeed = 5.5f;
+        public float AttackDamage = 15f;
+        public float AttackRange = 12f;
+        public float AttackCooldown = 1.5f;
+        public Color TintColor = Color.white;
+        // モデル名（プレハブ解決のキー）。Texture2D Icon とは別物
+        public string ModelName = "";
+
+        [Header("試合用 3D モデル（インポータが結線）")]
+        // ModelName が "UnityChan"/空 のキャラは null（既存 UnityChanModel を維持）。
+        // それ以外は Champ_{ModelName}.fbx のプレハブをエディタインポータが結線する。
+        public GameObject ModelPrefab;
+        // FBX サブアセットの AnimationClip。ランタイムでは FBX サブアセットへアクセスできないため事前結線が必要
+        public AnimationClip IdleClip;
+        public AnimationClip WalkClip;
+        // FBX リネームで内部のテクスチャ参照が切れるため、ボディテクスチャも明示結線する
+        public Texture2D BodyTexture;
+
         /// <summary>ロールの日本語表示名</summary>
         public string RoleLabel => Role switch
         {

@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf35096b832651a4899a6cfbe92645aa, type: 3}
+  m_Name: Char_thorne
+  m_EditorClassIdentifier: Enigma::Enigma.Character.CharacterData
+  CharId: thorne
+  DisplayName: "\u30BD\u30FC\u30F3"
+  Role: 1
+  Description: "LoL: \u30F4\u30A1\u30A4/\u30EF\u30FC\u30A6\u30A3\u30C3\u30AF\u7CFB\u306E\u30C0\u30A4\u30D0\u30FC"
+  ThemeColor: {r: 0.24313726, g: 0.5568628, b: 0.3529412, a: 1}
+  Icon: {fileID: 0}
+  Skills:
+  - {fileID: 11400000, guid: 68c5ab604a359304a95fa03e49982b67, type: 2}
+  - {fileID: 11400000, guid: e7271241497095548bdb46583c950c00, type: 2}
+  - {fileID: 11400000, guid: 9dabda12d24ff974b819f4d807b0596d, type: 2}
+  - {fileID: 0}
+  OwnedByDefault: 0
+  RoleLabelRaw: "\u30B8\u30E3\u30F3\u30B0\u30E9\u30FC/\u30D6\u30EB\u30FC\u30B6\u30FC"
+  Theme: "\u68EE\u6797\u4FDD\u8B77AI\u304C\u5BBF\u308B\u6A5F\u68B0\u5316\u30CF\u30F3\u30BF\u30FC\u3002\u4FB5\u5165\u8005\u3092\u72E9\u308A\u7D9A\u3051\u308B"
+  BaseHp: 280
+  HpPerLevel: 24
+  MoveSpeed: 5.8
+  AttackDamage: 19
+  AttackRange: 3.5
+  AttackCooldown: 1.4
+  TintColor: {r: 0.24313726, g: 0.5568628, b: 0.3529412, a: 1}
+  ModelName: Barbarian
+  ModelPrefab: {fileID: 919132149155446097, guid: be2b6d5e65eaa9a4ea2766aef1e77a82, type: 3}
+  IdleClip: {fileID: 9061338213343248790, guid: be2b6d5e65eaa9a4ea2766aef1e77a82, type: 3}
+  WalkClip: {fileID: -5599002979973759676, guid: be2b6d5e65eaa9a4ea2766aef1e77a82, type: 3}
+  BodyTexture: {fileID: 2800000, guid: 22322c4c1cdf14c42aae6e3763224b56, type: 3}

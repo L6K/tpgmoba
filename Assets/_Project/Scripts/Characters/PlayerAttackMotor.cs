@@ -24,6 +24,17 @@ namespace Enigma.Character
             }
         }
 
+        /// <summary>
+        /// プロシージャル攻撃モーションの対象モデルを差し替える。
+        /// モデルスワップ（ChampionModelSwapper）が新モデルの Transform を渡す。
+        /// ベース位置の再記録を促すためフラグをリセットする。
+        /// </summary>
+        public void SetModelRoot(Transform modelRoot)
+        {
+            _modelRoot            = modelRoot;
+            _baseLocalPosRecorded = false;
+        }
+
         /// <summary>AttackMotion.TryBegin に委譲して攻撃モーションを開始する。</summary>
         public bool RequestAttack(float windup, float recovery, Action fire)
         {

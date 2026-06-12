@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02ef13925d091ff45bc1e79bb27c7770, type: 3}
   m_Name: Skill_veil_E
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
-  SkillName: "\u30D8\u30C3\u30AF\u30B9"
+  SkillName: "\u6697\u6BBA\u523B\u5370"
   Description: "\u5BFE\u8C61\u306E\u6575\u5358\u4F53\u306B\u546A\u8A5B\u3092\u304B\u3051\u3001\u78BA\u5B9A\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u308B\u3002"
   Targeting: 2
-  Damage: 35
-  Range: 18
+  Damage: 160
+  Range: 10
   Radius: 0
-  CooldownSeconds: 8
+  CooldownSeconds: 70
   ProjectileSpeed: 0
   WindupSeconds: 0.15
   RecoverySeconds: 0.3
