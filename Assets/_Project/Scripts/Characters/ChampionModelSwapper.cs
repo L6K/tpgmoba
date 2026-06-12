@@ -68,8 +68,12 @@ namespace Enigma.Character
             foreach (var col in model.GetComponentsInChildren<Collider>(true))
                 Object.Destroy(col);
 
-            var animator = model.GetComponent<Animator>();
-            if (animator != null) animator.applyRootMotion = false; // 移動は CharacterController が担う
+            // Quaternius 等の FBX プレハブは Animator コンポーネントを持たないことがある。
+            // Playables 再生(LocomotionClipSwitcher)には Animator が必須のため、無ければ付与する
+            // (Generic クリップはトランスフォームパスでバインドされるため Avatar なしでも再生できる)
+            var animator = model.GetComponentInChildren<Animator>();
+            if (animator == null) animator = model.AddComponent<Animator>();
+            animator.applyRootMotion = false; // 移動は CharacterController が担う
         }
 
         // FBX ルートの単位変換スケールは上書きせず、bounds 計測 → 相対乗算で高さ正規化。

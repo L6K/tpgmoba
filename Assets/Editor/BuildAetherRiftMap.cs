@@ -769,6 +769,10 @@ public static class BuildAetherRiftMap
         var unityChanModel = player.transform.Find("UnityChanModel");
         if (unityChanModel != null)
             soMotor.FindProperty("_modelRoot").objectReferenceValue = unityChanModel;
+        // ゼフ(UnityChan)の攻撃アニメ: AttachUnityChanModel が付けた切替機を motor に結線
+        var ucSwitcher = player.GetComponentInChildren<Enigma.Character.LocomotionClipSwitcher>();
+        if (ucSwitcher != null)
+            soMotor.FindProperty("_clipSwitcher").objectReferenceValue = ucSwitcher;
         soMotor.ApplyModifiedPropertiesWithoutUndo();
 
         // SkillCaster/_motor 結線
@@ -1366,9 +1370,28 @@ public static class BuildAetherRiftMap
             var soPc = new SerializedObject(pc);
             soPc.FindProperty("_animator").objectReferenceValue = animator;
             soPc.ApplyModifiedPropertiesWithoutUndo();
+
+            // ゼフ用のアニメ切替機: Idle=WAIT00 / 走り=RUN00_F / 攻撃=HANDUP00_R(詠唱風)。
+            // 切替機は Start で runtimeAnimatorController を切り離して Playables 再生に統一する
+            var switcher = model.AddComponent<Enigma.Character.LocomotionClipSwitcher>();
+            var soSw = new SerializedObject(switcher);
+            soSw.FindProperty("_idle").objectReferenceValue   = LoadFirstClip("Assets/UnityChan/Animations/unitychan_WAIT00.fbx");
+            soSw.FindProperty("_walk").objectReferenceValue   = LoadFirstClip("Assets/UnityChan/Animations/unitychan_RUN00_F.fbx");
+            soSw.FindProperty("_attack").objectReferenceValue = LoadFirstClip("Assets/UnityChan/Animations/unitychan_HANDUP00_R.fbx");
+            soSw.FindProperty("_controller").objectReferenceValue = player.GetComponent<CharacterController>();
+            soSw.ApplyModifiedPropertiesWithoutUndo();
         }
 
         ApplyToonMaterials(model);
+    }
+
+    /// <summary>FBX サブアセットから最初の AnimationClip(__preview__ 除外)を返す。</summary>
+    private static AnimationClip LoadFirstClip(string fbxPath)
+    {
+        foreach (var sub in AssetDatabase.LoadAllAssetRepresentationsAtPath(fbxPath))
+            if (sub is AnimationClip clip && !clip.name.StartsWith("__preview__"))
+                return clip;
+        return null;
     }
 
     // 元マテリアルのメインテクスチャを引き継いだ Enigma/Toon マテリアルに差し替える
