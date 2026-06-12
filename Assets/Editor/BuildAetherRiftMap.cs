@@ -821,21 +821,21 @@ public static class BuildAetherRiftMap
         // 敵チーム（Red）3体: TOP / BOT / Jungle
         var redTop = CreateBotChampion("RedBot_Top", TeamId.Red,
             new Vector3(52f, 1.1f, -6f), BuildTopLaneWaypoints(),
-            matRed, matBarRed, redRing, aaProj);
+            matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redBot = CreateBotChampion("RedBot_Bot", TeamId.Red,
             new Vector3(52f, 1.1f, 6f), BuildBotLaneWaypoints(),
-            matRed, matBarRed, redRing, aaProj);
+            matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redJungle = CreateBotChampion("RedBot_Jungle", TeamId.Red,
             new Vector3(52f, 1.1f, 0f), BuildJungleWaypoints(),
-            matRed, matBarRed, redRing, aaProj);
+            matRed, matBarRed, redRing, aaProj, telegraphPrefab, farmsNeutralCamps: true);
 
         // 味方チーム（Blue）2体: TOP / BOT。経路は各レーンの逆順（青ベース開口スタート）。
         var blueTop = CreateBotChampion("BlueBot_Top", TeamId.Blue,
             new Vector3(-52f, 1.1f, -6f), Reverse(BuildTopLaneWaypoints()),
-            matBlue, matBarGreen, blueRing, aaProj);
+            matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
         var blueBot = CreateBotChampion("BlueBot_Bot", TeamId.Blue,
             new Vector3(-52f, 1.1f, 6f), Reverse(BuildBotLaneWaypoints()),
-            matBlue, matBarGreen, blueRing, aaProj);
+            matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
 
         // BotChampionBootstrap（シーンに1個）: CharacterDatabase と5体を結線する
         WireBotBootstrap(new[] { redTop, redBot, redJungle, blueTop, blueBot });
@@ -2145,7 +2145,8 @@ public static class BuildAetherRiftMap
     // 泉中心・リスポーン位置は spawnPos（=自ベース側）に合わせる。戻り値は結線済み AI。
     private static EnemyChampionAI CreateBotChampion(
         string name, TeamId team, Vector3 spawnPos, Vector3[] waypoints,
-        Material matBody, Material matBar, Color ringColor, Projectile projPrefab)
+        Material matBody, Material matBar, Color ringColor, Projectile projPrefab,
+        GameObject telegraphPrefab, bool farmsNeutralCamps = false)
     {
         // 経路先頭にスポーン地点(=泉中心)を挿入する。後退(Backward)が index 0 まで
         // 戻ったとき開口部でなく泉の回復圏(半径10)内で止まるようにするため
@@ -2232,6 +2233,10 @@ public static class BuildAetherRiftMap
         soAi.FindProperty("_barFill").objectReferenceValue          = wrapper;
         soAi.FindProperty("_clipSwitcher").objectReferenceValue     = enemySwitcher;
         soAi.FindProperty("_respawnPos").vector3Value               = spawnPos;
+        // スキル地点AoE 用テレグラフ（プレイヤー SkillCaster._telegraphPrefab と同一アセット）
+        soAi.FindProperty("_telegraphPrefab").objectReferenceValue  = telegraphPrefab.GetComponent<TelegraphCircle>();
+        // ジャングラーのみ中立キャンプ狩りを有効化
+        soAi.FindProperty("_farmsNeutralCamps").boolValue           = farmsNeutralCamps;
 
         var wpProp = soAi.FindProperty("_waypoints");
         wpProp.arraySize = waypoints.Length;
@@ -2286,10 +2291,11 @@ public static class BuildAetherRiftMap
         return list.ToArray();
     }
 
-    // ジャングル片道ルート（赤ベース開口→北側ジャングル→青ベース開口）。
-    // 木のない歩行可能コリドーのみを通る: レーン帯(r40-50) → 45°ジャングルパス
-    // (外端r45→キャンプr30→内端r18) → ベイスン北縁(r≈15.5、ボスピットr8の外) →
-    // 135°ジャングルパス → レーン帯。パス幅6・木はパス中心4.5m内に生えない前提。
+    // ジャングル巡回ルート（赤サイド周回: 45°キャンプ→ベイスン東縁→315°キャンプ）。
+    // 木のない歩行可能コリドーのみを通り、終端到達でピンポン反転して往復する
+    // (EnemyChampionAI 側、_farmsNeutralCamps のとき)。敵陣側キャンプ(135/225°)へは
+    // 行かない: 旧ルートの終端=敵ベース開口は敵タワーに焼かれるだけのうえ、
+    // 経路逸脱時に森でさまよう事故が多発したため自陣周回に限定した。
     private static Vector3[] BuildJungleWaypoints()
     {
         Vector3 Polar(float deg, float radius)
@@ -2300,17 +2306,17 @@ public static class BuildAetherRiftMap
 
         return new[]
         {
-            new Vector3(45.5f, 0f, 8f),  // 赤ベース開口（TOP側、壁帯の外）
-            Polar(32f,  45f),            // レーン帯を45°方向へ
-            Polar(45f,  45f),            // 45°パス外端（レーン接続点）
-            Polar(45f,  30f),            // 右上キャンプ空き地
-            Polar(45f,  18f),            // 45°パス内端（ベイスン縁）
-            new Vector3(0f, 0f, 15.5f),  // ベイスン北縁（ボスピット外周）
-            Polar(135f, 18f),            // 135°パス内端
-            Polar(135f, 30f),            // 左上キャンプ空き地
-            Polar(135f, 45f),            // 135°パス外端
-            Polar(148f, 45f),            // レーン帯を青ベースへ
-            new Vector3(-45.5f, 0f, 8f), // 青ベース開口（TOP側、壁帯の外）
+            new Vector3(45.5f, 0f, 8f),   // 赤ベース開口（TOP側、壁帯の外）
+            Polar(32f,  45f),             // レーン帯を45°方向へ
+            Polar(45f,  45f),             // 45°パス外端（レーン接続点）
+            Polar(45f,  30f),             // 右上キャンプ空き地
+            Polar(45f,  18f),             // 45°パス内端（ベイスン縁）
+            Polar(0f,   13f),             // ベイスン東縁（ボスピットr8の外・basin r16内）
+            Polar(-45f, 18f),             // 315°パス内端
+            Polar(-45f, 30f),             // 右下キャンプ空き地
+            Polar(-45f, 45f),             // 315°パス外端
+            Polar(-32f, 45f),             // レーン帯を赤ベースへ
+            new Vector3(45.5f, 0f, -8f),  // 赤ベース開口（BOT側）
         };
     }
 

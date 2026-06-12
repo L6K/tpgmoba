@@ -39,7 +39,10 @@ namespace Enigma.Ability
         /// <summary>飛翔体などに付ける細いトレイルを生成する。マテリアルはバーストと共用。</summary>
         public static TrailRenderer AddTrail(GameObject target, Color color, float startWidth, float time)
         {
-            var trail = target.AddComponent<TrailRenderer>();
+            // 既に TrailRenderer を持つプレハブ(AaBeam 等)には二重付与できず
+            // AddComponent が null を返すため、既存があれば色だけ差し替えて再利用する
+            if (!target.TryGetComponent<TrailRenderer>(out var trail))
+                trail = target.AddComponent<TrailRenderer>();
             trail.time           = time;
             trail.startWidth     = startWidth;
             trail.endWidth       = 0f;
