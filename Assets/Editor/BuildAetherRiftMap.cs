@@ -184,7 +184,7 @@ public static class BuildAetherRiftMap
         // クラスタ中心3〜4箇所 + 一様散布、木同士最小間隔1.2m
         // 高品質 FBX（Assets/External/Nature）へ置換。ロード後に bounds を測って
         // 目標樹高 4.5〜7m へ正規化（モデルごとの原寸差を吸収）。
-        // 種の混合: Tree_1 40% / Birch_1 25% / Pine_1 25% / TreeToonStylized01 10%、
+        // 種の混合: Tree_1 55% / Birch_1 45%（黒葉の Pine/TreeToon は除外）、
         // まれに DeadTree_1（5%以下、ジャングル奥のみ）。葉は 3 トーンからシード固定で割当。
         {
             var natureSpecies = LoadNatureSpecies();
@@ -1594,60 +1594,24 @@ public static class BuildAetherRiftMap
 
     /// <summary>
     /// タワーを配置する。ルート GO にゲームロジック（HP/Team/TowerAttack/コライダー/HPバー/報酬）を持たせ、
-    /// 見た目は DungeonTowerD.fbx を子 "Visual" として分離。高さは bounds 計測→相対乗算で TowerHeight に正規化、
-    /// 接地 y=0。頂上にチーム色クリスタル(SlowSpin)を浮かべ、muzzle はクリスタル位置に置く。
+    /// 見た目は子 "Visual" 以下にプロシージャル構築（LoL 風の石造多段砲塔＋頂部発光クリスタル）。
+    /// 接地 y=0。頂上にチーム色大クリスタル(SlowSpin)を据え、muzzle はクリスタル位置に置く。
     /// </summary>
     private static void PlaceTower(string name, Vector3 pos, Material mat, Projectile projPrefab,
         GameObject towerModel = null, bool isBlue = true)
     {
-        // ルート GO（ゲームロジック保持側）。見た目は子の FBX に分離する
+        // towerModel(FBX)は不使用に。シグネチャ維持のため受け取るだけ
+        _ = towerModel;
+
+        // ルート GO（ゲームロジック保持側）。見た目は子 "Visual" に分離する
         var go = new GameObject(name);
         go.transform.position = pos;
         SetStatic(go);
 
-        if (towerModel != null)
-        {
-            // 見た目: DungeonTowerD.fbx を子としてインスタンス化
-            var visual = (GameObject)PrefabUtility.InstantiatePrefab(towerModel);
-            visual.name = "Visual";
-            visual.transform.SetParent(go.transform, false);
-            visual.transform.localPosition = Vector3.zero;
+        // 見た目: プロシージャル砲塔（FBX 不使用）
+        var crystalTransform = BuildTowerVisual(go.transform, isBlue);
 
-            // FBX 側のコライダーは除去（ルートのクリック用コライダーに一本化）
-            foreach (var c in visual.GetComponentsInChildren<Collider>())
-                Object.DestroyImmediate(c);
-
-            // 高さ正規化: bounds 計測 → 相対乗算（FBX ルートの単位変換スケールを壊さない）
-            var rends = visual.GetComponentsInChildren<Renderer>();
-            if (rends.Length > 0)
-            {
-                var b = rends[0].bounds;
-                for (int i = 1; i < rends.Length; i++) b.Encapsulate(rends[i].bounds);
-                float measuredH = b.size.y;
-                if (measuredH > 0.0001f)
-                    visual.transform.localScale =
-                        visual.transform.localScale * (TowerHeight / measuredH);
-
-                // スケール変更を即時反映させてから再計測する
-                Physics.SyncTransforms();
-
-                // 接地補正: スケール後に再計測して最下端を y=0 に合わせる
-                var b2 = rends[0].bounds;
-                for (int i = 1; i < rends.Length; i++) b2.Encapsulate(rends[i].bounds);
-                float footOffset = b2.min.y - go.transform.position.y;
-                visual.transform.localPosition -= new Vector3(0f, footOffset, 0f);
-            }
-
-            // チーム色マテリアル（Enigma/Toon + パレット PNG）を全レンダラーに適用
-            var towerMat = GetOrCreateTowerMat(isBlue);
-            foreach (var r in rends) r.sharedMaterial = towerMat;
-
-            // 見た目サブツリーを静的化（クリスタルは別ツリーなので動的のまま）
-            foreach (var t in visual.GetComponentsInChildren<Transform>())
-                SetStatic(t.gameObject);
-        }
-
-        // ルートのクリック用コライダー（FBX 由来は上で除去済み）
+        // ルートのクリック用コライダー（見た目側にはコライダーを付けない）
         var cap = go.AddComponent<CapsuleCollider>();
         cap.radius = 1.2f;
         cap.height = TowerHeight;
@@ -1665,10 +1629,7 @@ public static class BuildAetherRiftMap
         soTt.FindProperty("_team").enumValueIndex = isBlue ? (int)TeamId.Blue : (int)TeamId.Red;
         soTt.ApplyModifiedPropertiesWithoutUndo();
 
-        // 頂上チーム色クリスタル（BossCrystal メッシュ）+ SlowSpin。コライダーなし
-        var crystalTransform = CreateTowerCrystal(go.transform, isBlue);
-
-        // TowerAttack: 発射起点はクリスタル位置に置き、差し替えでも結線を維持
+        // TowerAttack: 発射起点はクリスタル位置(y≈6.1)に置き、差し替えでも結線を維持
         var ta      = go.AddComponent<TowerAttack>();
         var muzzleGo = new GameObject("Muzzle");
         muzzleGo.transform.SetParent(go.transform, false);
@@ -1679,11 +1640,11 @@ public static class BuildAetherRiftMap
         soTa.FindProperty("_muzzle").objectReferenceValue           = muzzleGo.transform;
         soTa.ApplyModifiedPropertiesWithoutUndo();
 
-        // 頭上 HP バー（新高 6.5m に合わせて yOffset +7.2）。味方=緑/敵=赤 の規約に合わせる
+        // 頭上 HP バー（クリスタル新位置 y6.1 の上に出すよう yOffset 7.6）。味方=緑/敵=赤 の規約に合わせる
         var matBar = isBlue
             ? GetOrCreateBarMat("BarGreen", new Color(0.30f, 0.85f, 0.35f))
             : GetOrCreateBarMat("BarRed",   new Color(0.92f, 0.30f, 0.25f));
-        CreateWorldHealthBar(go.transform, 1.4f, 7.2f, matBar, 500f);
+        CreateWorldHealthBar(go.transform, 1.4f, 7.6f, matBar, 500f);
 
         // タワー撃破で100XP付与
         var towerReward = go.AddComponent<XpReward>();
@@ -1736,27 +1697,154 @@ public static class BuildAetherRiftMap
     }
 
     /// <summary>
-    /// タワー頂上(y≈7.0)に浮かべるチーム色クリスタル(BossCrystal メッシュ)を生成する。
-    /// URP/Unlit 発光マテリアル + SlowSpin。コライダーは付けない。
+    /// LoL 風の石造多段砲塔をプロシージャル構築する（FBX 不使用）。全高 ≈ 6.5m。
+    /// 子 "Visual" 以下に台座/基部/柱身/トリム/ヘッド/狭間/爪/大クリスタルを組む。
+    /// プリミティブのコライダーは全除去（当たり判定はルートのカプセルに一本化）。
+    /// 返り値は頂部の大クリスタル Transform（muzzle/HP バー基準に使う）。
     /// </summary>
-    private static Transform CreateTowerCrystal(Transform parent, bool isBlue)
+    private static Transform BuildTowerVisual(Transform parent, bool isBlue)
     {
-        // ボスの BossCrystal.asset はボス生成時に Delete+再生成されるため共有しない
-        // (先に配置したタワーの参照が死ぬ)。タワー専用メッシュを実寸で1度だけ作る
-        var mesh = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/_Project/Models/TowerCrystal.asset");
-        if (mesh == null)
-            mesh = ProceduralBossMeshes.CreateBipyramid("TowerCrystal", 0.45f, 1.4f, 6);
+        var visual = new GameObject("Visual");
+        visual.transform.SetParent(parent, false);
+        visual.transform.localPosition = Vector3.zero;
+        SetStatic(visual);
 
-        var color = isBlue ? new Color(0.35f, 0.65f, 1.0f) : new Color(1.0f, 0.4f, 0.35f);
+        var stone = GetOrCreateTowerStoneMat();
+        var trim  = GetOrCreateTowerTrimMat(isBlue);
+
+        // 石造の積層（Cylinder メッシュは高2なので scaleY=h/2、半径は r*2）
+        AddTowerCylinder(visual.transform, "Plinth",  1.9f, 0.5f, 0.25f, stone); // 台座
+        AddTowerCylinder(visual.transform, "Base",    1.5f, 1.4f, 1.2f,  stone); // 基部
+        AddTowerCylinder(visual.transform, "Shaft",   1.1f, 2.4f, 3.0f,  stone); // 柱身
+
+        // 柱身トリム（チーム色メタル）。専用トーラスメッシュを1度だけ生成
+        var trimMesh = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/_Project/Models/TowerTrim.asset");
+        if (trimMesh == null)
+            trimMesh = ProceduralBossMeshes.CreateTorus("TowerTrim", 1.25f, 0.10f);
+        AddTowerTorus(visual.transform, "TrimLow", trimMesh, 1.95f, trim);
+        AddTowerTorus(visual.transform, "TrimHigh", trimMesh, 4.1f, trim);
+
+        // ヘッド
+        AddTowerCylinder(visual.transform, "Head", 1.4f, 0.9f, 4.65f, stone);
+
+        // 狭間（クラウン）: 小箱 ×4 を半径1.25の円周上(y 5.25)
+        var crown = new GameObject("Crown");
+        crown.transform.SetParent(visual.transform, false);
+        crown.transform.localPosition = new Vector3(0f, 5.25f, 0f);
+        SetStatic(crown);
+        for (int i = 0; i < 4; i++)
+        {
+            float ang = (float)i / 4 * Mathf.PI * 2f;
+            var merlon = AddTowerBox(crown.transform, $"Merlon_{i}",
+                new Vector3(0.5f, 0.5f, 0.35f),
+                new Vector3(Mathf.Cos(ang) * 1.25f, 0f, Mathf.Sin(ang) * 1.25f), stone);
+            merlon.transform.localRotation = Quaternion.Euler(0f, -ang * Mathf.Rad2Deg, 0f);
+        }
+
+        // クリスタル爪（ホルダー）: 細長い箱 ×3 を半径0.5の円周上で内側に15度傾けて(y≈5.6)
+        var holder = new GameObject("Holder");
+        holder.transform.SetParent(visual.transform, false);
+        holder.transform.localPosition = new Vector3(0f, 5.6f, 0f);
+        SetStatic(holder);
+        for (int i = 0; i < 3; i++)
+        {
+            float ang = (float)i / 3 * Mathf.PI * 2f;
+            float deg = ang * Mathf.Rad2Deg;
+            var claw = AddTowerBox(holder.transform, $"Claw_{i}",
+                new Vector3(0.18f, 1.2f, 0.18f),
+                new Vector3(Mathf.Cos(ang) * 0.5f, 0f, Mathf.Sin(ang) * 0.5f), trim);
+            // 円周方向にヨーを合わせ、内側へ15度傾ける（X 軸前傾を方位へ回す）
+            claw.transform.localRotation =
+                Quaternion.Euler(0f, -deg, 0f) * Quaternion.Euler(15f, 0f, 0f);
+        }
+
+        // 大クリスタル（専用両錐メッシュ）。BossCrystal とは別名で1度だけ生成→使い回す。
+        // 既存があればロードして共有（Delete+再生成すると先行タワーの参照が死ぬため）
+        var crystalMesh = AssetDatabase.LoadAssetAtPath<Mesh>("Assets/_Project/Models/TowerCrystalLarge.asset");
+        if (crystalMesh == null)
+            crystalMesh = ProceduralBossMeshes.CreateBipyramid("TowerCrystalLarge", 0.62f, 2.2f, 6);
+
+        var color   = isBlue ? new Color(0.35f, 0.65f, 1.0f) : new Color(1.0f, 0.4f, 0.35f);
         var matName = isBlue ? "TowerCrystalBlue" : "TowerCrystalRed";
-        var mat = GetOrCreateUnlitEmissiveMat(matName, color * 2f);
+        var matCrystal = GetOrCreateUnlitEmissiveMat(matName, color * 2f);
 
-        var crystal = CreateMeshGo("Crystal", mesh, mat, parent);
-        crystal.transform.localPosition = new Vector3(0f, 7.0f, 0f);
-        crystal.transform.localScale = Vector3.one;
+        var crystal = CreateMeshGo("Crystal", crystalMesh, matCrystal, visual.transform);
+        // ヘッド上端(≈5.1)に「鎮座」する位置。浮かせすぎると塔と分離して見える
+        crystal.transform.localPosition = new Vector3(0f, 5.65f, 0f);
+        crystal.transform.localScale    = Vector3.one;
+        var spin = crystal.AddComponent<Enigma.Map.SlowSpin>();
+        ConfigureSlowSpin(spin, 20f, 0.08f);
 
-        crystal.AddComponent<Enigma.Map.SlowSpin>();
         return crystal.transform;
+    }
+
+    /// <summary>SlowSpin の回転速度/ボブ量を SerializedObject 経由で設定（フィールド名はベストエフォート）。</summary>
+    private static void ConfigureSlowSpin(Enigma.Map.SlowSpin spin, float degPerSec, float bob)
+    {
+        var so = new SerializedObject(spin);
+        var sp = so.FindProperty("_degreesPerSecond") ?? so.FindProperty("_spinSpeed")
+                 ?? so.FindProperty("_speed");
+        if (sp != null) sp.floatValue = degPerSec;
+        var bp = so.FindProperty("_bobAmplitude") ?? so.FindProperty("_bobHeight")
+                 ?? so.FindProperty("_bob");
+        if (bp != null) bp.floatValue = bob;
+        so.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    /// <summary>Cylinder プリミティブを台座部材として追加。CapsuleCollider は除去。</summary>
+    private static GameObject AddTowerCylinder(
+        Transform parent, string name, float radius, float height, float centerY, Material mat)
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        go.name = name;
+        Object.DestroyImmediate(go.GetComponent<CapsuleCollider>());
+        go.transform.SetParent(parent, false);
+        // Cylinder メッシュは高2 → scaleY=h/2、デフォルト半径0.5 → scaleXZ=r*2
+        go.transform.localScale    = new Vector3(radius * 2f, height * 0.5f, radius * 2f);
+        go.transform.localPosition = new Vector3(0f, centerY, 0f);
+        SetMat(go, mat);
+        SetStatic(go);
+        return go;
+    }
+
+    /// <summary>Cube プリミティブを部材として追加。BoxCollider は除去。</summary>
+    private static GameObject AddTowerBox(
+        Transform parent, string name, Vector3 size, Vector3 localPos, Material mat)
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        go.name = name;
+        Object.DestroyImmediate(go.GetComponent<BoxCollider>());
+        go.transform.SetParent(parent, false);
+        go.transform.localScale    = size;
+        go.transform.localPosition = localPos;
+        SetMat(go, mat);
+        SetStatic(go);
+        return go;
+    }
+
+    /// <summary>トーラスメッシュをチーム色トリムとして追加（コライダーなし、水平に寝かせる）。</summary>
+    private static void AddTowerTorus(
+        Transform parent, string name, Mesh mesh, float centerY, Material mat)
+    {
+        var go = CreateMeshGo(name, mesh, mat, parent);
+        go.transform.localPosition = new Vector3(0f, centerY, 0f);
+        SetStatic(go);
+    }
+
+    /// <summary>石材マテリアル "TowerStone" = Enigma/Toon (灰) + ApplyWutheringRamp。</summary>
+    private static Material GetOrCreateTowerStoneMat()
+    {
+        var mat = GetOrCreateMat("TowerStone", new Color(0.62f, 0.62f, 0.66f));
+        ApplyWutheringRamp(mat);
+        return mat;
+    }
+
+    /// <summary>チーム色トリムマテリアル "TowerTrimBlue/Red" = Enigma/Toon。</summary>
+    private static Material GetOrCreateTowerTrimMat(bool isBlue)
+    {
+        var name  = isBlue ? "TowerTrimBlue" : "TowerTrimRed";
+        var color = isBlue ? new Color(0.35f, 0.5f, 0.85f) : new Color(0.85f, 0.4f, 0.35f);
+        return GetOrCreateMat(name, color);
     }
 
     /// <summary>Projectile プレハブ生成後に全タワーの TowerAttack へ結線する。</summary>
@@ -2831,12 +2919,11 @@ public static class BuildAetherRiftMap
     {
         var list = new System.Collections.Generic.List<NatureSpecies>();
 
-        // 出現重み: Tree 40 / Birch 25 / Pine 25 / TreeToon 10。DeadTree は専用枠。
-        AddSpecies(list, "Tree_1",             "Tree",     weight: 40, isDead: false);
-        AddSpecies(list, "Birch_1",            "Birch",    weight: 25, isDead: false);
-        AddSpecies(list, "Pine_1",             "Pine",     weight: 25, isDead: false);
-        AddSpecies(list, "TreeToonStylized01", "TreeToon", weight: 10, isDead: false);
-        // DeadTree は通常の重みテーブルに含めず、確率判定で別扱い（weight 0）。
+        // 出現重み: Tree 55 / Birch 45。DeadTree は専用枠。
+        // Pine_1 / TreeToonStylized01 は葉が黒く描画されるため配置から除外（重みを Tree/Birch に再配分）。
+        AddSpecies(list, "Tree_1",             "Tree",     weight: 55, isDead: false);
+        AddSpecies(list, "Birch_1",            "Birch",    weight: 45, isDead: false);
+        // DeadTree は通常の重みテーブルに含めず、確率判定で別扱い（weight 0、ジャングル奥のみ低確率）。
         AddSpecies(list, "DeadTree_1",         "DeadTree", weight: 0,  isDead: true);
 
         return list;

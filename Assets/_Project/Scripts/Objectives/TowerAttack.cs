@@ -91,8 +91,8 @@ namespace Enigma.Objective
             if (_projectilePrefab == null || _muzzle == null) return;
             if (!_attackCd.TryConsume(Time.time)) return;
 
-            var dir = (targetPos - _muzzle.position);
-            dir.y = 0f;
+            // 銃口が高所(クリスタル)にあるため、対象の胴体高さを狙う3D方向で撃つ
+            var dir = (targetPos + Vector3.up * 0.9f - _muzzle.position);
             if (dir.sqrMagnitude < 0.001f) return;
             dir.Normalize();
 
@@ -105,8 +105,7 @@ namespace Enigma.Objective
         {
             _dead = true;
 
-            // 倒壊演出: 90度傾ける
-            transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            // 倒壊演出は DeathPresenter(Sink) が担うため、ここでは傾けない（二重演出回避）。
 
             // コライダーを無効化して通行可能にする
             foreach (var col in GetComponents<Collider>())
