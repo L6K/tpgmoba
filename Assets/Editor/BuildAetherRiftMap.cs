@@ -889,6 +889,21 @@ public static class BuildAetherRiftMap
         soHudCtrl.FindProperty("_skillCaster").objectReferenceValue  = skillCaster;
         soHudCtrl.ApplyModifiedPropertiesWithoutUndo();
 
+        // ヒットフィール: プレイヤーのヒットフラッシュ + 被弾フィードバック（シェイク + 赤ビネット）
+        player.AddComponent<Enigma.Combat.HitFlash>();
+        var hitFeedback = player.AddComponent<Enigma.Character.PlayerHitFeedback>();
+        var soHitFeedback = new SerializedObject(hitFeedback);
+        soHitFeedback.FindProperty("_camera").objectReferenceValue = orbitCam;
+        soHitFeedback.FindProperty("_hud").objectReferenceValue    = hudCtrl;
+        soHitFeedback.ApplyModifiedPropertiesWithoutUndo();
+
+        // キルフィード司令塔（シーンに1個）。HUD への参照を結線する
+        var killFeedGo = new GameObject("KillFeedDirector");
+        var killFeedDirector = killFeedGo.AddComponent<Enigma.Combat.KillFeedDirector>();
+        var soKillFeed = new SerializedObject(killFeedDirector);
+        soKillFeed.FindProperty("_hud").objectReferenceValue = hudCtrl;
+        soKillFeed.ApplyModifiedPropertiesWithoutUndo();
+
         // ShopController: ショップオーバーレイ制御・購入処理（catalog 結線はステップ15の後）
         var shopCtrl   = hudGo.AddComponent<ShopController>();
         var soShopCtrl = new SerializedObject(shopCtrl);
@@ -2271,6 +2286,9 @@ public static class BuildAetherRiftMap
         // 死亡演出: 倒れる。リスポーン型なので破棄しない（見た目は UnityChanModel 子）
         var champVisual = go.transform.Find("UnityChanModel");
         AddDeathPresenter(go, mode: 0, destroyWhenDone: false, visualRoot: champVisual);
+
+        // 被弾ヒットフラッシュ（チャンピオンのみ。ミニオンには付けない）
+        go.AddComponent<Enigma.Combat.HitFlash>();
 
         return ai;
     }

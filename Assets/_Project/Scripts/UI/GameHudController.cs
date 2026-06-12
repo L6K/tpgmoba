@@ -78,6 +78,18 @@ namespace Enigma.UI
         private PlayerWallet _playerWallet;
         private PlayerItems  _playerItems;
 
+        // 戦闘フィードバック用要素（被弾ビネット・キルフィード・センターアナウンス）
+        private VisualElement _damageVignette;
+        private VisualElement _killFeed;
+        private Label         _announce;
+
+        // KillFeedDirector が結線するキルフィードモデル。Changed でフィード行を再構築する
+        private KillFeedModel _killFeedModel;
+
+        // チーム色（青=#6FA8FF / 赤=#FF7A6F）。キラーのチームで行色を決める
+        private static readonly Color TeamColorBlue = new Color(0x6F / 255f, 0xA8 / 255f, 0xFF / 255f);
+        private static readonly Color TeamColorRed  = new Color(0xFF / 255f, 0x7A / 255f, 0x6F / 255f);
+
         private void OnEnable()
         {
             // GameServices が未初期化の場合の保険（HomeScreenController と同様）
@@ -130,6 +142,18 @@ namespace Enigma.UI
             _tooltipStats = root.Q<Label>("hud-tooltip-stats");
             _tooltipDesc  = root.Q<Label>("hud-tooltip-desc");
 
+            // 戦闘フィードバック要素
+            _damageVignette = root.Q<VisualElement>("hud-damage-vignette");
+            _killFeed       = root.Q<VisualElement>("hud-killfeed");
+            _announce       = root.Q<Label>("hud-announce");
+
+            // OnEnable が再入してもモデルが既に結線済みなら再購読・再構築する
+            if (_killFeedModel != null)
+            {
+                _killFeedModel.Changed += RebuildKillFeed;
+                RebuildKillFeed();
+            }
+
             SetupSkillProgressionUi();
         }
 
@@ -137,6 +161,65 @@ namespace Enigma.UI
         {
             if (_progression != null)
                 _progression.Changed -= OnProgressionChanged;
+            if (_killFeedModel != null)
+                _killFeedModel.Changed -= RebuildKillFeed;
+        }
+
+        // KillFeedDirector からキルフィードモデルを結線する。要素取得済みなら即購読・再構築する。
+        public void BindKillFeed(KillFeedModel model)
+        {
+            if (_killFeedModel == model) return;
+            if (_killFeedModel != null)
+                _killFeedModel.Changed -= RebuildKillFeed;
+
+            _killFeedModel = model;
+
+            if (_killFeedModel != null && _killFeed != null)
+            {
+                _killFeedModel.Changed += RebuildKillFeed;
+                RebuildKillFeed();
+            }
+        }
+
+        // キルフィードを最新順に再構築する。キラーのチーム色で killer/victim 名を着色する
+        private void RebuildKillFeed()
+        {
+            if (_killFeed == null || _killFeedModel == null) return;
+
+            _killFeed.Clear();
+            foreach (var e in _killFeedModel.Entries)
+            {
+                var row = new Label($"{e.KillerName} ▶ {e.VictimName}");
+                row.AddToClassList("hud-killfeed-row");
+                row.pickingMode = PickingMode.Ignore;
+                row.style.color = new StyleColor(
+                    e.KillerTeam == Enigma.Combat.TeamId.Blue ? TeamColorBlue : TeamColorRed);
+                _killFeed.Add(row);
+            }
+        }
+
+        // 被弾時に画面端の赤ビネットを 0.35→0 でフラッシュする（PlayerHitFeedback から呼ぶ）。
+        // USS の transition(0.4s) に乗せるため、即時 0.35 をセットしてから次フレームで 0 へ戻す
+        public void FlashDamageVignette()
+        {
+            if (_damageVignette == null) return;
+
+            _damageVignette.style.opacity = 0.35f;
+            _damageVignette.schedule.Execute(() => _damageVignette.style.opacity = 0f).StartingIn(16);
+        }
+
+        // プレイヤーがキルした/された時にセンターアナウンスを 1.5 秒表示する。
+        // killed=true で「倒された…」赤、false で「キル!」金色
+        public void AnnounceKill(bool killed)
+        {
+            if (_announce == null) return;
+
+            _announce.text = killed ? "倒された…" : "キル!";
+            _announce.style.color = new StyleColor(
+                killed ? TeamColorRed : new Color(0xEB / 255f, 0xC8 / 255f, 0x5A / 255f));
+
+            _announce.style.opacity = 1f;
+            _announce.schedule.Execute(() => _announce.style.opacity = 0f).StartingIn(1500);
         }
 
         // ピップ生成・ボタンクリック登録・ホバー登録を一度だけ行う

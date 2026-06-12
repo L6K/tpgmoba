@@ -21,6 +21,20 @@ namespace Enigma.Character
         private float _pitch = 10f;
         private float _distance = DistanceDefault;
 
+        // 被弾シェイク: 振幅は時間で減衰し、毎フレーム System.Random でオフセットを揺らす。
+        // UnityEngine.Random を避けるため独自の乱数源を持つ
+        private const float ShakeDecaySeconds = 0.5f;
+        private readonly System.Random _shakeRng = new System.Random();
+        private float _shakeAmplitude;
+
+        // 外部（被弾フィードバック）から呼び出してシェイクを開始/上書きする。
+        // amplitude=0.15 を基準に、より強い揺れが来たときのみ上書きする
+        public void AddShake(float amplitude)
+        {
+            if (amplitude > _shakeAmplitude)
+                _shakeAmplitude = amplitude;
+        }
+
         private void Start()
         {
             // ドラッグ中以外は常時表示
@@ -66,8 +80,21 @@ namespace Enigma.Character
             var pivotPos  = _target.position + Vector3.up * HeightOffset;
             var backOffset = rotation * new Vector3(0f, 0f, -_distance);
 
-            transform.position = pivotPos + backOffset;
+            transform.position = pivotPos + backOffset + ComputeShakeOffset();
             transform.rotation = rotation;
+        }
+
+        // 減衰中のランダムオフセットを返す。振幅は ShakeDecaySeconds で 0 へ向かって線形減衰する
+        private Vector3 ComputeShakeOffset()
+        {
+            if (_shakeAmplitude <= 0f) return Vector3.zero;
+
+            _shakeAmplitude -= 0.15f / ShakeDecaySeconds * Time.deltaTime;
+            if (_shakeAmplitude < 0f) _shakeAmplitude = 0f;
+
+            float x = ((float)_shakeRng.NextDouble() * 2f - 1f) * _shakeAmplitude;
+            float y = ((float)_shakeRng.NextDouble() * 2f - 1f) * _shakeAmplitude;
+            return new Vector3(x, y, 0f);
         }
     }
 }

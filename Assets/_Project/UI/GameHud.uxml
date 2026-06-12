@@ -156,6 +156,15 @@
         <ui:Label name="hud-shop-hint" class="hud-shop-hint" text="ショップは本拠地でのみ利用できます"
                   style="display: none;" />
 
+        <!-- 被弾時の画面端赤ビネット（全画面・操作を遮らない・通常は透明） -->
+        <ui:VisualElement name="hud-damage-vignette" class="hud-damage-vignette" picking-mode="Ignore" />
+
+        <!-- 右上: キルフィード縦並びコンテナ（Controller が行 Label を再構築） -->
+        <ui:VisualElement name="hud-killfeed" class="hud-killfeed" picking-mode="Ignore" />
+
+        <!-- 中央上: キルアナウンス（プレイヤーのキル/デス時に一時表示） -->
+        <ui:Label name="hud-announce" class="hud-announce" text="" picking-mode="Ignore" />
+
     </ui:VisualElement>
 
     <!-- ショップオーバーレイ（全画面・通常は非表示） -->

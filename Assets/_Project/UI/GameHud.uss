@@ -783,3 +783,69 @@
     -unity-font-definition: url("Fonts/NotoSansJP.ttf");
     -unity-text-align: lower-right;
 }
+
+/* ── 被弾フィードバック: 画面端赤ビネット ───────────── */
+/* 全画面に重ね、縁が赤く中央が透明になるよう放射グラデ風に縁取る。
+   opacity を Controller が 0.35→0 へ遷移させるので transition を仕込む */
+.hud-damage-vignette {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+    border-left-width: 120px;
+    border-right-width: 120px;
+    border-top-width: 90px;
+    border-bottom-width: 90px;
+    border-left-color: rgba(200, 30, 30, 0.55);
+    border-right-color: rgba(200, 30, 30, 0.55);
+    border-top-color: rgba(200, 30, 30, 0.55);
+    border-bottom-color: rgba(200, 30, 30, 0.55);
+    transition-property: opacity;
+    transition-duration: 0.4s;
+}
+
+/* ── キルフィード: 右上の縦並び ───────────────────── */
+.hud-killfeed {
+    position: absolute;
+    top: 64px;
+    right: 16px;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.hud-killfeed-row {
+    margin-bottom: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    background-color: rgba(8, 10, 18, 0.75);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--color-gold-dim);
+    border-right-color: var(--color-gold-dim);
+    border-top-color: var(--color-gold-dim);
+    border-bottom-color: var(--color-gold-dim);
+    font-size: 14px;
+    color: var(--color-text);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+}
+
+/* ── キルアナウンス: 中央上の大テキスト ───────────── */
+.hud-announce {
+    position: absolute;
+    top: 96px;
+    left: 0;
+    right: 0;
+    opacity: 0;
+    font-size: 48px;
+    -unity-text-align: upper-center;
+    -unity-font-style: bold;
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    transition-property: opacity;
+    transition-duration: 0.3s;
+}
