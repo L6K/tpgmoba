@@ -15,6 +15,7 @@ using Enigma.Minimap;
 using Enigma.Minion;
 using Enigma.Core;
 using Enigma.Item;
+using Enigma.Map;
 
 public static class BuildAetherRiftMap
 {
@@ -1672,6 +1673,14 @@ public static class BuildAetherRiftMap
             StaticEditorFlags.BatchingStatic);
     }
 
+    // 実行時に倒して動かすオブジェクト用。BatchingStatic だと静的バッチ済みメッシュが
+    // 実行時の Transform 変更に追従しないため ContributeGI のみ付ける(子も再帰的に)。
+    private static void SetStaticContributeGiOnly(GameObject go)
+    {
+        foreach (var t in go.GetComponentsInChildren<Transform>(true))
+            GameObjectUtility.SetStaticEditorFlags(t.gameObject, StaticEditorFlags.ContributeGI);
+    }
+
     private static void SetMat(GameObject go, Material mat)
     {
         var mr = go.GetComponent<Renderer>();
@@ -2166,6 +2175,9 @@ public static class BuildAetherRiftMap
 
         // 死亡演出: 沈下。見た目は CoreVisual 子（BuildBossCoreVisual が生成）
         AddDeathPresenter(boss, mode: 1, destroyWhenDone: false, visualRoot: boss.transform.Find("CoreVisual"));
+
+        // 討伐時に森の木を波及的に倒す演出
+        boss.AddComponent<ForestToppleDirector>();
     }
 
     /// <summary>
@@ -2810,7 +2822,8 @@ public static class BuildAetherRiftMap
             SetMat(treeGo, matJungle);
         }
         treeGo.name = $"Tree_Q{q}_{index:D2}";
-        SetStatic(treeGo);
+        SetStaticContributeGiOnly(treeGo);
+        treeGo.AddComponent<TreeTopplePresenter>();
     }
 
     /// <summary>
