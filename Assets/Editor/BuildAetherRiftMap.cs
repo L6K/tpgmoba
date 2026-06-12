@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -711,6 +712,12 @@ public static class BuildAetherRiftMap
         player.AddComponent<PlayerWallet>();
         player.AddComponent<PlayerItems>();
 
+        // 泉回復(青ベースの泉付近で毎秒回復)
+        var playerFountain   = player.AddComponent<Enigma.Combat.FountainRegen>();
+        var soPlayerFountain = new SerializedObject(playerFountain);
+        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-52f, 1.1f, 10f);
+        soPlayerFountain.ApplyModifiedPropertiesWithoutUndo();
+
         // MatchBootstrap: ピック済みキャラのスキルを Start 時に注入する
         var bootstrap    = player.AddComponent<MatchBootstrap>();
         var soBootstrap  = new SerializedObject(bootstrap);
@@ -784,6 +791,9 @@ public static class BuildAetherRiftMap
         var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
         CreateEnemyDummy("EnemyDummy_Lane",  new Vector3(-31.8f, 1.1f, 31.8f), matRed, matBarRed);
         CreateEnemyDummy("EnemyDummy_River", new Vector3(3.5f,   1.1f, -28f),  matRed, matBarRed);
+
+        // 11c. 赤チーム レーナー AI チャンピオン（TOPレーンを北回りに進軍）
+        CreateEnemyChampion(matRed, matBarRed, projPrefab.GetComponent<Projectile>());
 
         // 7b. TelegraphSector プレハブ（空 GO + MeshFilter + MeshRenderer + TelegraphSector）
         var sectorGo   = new GameObject("TelegraphSector");
@@ -1211,9 +1221,14 @@ public static class BuildAetherRiftMap
         var capsuleRenderer = player.GetComponent<MeshRenderer>();
         if (capsuleRenderer != null) capsuleRenderer.enabled = false;
 
-        var soPc = new SerializedObject(player.GetComponent<PlayerController>());
-        soPc.FindProperty("_animator").objectReferenceValue = animator;
-        soPc.ApplyModifiedPropertiesWithoutUndo();
+        // PlayerController がある場合のみ Animator を結線する（敵 AI には存在しない）
+        var pc = player.GetComponent<PlayerController>();
+        if (pc != null)
+        {
+            var soPc = new SerializedObject(pc);
+            soPc.FindProperty("_animator").objectReferenceValue = animator;
+            soPc.ApplyModifiedPropertiesWithoutUndo();
+        }
 
         ApplyToonMaterials(model);
     }
@@ -1672,6 +1687,117 @@ public static class BuildAetherRiftMap
         var soReward = new SerializedObject(reward);
         soReward.FindProperty("_amount").floatValue = 50f;
         soReward.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // 赤チームのレーナー AI チャンピオン1体を生成する。
+    // CharacterController + HealthComponent(500) + TeamTag(Red) + EnemyChampionAI +
+    // XpReward(100)/GoldReward(300)。UnityChan モデル・足元リング・頭上バーを結線する。
+    private static void CreateEnemyChampion(Material matBody, Material matBarRed, Projectile projPrefab)
+    {
+        var spawnPos = new Vector3(52f, 1.1f, -6f);
+
+        // ベースはカプセル（モデルが乗るまでの当たり/フォールバック表示）
+        var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+        go.name = "EnemyChampion";
+        go.transform.position = spawnPos;
+        SetMat(go, matBody);
+
+        // 既定のカプセルコライダーは消し、CharacterController + クリック用カプセルを付ける
+        Object.DestroyImmediate(go.GetComponent<CapsuleCollider>());
+
+        var cc = go.AddComponent<CharacterController>();
+        cc.height = 2f;
+        cc.radius = 0.5f;
+        cc.center = new Vector3(0f, 0f, 0f);
+
+        // クリック判定用の追加カプセル（プレイヤー/ミニオン同様）
+        var clickCap = go.AddComponent<CapsuleCollider>();
+        clickCap.radius = 0.6f;
+        clickCap.height = 2.4f;
+        clickCap.center = new Vector3(0f, 0f, 0f);
+
+        var hc = go.AddComponent<HealthComponent>();
+        var soHc = new SerializedObject(hc);
+        soHc.FindProperty("_maxHp").floatValue = 500f;
+        soHc.ApplyModifiedPropertiesWithoutUndo();
+
+        var tt = go.AddComponent<TeamTag>();
+        var soTt = new SerializedObject(tt);
+        soTt.FindProperty("_team").enumValueIndex = (int)TeamId.Red;
+        soTt.ApplyModifiedPropertiesWithoutUndo();
+
+        // 泉回復(赤ベースの泉=リスポーン地点付近で毎秒回復)
+        var botFountain   = go.AddComponent<Enigma.Combat.FountainRegen>();
+        var soBotFountain = new SerializedObject(botFountain);
+        soBotFountain.FindProperty("_fountainCenter").vector3Value = spawnPos;
+        soBotFountain.ApplyModifiedPropertiesWithoutUndo();
+
+        var xp = go.AddComponent<XpReward>();
+        var soXp = new SerializedObject(xp);
+        soXp.FindProperty("_amount").floatValue = 100f;
+        soXp.ApplyModifiedPropertiesWithoutUndo();
+
+        var gold = go.AddComponent<GoldReward>();
+        var soGold = new SerializedObject(gold);
+        soGold.FindProperty("_amount").intValue = 300;
+        soGold.ApplyModifiedPropertiesWithoutUndo();
+
+        // 頭上 HPバー（レベル表示なし）
+        var wrapper = CreateWorldHealthBar(go.transform, 1.05f, 0.65f, matBarRed, 500f);
+
+        // 銃口 Transform（攻撃弾の発射点）。胸高・前方
+        var muzzle = new GameObject("Muzzle");
+        muzzle.transform.SetParent(go.transform, false);
+        muzzle.transform.localPosition = new Vector3(0f, 0.4f, 0.6f);
+
+        // 識別用の赤い半透明リング（半径1.2 の薄い円柱、コライダーなし）
+        var ringMat = GetOrCreateTransparentMat("EnemyChampionRing", new Color(0.9f, 0.15f, 0.15f, 0.5f));
+        var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        ring.name = "EnemyRing";
+        ring.transform.SetParent(go.transform, false);
+        ring.transform.localPosition = new Vector3(0f, -0.98f, 0f); // 足元
+        ring.transform.localScale    = new Vector3(2.4f, 0.02f, 2.4f); // 直径2.4 = 半径1.2
+        SetMat(ring, ringMat);
+        Object.DestroyImmediate(ring.GetComponent<CapsuleCollider>());
+
+        // UnityChan モデルを子付け（プレイヤー専用処理は内部で分岐済み）
+        AttachUnityChanModel(go);
+
+        var ai = go.AddComponent<EnemyChampionAI>();
+
+        // TOPレーン（z>0 側）の経路: 赤ベース開口(50,0,10) → 半径45 を北回りに
+        // 12°刻みでアーク → 青ベース開口(-50,0,10)。
+        var waypoints = BuildTopLaneWaypoints();
+
+        var soAi = new SerializedObject(ai);
+        soAi.FindProperty("_projectilePrefab").objectReferenceValue = projPrefab;
+        soAi.FindProperty("_muzzle").objectReferenceValue           = muzzle.transform;
+        soAi.FindProperty("_barFill").objectReferenceValue          = wrapper;
+
+        var wpProp = soAi.FindProperty("_waypoints");
+        wpProp.arraySize = waypoints.Length;
+        for (int i = 0; i < waypoints.Length; i++)
+            wpProp.GetArrayElementAtIndex(i).vector3Value = waypoints[i];
+
+        soAi.ApplyModifiedPropertiesWithoutUndo();
+    }
+
+    // TOPレーン経路を赤ベース→青ベース方向（角度 20°→160°、12°刻み）で構築する。
+    // ミニオンの ArcPt と同じ半径45・角度系。
+    private static Vector3[] BuildTopLaneWaypoints()
+    {
+        Vector3 ArcPt(float deg)
+        {
+            float r = deg * Mathf.Deg2Rad;
+            return new Vector3(45f * Mathf.Cos(r), 0f, 45f * Mathf.Sin(r));
+        }
+
+        var list = new List<Vector3>();
+        list.Add(new Vector3(50f, 0f, 10f)); // 赤ベース開口
+        for (float deg = 20f; deg <= 160f + 0.01f; deg += 12f)
+            list.Add(ArcPt(deg));
+        list.Add(new Vector3(-50f, 0f, 10f)); // 青ベース開口
+        return list.ToArray();
     }
 
     private static MinionAI CreateMinionPrefab()

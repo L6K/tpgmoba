@@ -22,6 +22,25 @@ namespace Enigma.Tests
         }
 
         [Test]
+        public void Heal_ClampsToMaxHp()
+        {
+            var model = new HealthModel(100f);
+            model.TakeDamage(30f);
+            model.Heal(50f);
+            Assert.AreEqual(100f, model.CurrentHp, 0.001f);
+        }
+
+        [Test]
+        public void Heal_DoesNothingWhenDead()
+        {
+            var model = new HealthModel(100f);
+            model.TakeDamage(100f);
+            model.Heal(50f);
+            Assert.IsTrue(model.IsDead);
+            Assert.AreEqual(0f, model.CurrentHp, 0.001f);
+        }
+
+        [Test]
         public void Died_FiresOnlyOnce()
         {
             var model = new HealthModel(100f);

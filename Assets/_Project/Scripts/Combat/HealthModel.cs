@@ -43,6 +43,16 @@ namespace Enigma.Combat
             Changed?.Invoke(CurrentHp, MaxHp);
         }
 
+        // 泉(ベース)回復など。死亡中は無効
+        public void Heal(float amount)
+        {
+            if (IsDead || amount <= 0f) return;
+            float before = CurrentHp;
+            CurrentHp = Math.Min(MaxHp, CurrentHp + amount);
+            if (CurrentHp != before)
+                Changed?.Invoke(CurrentHp, MaxHp);
+        }
+
         public void Revive()
         {
             _diedFired = false;
