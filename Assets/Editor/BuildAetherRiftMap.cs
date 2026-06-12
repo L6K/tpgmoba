@@ -1459,6 +1459,9 @@ public static class BuildAetherRiftMap
         soSw.FindProperty("_attack").objectReferenceValue = LoadFirstClip("Assets/UnityChan/Animations/unitychan_HANDUP00_R.fbx");
         // _controller はホスト（player 引数の GameObject）の CharacterController。velocity で歩行判定する
         soSw.FindProperty("_controller").objectReferenceValue = player.GetComponent<CharacterController>();
+        // 攻撃は上半身レイヤーのみへ適用し、下半身は移動アニメ（Idle/Walk）を継続させる。
+        // ユニティちゃんはヒューマノイドなので上半身マスクが効く（Generic リグは結線しない）。
+        soSw.FindProperty("_attackMask").objectReferenceValue = GetOrCreateUpperBodyMask();
         soSw.ApplyModifiedPropertiesWithoutUndo();
 
         // プレイヤー分岐のみ: マズルを右手ボーンへ付け替えてビーム発射点を手元に寄せる。
@@ -1505,6 +1508,36 @@ public static class BuildAetherRiftMap
             if (sub is AnimationClip clip && !clip.name.StartsWith("__preview__"))
                 return clip;
         return null;
+    }
+
+    /// <summary>
+    /// 攻撃レイヤー用の上半身 AvatarMask を取得（無ければ生成）する。
+    /// ヒューマノイドのボディパーツを全て有効化したうえで、下半身・ルート・足IKを無効化し、
+    /// 上半身（胴/腕/頭/手指）のみが攻撃アニメに置き換わるようにする。
+    /// </summary>
+    private const string UpperBodyMaskPath = "Assets/_Project/Animations/UpperBodyMask.asset";
+    private static AvatarMask GetOrCreateUpperBodyMask()
+    {
+        var existing = AssetDatabase.LoadAssetAtPath<AvatarMask>(UpperBodyMaskPath);
+        if (existing != null) return existing;
+
+        var mask = new AvatarMask();
+        // まず全ボディパーツを有効化
+        for (int i = 0; i < (int)AvatarMaskBodyPart.LastBodyPart; i++)
+            mask.SetHumanoidBodyPartActive((AvatarMaskBodyPart)i, true);
+        // 下半身・ルート・足IK を無効化（移動レイヤーが担当する）
+        mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftLeg, false);
+        mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightLeg, false);
+        mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.Root, false);
+        mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.LeftFootIK, false);
+        mask.SetHumanoidBodyPartActive(AvatarMaskBodyPart.RightFootIK, false);
+
+        var dir = Path.GetDirectoryName(UpperBodyMaskPath);
+        if (!AssetDatabase.IsValidFolder(dir))
+            Directory.CreateDirectory(dir);
+        AssetDatabase.CreateAsset(mask, UpperBodyMaskPath);
+        AssetDatabase.SaveAssets();
+        return mask;
     }
 
     // 元マテリアルのメインテクスチャを引き継いだ Enigma/Toon マテリアルに差し替える
