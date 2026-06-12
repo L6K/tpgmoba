@@ -1,5 +1,6 @@
 using UnityEngine;
 using Enigma.Ability;
+using Enigma.Audio;
 using Enigma.Combat;
 
 namespace Enigma.Character
@@ -59,6 +60,12 @@ namespace Enigma.Character
                     hc.TakeDamage(finalDamage, _owner);
                 else
                     damageable.TakeDamage(finalDamage);
+
+                // タワー弾は重い着弾音、それ以外は AA ヒットのバリアントを鳴らす
+                if (_owner != null && _owner.GetComponent<Enigma.Objective.TowerAttack>() != null)
+                    GameSfx.Play("tower_hit", transform.position, 0.9f);
+                else
+                    GameSfx.PlayVariant("aa_hit", 3, transform.position, 0.55f);
             }
 
             // 着弾の小バースト。AA 連射のスパムに耐えるよう小さく短命(0.25s)に。

@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Enigma.Audio;
 
 namespace Enigma.Combat
 {
@@ -116,6 +117,8 @@ namespace Enigma.Combat
             // 二重再生ガード（多段ヒット等で Died が想定外に再入しても安全に）
             if (_playing) return;
             _playing = true;
+
+            GameSfx.Play("death", transform.position, 0.8f);
 
             if (_healthBar != null) _healthBar.SetActive(false);
 

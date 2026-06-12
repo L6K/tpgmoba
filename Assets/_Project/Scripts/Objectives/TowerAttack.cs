@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Enigma.Ability;
+using Enigma.Audio;
 using Enigma.Character;
 using Enigma.Combat;
 using Enigma.Minion;
@@ -77,6 +78,9 @@ namespace Enigma.Objective
 
         private void Update()
         {
+            // プレイ開始直後の約1秒、初期化前 Update が走る環境要因の NRE バーストが
+            // 観測されたため防御(根本原因は初期化順の調査タスクへ切り出し済み)
+            if (_attackCd == null) return;
             if (_dead || _charging) return;
 
             _scanTimer += Time.deltaTime;
@@ -103,6 +107,8 @@ namespace Enigma.Objective
             // チャージ中に小バーストを2回（前半と中盤）
             if (_crystal != null)
                 SkillVfx.SpawnBurst(_crystal.position, color, 0.2f, 0.9f, 0.25f);
+
+            GameSfx.Play("tower_charge", _crystal != null ? _crystal.position : transform.position, 0.8f);
 
             float elapsed = 0f;
             bool secondBurstDone = false;
@@ -182,6 +188,7 @@ namespace Enigma.Objective
             SkillVfx.AddTrail(proj.gameObject, color, 0.18f, 0.3f);
             SkillVfx.AttachGlowCore(proj.gameObject, dir, color, 0.3f, 1.1f);
             SkillVfx.SpawnBurst(_muzzle.position, color, 0.25f, 1.0f, 0.2f);
+            GameSfx.Play("tower_fire", _muzzle.position, 0.9f);
         }
 
         private void OnDied()
@@ -189,6 +196,7 @@ namespace Enigma.Objective
             _dead = true;
 
             // 倒壊演出は DeathPresenter(Sink) が担うため、ここでは傾けない（二重演出回避）。
+            GameSfx.Play("tower_destroyed", transform.position, 1f);
 
             // コライダーを無効化して通行可能にする
             foreach (var col in GetComponents<Collider>())

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Enigma.Ability;
+using Enigma.Audio;
 
 namespace Enigma.Combat
 {
@@ -141,6 +142,7 @@ namespace Enigma.Combat
             SkillVfx.SpawnBurst(transform.position, burstColor, _radius * 0.5f, _radius * 2.2f, 0.35f);
             SkillVfx.SpawnRing(transform.position, burstColor, _radius * 0.6f, _radius * 1.4f, 0.4f);
             SkillVfx.SpawnPillar(transform.position, burstColor, _radius * 0.55f, _radius * 2.2f, 0.45f);
+            GameSfx.Play("skill_e_blast", transform.position, 0.9f);
 
             // 中心から半径内にある全コライダーを取得してダメージ。
             // CharacterController + CapsuleCollider のような複数コライダー持ちに

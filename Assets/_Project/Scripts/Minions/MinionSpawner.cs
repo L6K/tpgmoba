@@ -13,6 +13,11 @@ namespace Enigma.Minion
         [SerializeField] private float       _waveInterval    = 25f;
         [SerializeField] private Material    _teamMaterial;
 
+        // チーム間でウェーブ到着をずらすための初期遅延オフセット(ビルダーが赤側へ設定)。
+        // 完全対称だと前線がレーン中央で永久に均衡しタワーまで届かないため、
+        // 半周期ずらして前線を振動させ、自然な押し込み(ブレイクスルー)を生む
+        [SerializeField] private float       _initialDelayOffset = 0f;
+
         private const float InitialDelay   = 5f;
         private const int   WaveSize       = 3;
         private const float SpawnStagger   = 0.8f;
@@ -25,7 +30,7 @@ namespace Enigma.Minion
 
         private IEnumerator SpawnLoop()
         {
-            yield return new WaitForSeconds(InitialDelay);
+            yield return new WaitForSeconds(InitialDelay + _initialDelayOffset);
 
             while (true)
             {
@@ -64,6 +69,10 @@ namespace Enigma.Minion
 
             var instance = Object.Instantiate(_minionPrefab, spawnPos, Quaternion.identity);
             instance.Initialize(_team, waypointPositions, _teamMaterial);
+
+            // 膠着防止: 試合経過に応じて HP と攻撃力を底上げする。
+            // System.DateTime は使わず Time.timeSinceLevelLoad を試合経過時間とする。
+            instance.ApplyTimeScaling(MinionScaling.MultiplierAt(Time.timeSinceLevelLoad));
         }
 
         private List<Vector3> BuildWaypointList()

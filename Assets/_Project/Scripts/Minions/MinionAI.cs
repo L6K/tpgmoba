@@ -105,6 +105,22 @@ namespace Enigma.Minion
             }
         }
 
+        /// <summary>
+        /// 試合経過に応じた強化倍率を HP と攻撃力へ適用する（スポーナーが呼ぶ）。
+        /// HP は現 MaxHp との差分を AddMaxHp で寄せて全回復させ、攻撃力は直接乗算する。
+        /// </summary>
+        public void ApplyTimeScaling(float multiplier)
+        {
+            if (multiplier <= 1f) return;
+
+            // _health は Awake で結線済み。未結線でも遅延初期化に任せて安全に取得する。
+            var model = _health != null ? _health.Model : GetComponent<HealthComponent>().Model;
+            float delta = model.MaxHp * (multiplier - 1f);
+            if (delta > 0f) model.AddMaxHp(delta);
+
+            _attackDamage *= multiplier;
+        }
+
         private void Update()
         {
             if (_health.Model.IsDead) return;

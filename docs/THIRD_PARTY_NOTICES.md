@@ -119,6 +119,21 @@
 
 ---
 
+## Audio Assets — CC0 効果音パック (Kenney)
+
+クレジット表記: **不要**（すべて CC0 1.0 パブリックドメイン）。任意で "Audio by Kenney (kenney.nl)" と表記可
+ライセンス全文: https://creativecommons.org/publicdomain/zero/1.0/
+
+### Kenney Impact Sounds / Interface Sounds / Sci-Fi Sounds / RPG Audio
+
+- 提供: Kenney (kenney.nl)
+- ライセンス: CC0 1.0 (Public Domain)
+- 出典: https://kenney.nl/assets/impact-sounds ほか各パックページ
+- 配置: `Assets/_Project/Resources/Sfx/`（用途名にリネームした ogg 20 ファイル: aa_fire/aa_hit/skill_q_fire/skill_e_blast/skill_r_beam/skill_r_hit/tower_charge/tower_fire/tower_hit/tower_destroyed/death/level_up/rank_up/ui_click/gold/minion_hit）
+- 内容: AA・スキル・タワー・UI 等の効果音
+
+---
+
 ## Tower Assets — CC0 防衛タワーパック (OpenGameArt.org)
 
 クレジット表記: **不要**（すべて CC0 1.0 パブリックドメイン）

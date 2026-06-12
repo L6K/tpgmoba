@@ -1,4 +1,5 @@
 using UnityEngine;
+using Enigma.Audio;
 using Enigma.Combat;
 
 namespace Enigma.Character
@@ -112,6 +113,7 @@ namespace Enigma.Character
             // ビーム見た目を進行方向へ向けるため LookRotation を与える
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, _projectileSpeed, _attackDamage, gameObject);
+            GameSfx.PlayVariant("aa_fire", 3, _muzzle.position, 0.7f);
         }
     }
 }

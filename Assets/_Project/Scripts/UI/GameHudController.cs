@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UIElements;
 using Enigma.Abilities;
+using Enigma.Audio;
 using Enigma.Combat;
 using Enigma.Ability;
 using Enigma.Core;
@@ -192,8 +193,12 @@ namespace Enigma.UI
 
         private void OnLevelUpClicked(int slot)
         {
+            // ボタン押下自体のクリック音。ランクアップ成立時のみ昇格音を重ねる
+            GameSfx.PlayUi("ui_click", 0.6f);
+
             if (_progression == null || _skillCaster == null) return;
-            _progression.TryLevelUp(slot, _skillCaster.ChampionLevel);
+            if (_progression.TryLevelUp(slot, _skillCaster.ChampionLevel))
+                GameSfx.PlayUi("rank_up", 0.8f);
         }
 
         private void Update()

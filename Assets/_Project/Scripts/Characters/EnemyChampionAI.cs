@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Enigma.Ability;
+using Enigma.Audio;
 using Enigma.Combat;
 
 namespace Enigma.Character
@@ -89,6 +90,11 @@ namespace Enigma.Character
         private HealthComponent _attackerChampion;
         // 最寄り敵がチャンピオン種別か（スキル使用可否の判定に使う）。
         private bool _nearestEnemyIsChampion;
+
+        // 最寄り敵タワー/タイタンの HealthComponent（終盤にウェーブと一緒に折るため保持）。
+        private HealthComponent _nearestTowerHc;
+        // 味方ミニオンが射程内に居るか（タワーダイブ＝被弾の盾になる味方が居るかの判定）。
+        private bool _allyMinionNearby;
 
         // スロット毎の次回使用可能時刻（Time.time 基準）。初回は試合開始からずらして撃つ。
         private readonly float[] _skillReadyAt = new float[SkillSlotCount];
@@ -216,6 +222,13 @@ namespace Enigma.Character
                 bool targetIsChampion = decision.TargetIsAttackerChampion || _nearestEnemyIsChampion;
                 FaceAndAttack(target, allowSkills: targetIsChampion);
             }
+            else if (CanSiegeTower())
+            {
+                // 交戦対象が居らず、敵タワー/タイタンが AA 射程内で味方ミニオンが盾に居るとき、
+                // ウェーブと一緒にタワーを折る。移動は decision.Move のまま継続させ、
+                // スキルは無駄撃ちを避けて使わない(タワー相手は AA で十分)。
+                FaceAndAttack(_nearestTowerHc, allowSkills: false);
+            }
 
             ApplyMovement(decision.Move);
         }
@@ -229,12 +242,13 @@ namespace Enigma.Character
             _attackerChampion = null;
             _nearestEnemyIsChampion = false;
             _neutralTarget = null;
+            _nearestTowerHc = null;
+            _allyMinionNearby = false;
 
             float nearestDist = float.MaxValue;
             var nearestKind = LaneThreatKind.None;
             float towerDist = float.MaxValue;
             float attackerDist = float.MaxValue;
-            bool allyMinionNearby = false;
             bool anyEnemyChampion = false; // 敵チャンピオンを知覚したか（中立狩り抑制用）
 
             float neutralDist = float.MaxValue; // 最寄り生存中立モンスターの距離
@@ -259,7 +273,7 @@ namespace Enigma.Character
                 if (tag.Team == myTeam)
                 {
                     if (col.GetComponent<Enigma.Minion.MinionAI>() != null && dist <= _attackRange)
-                        allyMinionNearby = true;
+                        _allyMinionNearby = true;
                     continue;
                 }
 
@@ -290,7 +304,12 @@ namespace Enigma.Character
 
                 if (kind == LaneThreatKind.Tower)
                 {
-                    if (dist < towerDist) towerDist = dist;
+                    // 終盤にウェーブと一緒に折るため、最寄り敵タワー/タイタンの HC も保持する。
+                    if (dist < towerDist)
+                    {
+                        towerDist = dist;
+                        _nearestTowerHc = hc;
+                    }
                     continue;
                 }
 
@@ -327,7 +346,7 @@ namespace Enigma.Character
                 _attackerChampion != null,
                 attackerDist,
                 towerDist,
-                allyMinionNearby);
+                _allyMinionNearby);
         }
 
         private static LaneThreatKind ClassifyTarget(Collider col)
@@ -339,11 +358,11 @@ namespace Enigma.Character
             if (col.GetComponent<CharacterController>() != null || col.CompareTag("Player"))
                 return LaneThreatKind.Champion;
 
-            // タワー判定: TowerAttack コンポーネントの有無で識別する
-            if (col.GetComponentInParent<Enigma.Objective.TowerAttack>() != null)
-                return LaneThreatKind.Tower;
-
-            return LaneThreatKind.Champion;
+            // 静的オブジェクティブ(タワー/タイタン)は CharacterController を持たない。
+            // タワーは TowerAttack を持つが、タイタンは持たないため、TowerAttack の有無では
+            // なく「CharacterController 非保持の静的体」を Tower 種別として一括で扱い、
+            // タイタンも攻撃対象に含める(本陣タワー/タイタン破壊=決着のため)。
+            return LaneThreatKind.Tower;
         }
 
         // 中立狩りの1フレーム分: 空き地内(NeutralAttackRange)まで寄ってから攻撃する。
@@ -570,6 +589,17 @@ namespace Enigma.Character
             return slide.normalized;
         }
 
+        // 敵タワー/タイタンを攻囲できる状況か: 生存中の敵タワーが AA 射程内にあり、
+        // 味方ミニオンが盾として近くに居る(タワー砲のヘイトを肩代わりしてくれる)こと。
+        private bool CanSiegeTower()
+        {
+            if (_nearestTowerHc == null || _nearestTowerHc.Model.IsDead) return false;
+            if (!_allyMinionNearby) return false;
+
+            float dist = Vector3.Distance(transform.position, _nearestTowerHc.transform.position);
+            return dist <= _attackRange;
+        }
+
         private void FaceAndAttack(HealthComponent target, bool allowSkills)
         {
             if (target == null) return;
@@ -596,6 +626,7 @@ namespace Enigma.Character
             // ビーム見た目を進行方向へ向けるため LookRotation を与える
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, ProjectileSpeed, _attackDamage, gameObject);
+            GameSfx.PlayVariant("aa_fire", 3, _muzzle.position, 0.6f);
             _clipSwitcher?.PlayAttack(0.45f);
         }
 
@@ -659,6 +690,7 @@ namespace Enigma.Character
             // 発光コア + トレイル + 二段バースト（プレイヤー側と共通化）
             var color = SkillSlotColor(slot);
             SkillVfx.FireDirectionalVisuals(proj.gameObject, _muzzle.position, dir, color);
+            GameSfx.Play("skill_q_fire", _muzzle.position);
         }
 
         private void CastBotGroundAoe(int slot, SkillDefinition def, HealthComponent target)
@@ -699,6 +731,8 @@ namespace Enigma.Character
             var to    = target.transform.position + Vector3.up * 1.2f;
             SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : from, color, 0.3f, 1.2f, 0.25f);
             SkillVfx.TargetedHitVisuals(from, to, color);
+            GameSfx.Play("skill_r_beam", _muzzle != null ? _muzzle.position : from);
+            GameSfx.Play("skill_r_hit", target.transform.position, 0.8f);
         }
 
         // スロット色（プレイヤー SkillCaster と同系: Q=シアン, E=マゼンタ, R=ゴールド）

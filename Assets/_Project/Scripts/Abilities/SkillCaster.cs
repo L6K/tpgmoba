@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 using Enigma.Abilities;
+using Enigma.Audio;
 using Enigma.Character;
 using Enigma.Combat;
 using Enigma.Core;
@@ -108,6 +109,9 @@ namespace Enigma.Ability
 
         private void Update()
         {
+            // プレイ開始直後の初期化前 Update 対策(TowerAttack 同様の防御)
+            if (_castLogic == null) return;
+
             SyncSkillPointsToLevel();
             SyncCastMode();
             UpdateGroundCursor();
@@ -319,6 +323,7 @@ namespace Enigma.Ability
             // 発光コア + トレイル + 二段バースト（白コア小 + スロット色大）
             var color = SlotColor(slot);
             SkillVfx.FireDirectionalVisuals(proj.gameObject, _muzzle.position, dir, color);
+            GameSfx.Play("skill_q_fire", _muzzle.position);
         }
 
         private void CastGroundAoe(int slot, SkillDefinition def, Vector3 groundCursorPos, float scale)
@@ -359,6 +364,8 @@ namespace Enigma.Ability
             var to    = ChestPoint(target.transform);
             SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : from, color, 0.3f, 1.2f, 0.25f);
             SkillVfx.TargetedHitVisuals(from, to, color);
+            GameSfx.Play("skill_r_beam", _muzzle != null ? _muzzle.position : from);
+            GameSfx.Play("skill_r_hit", target.transform.position, 0.8f);
         }
 
         // キャスター/対象の「胸元」高さ(足元 +1.2m)を返す。ビームの見栄え用。
@@ -460,7 +467,8 @@ namespace Enigma.Ability
         /// <summary>残りクールダウンの割合（0〜1）。スキル未設定のスロットは 0 を返す。</summary>
         public float GetCooldownFraction(int slot)
         {
-            if (slot < 0 || slot >= _cooldowns.Length || _skills[slot] == null) return 0f;
+            if (slot < 0 || slot >= _cooldowns.Length || _skills[slot] == null
+                || _cooldowns[slot] == null) return 0f;
             float duration = _cooldowns[slot].Duration;
             if (duration <= 0f) return 0f;
             return Mathf.Clamp01(_cooldowns[slot].Remaining(Time.time) / duration);

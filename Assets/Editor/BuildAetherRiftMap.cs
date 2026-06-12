@@ -437,7 +437,10 @@ public static class BuildAetherRiftMap
 
                 // 接地位置 y=0。チームはタワー名の B/R プレフィックスで判定
                 bool isBlue = tname.StartsWith("Tower_B");
-                PlaceTower(tname, tPos, tmat, null, towerModel, isBlue);
+                // 外側タワー(名前に "Mid" を含む)=600、本陣寄りの内側タワー=800。
+                // 本陣防衛ほど固くして、ウェーブで段階的に折り進む設計にする。
+                float towerHp = tname.Contains("Mid") ? 600f : 800f;
+                PlaceTower(tname, tPos, tmat, null, towerModel, isBlue, towerHp);
 
                 // 足元チーム色リング
                 var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -904,6 +907,9 @@ public static class BuildAetherRiftMap
         // 14. ミニオンプレハブ + スポーナー
         var minionPrefab = CreateMinionPrefab();
         PlaceMinionSpawners(minionPrefab, matBlue, matRed);
+
+        // 14b. オーバータイム進行役(20分経過で構造物が毎秒1%減衰し必ず決着する)
+        new GameObject("OvertimeDirector").AddComponent<Enigma.Objective.OvertimeDirector>();
 
         // 15. ItemData 6種生成 & ItemShopCatalog
         var catalogItems = new System.Collections.Generic.List<ItemData>
@@ -1739,7 +1745,7 @@ public static class BuildAetherRiftMap
     /// 接地 y=0。頂上にチーム色大クリスタル(SlowSpin)を据え、muzzle はクリスタル位置に置く。
     /// </summary>
     private static void PlaceTower(string name, Vector3 pos, Material mat, Projectile projPrefab,
-        GameObject towerModel = null, bool isBlue = true)
+        GameObject towerModel = null, bool isBlue = true, float maxHp = 500f)
     {
         // towerModel(FBX)は不使用に。シグネチャ維持のため受け取るだけ
         _ = towerModel;
@@ -1758,10 +1764,10 @@ public static class BuildAetherRiftMap
         cap.height = TowerHeight;
         cap.center = new Vector3(0f, TowerHeight * 0.5f, 0f);
 
-        // HP
+        // HP（外側=600 / 内側=800 を呼び出し元から渡す。既定 500 は後方互換）
         var hc = go.AddComponent<HealthComponent>();
         var soHc = new SerializedObject(hc);
-        soHc.FindProperty("_maxHp").floatValue = 500f;
+        soHc.FindProperty("_maxHp").floatValue = maxHp;
         soHc.ApplyModifiedPropertiesWithoutUndo();
 
         // チーム
@@ -1788,7 +1794,7 @@ public static class BuildAetherRiftMap
         var matBar = isBlue
             ? GetOrCreateBarMat("BarGreen", new Color(0.30f, 0.85f, 0.35f))
             : GetOrCreateBarMat("BarRed",   new Color(0.92f, 0.30f, 0.25f));
-        CreateWorldHealthBar(go.transform, 1.4f, 7.6f, matBar, 500f);
+        CreateWorldHealthBar(go.transform, 1.4f, 7.6f, matBar, maxHp);
 
         // タワー撃破で100XP付与
         var towerReward = go.AddComponent<XpReward>();
@@ -2042,7 +2048,7 @@ public static class BuildAetherRiftMap
 
         var hc = go.AddComponent<HealthComponent>();
         var soHc = new SerializedObject(hc);
-        soHc.FindProperty("_maxHp").floatValue = 2000f;
+        soHc.FindProperty("_maxHp").floatValue = 2500f;
         soHc.ApplyModifiedPropertiesWithoutUndo();
 
         var tt   = go.AddComponent<TeamTag>();
@@ -2589,6 +2595,10 @@ public static class BuildAetherRiftMap
         soSpawner.FindProperty("_minionPrefab").objectReferenceValue = minionPrefab;
         soSpawner.FindProperty("_team").enumValueIndex               = (int)team;
         soSpawner.FindProperty("_teamMaterial").objectReferenceValue = teamMaterial;
+        // 赤側はウェーブを半周期(12.5s)遅らせ、前線を振動させて自然な押し込みを生む
+        // (完全対称だとレーン中央で永久均衡しタワーまで届かない)
+        soSpawner.FindProperty("_initialDelayOffset").floatValue =
+            team == TeamId.Red ? 12.5f : 0f;
 
         // ウェイポイント用の空 GO を生成して結線
         var wpArray = soSpawner.FindProperty("_waypoints");
