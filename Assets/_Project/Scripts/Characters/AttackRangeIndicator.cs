@@ -3,7 +3,8 @@ using UnityEngine.InputSystem;
 
 namespace Enigma.Character
 {
-    // A キー長押し中だけ AA 射程を示す円リングを足元に表示する。
+    // Alt キー長押し中だけ AA 射程を示す円リングを足元に表示する
+    // (A は WASD 移動と重複するため Alt に割当)。
     // 半径はピック/強化で変動しうるため、表示中は毎フレーム AutoAttack の射程で更新する。
     public sealed class AttackRangeIndicator : MonoBehaviour
     {
@@ -44,7 +45,9 @@ namespace Enigma.Character
 
         private void Update()
         {
-            bool show = Keyboard.current?.aKey.isPressed == true && _autoAttack != null;
+            var kb = Keyboard.current;
+            bool show = kb != null && _autoAttack != null &&
+                        (kb.leftAltKey.isPressed || kb.rightAltKey.isPressed);
 
             if (_line.gameObject.activeSelf != show)
                 _line.gameObject.SetActive(show);

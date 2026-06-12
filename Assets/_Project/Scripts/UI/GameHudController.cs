@@ -366,19 +366,19 @@ namespace Enigma.UI
             }
         }
 
-        // + ボタンを対応スロットの上辺中央に重ねる（hud-skills 基準の相対座標）
+        // + ボタンを対応スロット上端の内側に全幅で重ねる（hud-skills 基準の相対座標）。
+        // パネル境界の外（負の top）はピッキング不能になるため内側配置が必須
         private void PositionLevelUpButton(int slot)
         {
             var btn  = _skillLevelUp[slot];
             var slotEl = _skillSlots[slot];
             if (btn == null || slotEl == null) return;
 
-            // 親（hud-skills）基準での slot の左端 + 中央寄せ
             float slotLeft  = slotEl.layout.x;
             float slotWidth = slotEl.layout.width;
             if (float.IsNaN(slotLeft) || float.IsNaN(slotWidth)) return; // レイアウト未解決
-            float left = slotLeft + slotWidth * 0.5f - 10f; // ボタン幅 20 の半分
-            btn.style.left = left;
+            btn.style.left  = slotLeft;
+            btn.style.width = slotWidth;
         }
 
         // Targeting 種別に対応するアイコンクラスのみを残し、他を外す。
