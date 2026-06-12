@@ -51,8 +51,8 @@ namespace Enigma.Character
             StripGameplayComponents(model);
             NormalizeHeightAndGround(model);
             ApplyToonMaterials(model, data);
-            SetupLocomotion(model, player, data);
-            RewireAttackMotor(player, model.transform);
+            var switcher = SetupLocomotion(model, player, data);
+            RewireAttackMotor(player, model.transform, switcher);
 
             return model;
         }
@@ -155,19 +155,22 @@ namespace Enigma.Character
 
         // LocomotionClipSwitcher を付与して Idle/Walk を結線。
         // CharacterController はプレイヤー側のものを渡す（velocity で歩行判定）。
-        private static void SetupLocomotion(GameObject model, GameObject player, CharacterData data)
+        private static LocomotionClipSwitcher SetupLocomotion(GameObject model, GameObject player, CharacterData data)
         {
             var switcher = model.AddComponent<LocomotionClipSwitcher>();
             var controller = player.GetComponent<CharacterController>();
             // IdleClip 未結線時は何も再生されないため、最低限 Idle が無いと静止する点に留意
-            switcher.Configure(data.IdleClip, data.WalkClip, controller);
+            switcher.Configure(data.IdleClip, data.WalkClip, data.AttackClip, controller);
+            return switcher;
         }
 
-        // PlayerAttackMotor の _modelRoot を新モデルへ差し替える（存在する場合のみ）。
-        private static void RewireAttackMotor(GameObject player, Transform modelRoot)
+        // PlayerAttackMotor の _modelRoot を新モデルへ差し替え、攻撃アニメ用 switcher も結線する（存在する場合のみ）。
+        private static void RewireAttackMotor(GameObject player, Transform modelRoot, LocomotionClipSwitcher switcher)
         {
             var motor = player.GetComponent<PlayerAttackMotor>();
-            if (motor != null) motor.SetModelRoot(modelRoot);
+            if (motor == null) return;
+            motor.SetModelRoot(modelRoot);
+            motor.SetClipSwitcher(switcher);
         }
     }
 }

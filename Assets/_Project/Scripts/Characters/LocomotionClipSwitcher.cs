@@ -19,6 +19,7 @@ namespace Enigma.Character
     {
         [SerializeField] private AnimationClip _idle;
         [SerializeField] private AnimationClip _walk;
+        [SerializeField] private AnimationClip _attack;
         [SerializeField] private CharacterController _controller;
         [SerializeField] private float _walkSpeedThreshold = 0.5f;
 
@@ -29,17 +30,50 @@ namespace Enigma.Character
         private double _clipStartTime;
         private bool _walking;
 
+        // 攻撃ワンショット再生中フラグ。true の間は Idle/Walk への速度切替を抑制する。
+        private bool _attacking;
+        private double _attackEndTime;
+
         /// <summary>
         /// スワッパーからの結線用。Start 前後どちらで呼ばれても整合するよう、
         /// 再生中であれば即座に現在状態のクリップを反映する。
         /// </summary>
-        public void Configure(AnimationClip idle, AnimationClip walk, CharacterController controller)
+        public void Configure(AnimationClip idle, AnimationClip walk, AnimationClip attack, CharacterController controller)
         {
             _idle       = idle;
             _walk       = walk;
+            _attack     = attack;
             _controller = controller;
             if (_graph.IsValid())
                 PlayState(_walking, force: true);
+        }
+
+        /// <summary>
+        /// 攻撃クリップを durationSeconds で1周再生する。AttackClip が無ければ何もせず false を返す。
+        /// クリップ全体が durationSeconds で再生し終わるよう speed = clip.length / duration でスケールし、
+        /// 再生終了（時間監視）で Idle/Walk の通常状態へ自動復帰する。
+        /// </summary>
+        public bool PlayAttack(float durationSeconds)
+        {
+            if (!_graph.IsValid() || _attack == null || durationSeconds <= 0.0001f)
+                return false;
+
+            if (_playable.IsValid())
+                _playable.Destroy();
+
+            _playable = AnimationClipPlayable.Create(_graph, _attack);
+            var output = _graph.GetOutput(0);
+            ((AnimationPlayableOutput)output).SetSourcePlayable(_playable);
+
+            // クリップ全体が duration で再生し終わるよう速度スケール
+            float speed = _attack.length > 0.0001f ? _attack.length / durationSeconds : 1f;
+            _playable.SetSpeed(speed);
+
+            _current       = _attack;
+            _attacking     = true;
+            _clipStartTime = Time.timeAsDouble;
+            _attackEndTime = Time.timeAsDouble + durationSeconds;
+            return true;
         }
 
         private void Start()
@@ -75,12 +109,24 @@ namespace Enigma.Character
 
             _current       = target;
             _walking       = walking;
+            _attacking     = false; // 通常クリップへ復帰したので攻撃状態を解除
             _clipStartTime = Time.timeAsDouble;
         }
 
         private void Update()
         {
             if (!_graph.IsValid() || _current == null) return;
+
+            // 攻撃ワンショット中: 速度切替を抑制し、再生終了で通常状態へ自動復帰する
+            if (_attacking)
+            {
+                if (Time.timeAsDouble >= _attackEndTime)
+                {
+                    _attacking = false;
+                    PlayState(_walking, force: true);
+                }
+                return;
+            }
 
             // 速度判定（CharacterController 未結線時は Idle 固定）
             if (_controller != null)

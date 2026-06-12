@@ -85,8 +85,30 @@ namespace Enigma.Ability
         /// <summary>現在のチャンピオンレベル（1〜）。PlayerProgression 未設定時は 1。</summary>
         public int ChampionLevel => _playerProgression != null ? _playerProgression.Experience.Level : 1;
 
+        // 「総ポイント数(未使用+取得済みランク) = チャンピオンレベル」の不変条件を毎フレーム強制する。
+        // イベント購読のタイミング問題(参照の遅延結線・差し替え等)があってもレベル分のポイントへ追いつく
+        private void SyncSkillPointsToLevel()
+        {
+            if (_playerProgression == null)
+            {
+                _playerProgression = GetComponent<PlayerProgression>();
+                if (_playerProgression == null) return;
+                _playerProgression.Experience.LevelChanged += OnChampionLevelChanged;
+            }
+
+            int have = _progression.UnspentPoints
+                       + _progression.GetRank(0) + _progression.GetRank(1) + _progression.GetRank(2);
+            int level = ChampionLevel;
+            while (have < level)
+            {
+                _progression.OnChampionLevelUp();
+                have++;
+            }
+        }
+
         private void Update()
         {
+            SyncSkillPointsToLevel();
             SyncCastMode();
             UpdateGroundCursor();
 

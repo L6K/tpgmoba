@@ -37,4 +37,5 @@ MonoBehaviour:
   ModelPrefab: {fileID: 0}
   IdleClip: {fileID: 0}
   WalkClip: {fileID: 0}
+  AttackClip: {fileID: 0}
   BodyTexture: {fileID: 0}

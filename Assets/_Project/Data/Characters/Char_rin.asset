@@ -37,4 +37,5 @@ MonoBehaviour:
   ModelPrefab: {fileID: 919132149155446097, guid: 7089bb0742817f949891e0aa40798440, type: 3}
   IdleClip: {fileID: 9061338213343248790, guid: 7089bb0742817f949891e0aa40798440, type: 3}
   WalkClip: {fileID: -5599002979973759676, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  AttackClip: {fileID: 2050526777322066626, guid: 7089bb0742817f949891e0aa40798440, type: 3}
   BodyTexture: {fileID: 2800000, guid: 2c976cf6429ef8249abbe5b8b9cc990f, type: 3}

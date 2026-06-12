@@ -10,10 +10,15 @@ namespace Enigma.Character
     public sealed class PlayerAttackMotor : MonoBehaviour
     {
         [SerializeField] private Transform _modelRoot;
+        [SerializeField] private LocomotionClipSwitcher _clipSwitcher;
 
         private AttackMotion _motion;
         private Vector3      _baseLocalPos;
         private bool         _baseLocalPosRecorded;
+
+        // 実攻撃クリップ再生中はプロシージャルランジを抑制する（二重演出回避）。
+        // Motion が None に戻ったら解除する。
+        private bool _suppressLunge;
 
         public AttackMotion Motion
         {
@@ -35,10 +40,26 @@ namespace Enigma.Character
             _baseLocalPosRecorded = false;
         }
 
+        /// <summary>
+        /// 攻撃アニメーション再生用の LocomotionClipSwitcher を結線する。
+        /// モデルスワップ（ChampionModelSwapper）が新モデルの switcher を渡す。
+        /// </summary>
+        public void SetClipSwitcher(LocomotionClipSwitcher clipSwitcher)
+        {
+            _clipSwitcher = clipSwitcher;
+        }
+
         /// <summary>AttackMotion.TryBegin に委譲して攻撃モーションを開始する。</summary>
         public bool RequestAttack(float windup, float recovery, Action fire)
         {
-            return Motion.TryBegin(windup, recovery, fire);
+            bool began = Motion.TryBegin(windup, recovery, fire);
+            if (began)
+            {
+                // 実攻撃クリップが再生された場合のみランジを抑制（アニメと位置ランジの二重演出を避ける）。
+                // クリップが無い（UnityChan 等）場合は false が返り、従来どおりプロシージャルランジを行う。
+                _suppressLunge = _clipSwitcher != null && _clipSwitcher.PlayAttack(windup + recovery);
+            }
+            return began;
         }
 
         private void Awake()
@@ -65,6 +86,16 @@ namespace Enigma.Character
             }
 
             if (!_baseLocalPosRecorded) return;
+
+            // 実攻撃クリップ再生中はランジを抑制。モデルは基準位置を維持し、
+            // Motion が None に戻ったタイミングで抑制を解除する。
+            if (_suppressLunge)
+            {
+                _modelRoot.localPosition = _baseLocalPos;
+                if (Motion.Phase == AttackPhase.None)
+                    _suppressLunge = false;
+                return;
+            }
 
             const float windupZ    = -0.15f; // 後ろへ引く
             const float strikeZ    =  0.35f; // 前方へランジ（Recovery開始時の初期位置）

@@ -177,6 +177,7 @@ namespace Enigma.EditorTools
             character.ModelPrefab = null;
             character.IdleClip    = null;
             character.WalkClip    = null;
+            character.AttackClip  = null;
             character.BodyTexture = null;
 
             if (string.IsNullOrEmpty(model) || model == "UnityChan") return;
@@ -196,9 +197,18 @@ namespace Enigma.EditorTools
 
             // FBX サブアセットの AnimationClip を名前部分一致で拾う（__preview__ 除外）。
             // 無ければ先頭クリップ（Idle）/ null（Walk）。
-            AnimationClip first = null;
-            AnimationClip idle  = null;
-            AnimationClip walk  = null;
+            // 攻撃クリップは武器攻撃を最優先（Sword/Dagger/Staff/Bow → 汎用 Attack → Punch/Slash/Shoot/Spell）。
+            // "Idle" と被弾リアクション("Recieve"/"Receive"/"Hit")を含むクリップは攻撃候補から除外する
+            // （Quaternius の "RecieveHit_Attacking" や "Attack_Idle" の誤検出対策）。
+            string[] attackPriority =
+            {
+                "Sword_Attack", "Dagger_Attack", "Staff_Attack", "Bow_Attack",
+                "Attack", "Punch", "Slash", "Shoot", "Spell",
+            };
+            AnimationClip first  = null;
+            AnimationClip idle   = null;
+            AnimationClip walk   = null;
+            var attackCandidates = new AnimationClip[attackPriority.Length];
             foreach (var sub in AssetDatabase.LoadAllAssetRepresentationsAtPath(fbxPath))
             {
                 if (!(sub is AnimationClip clip)) continue;
@@ -208,9 +218,34 @@ namespace Enigma.EditorTools
                     idle = clip;
                 if (walk == null && clip.name.IndexOf("Walk", System.StringComparison.OrdinalIgnoreCase) >= 0)
                     walk = clip;
+
+                bool excluded =
+                    clip.name.IndexOf("Idle", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    clip.name.IndexOf("Recieve", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    clip.name.IndexOf("Receive", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    clip.name.IndexOf("Hit", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                if (!excluded)
+                {
+                    for (int p = 0; p < attackPriority.Length; p++)
+                    {
+                        if (attackCandidates[p] == null &&
+                            clip.name.IndexOf(attackPriority[p], System.StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            attackCandidates[p] = clip;
+                            break;
+                        }
+                    }
+                }
             }
             character.IdleClip = idle != null ? idle : first;
             character.WalkClip = walk;
+
+            AnimationClip attack = null;
+            foreach (var candidate in attackCandidates)
+                if (candidate != null) { attack = candidate; break; }
+            character.AttackClip = attack;
+
+            Debug.Log($"[Enigma] {character.CharId}: attack={(attack != null ? attack.name : "なし")}");
         }
 
         private static SkillTargeting ParseTargeting(string value)
