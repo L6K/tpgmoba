@@ -47,6 +47,10 @@ namespace Enigma.Ability
         // カーソル→地面の交差点（毎フレーム更新）
         private Vector3 _groundCursorPos;
 
+        private StatusEffectController _statusEffects;
+        private PlayerController _playerController;
+        private HealthComponent _health;
+
         private void Awake()
         {
             for (int i = 0; i < 4; i++)
@@ -63,6 +67,9 @@ namespace Enigma.Ability
             _playerProgression = GetComponent<PlayerProgression>();
 
             SetIndicatorActive(null);
+            _statusEffects = StatusEffectController.GetOrAdd(gameObject);
+            _playerController = GetComponent<PlayerController>();
+            _health = GetComponent<HealthComponent>();
         }
 
         private void OnEnable()
@@ -121,6 +128,7 @@ namespace Enigma.Ability
             if (keyboard == null || mouse == null) return;
 
             bool isArmed = _castLogic.ArmedSlot >= 0;
+            bool canAct  = _statusEffects == null || _statusEffects.CanAct;
 
             // アーム中インジケーター更新
             if (isArmed)
@@ -129,7 +137,7 @@ namespace Enigma.Ability
             }
 
             // Normal モード: アーム中の左クリックはスキル確定（TargetingSystem より優先）
-            if (isArmed && _lastSyncedMode == CastMode.Normal && mouse.leftButton.wasPressedThisFrame)
+            if (canAct && isArmed && _lastSyncedMode == CastMode.Normal && mouse.leftButton.wasPressedThisFrame)
             {
                 // TargetingSystem のクリックペンディングを横取り
                 _targeting?.CancelPendingClick();
@@ -170,13 +178,14 @@ namespace Enigma.Ability
 
                 if (keyControl.wasPressedThisFrame)
                 {
+                    if (!canAct) continue;
                     // rank 0（未習得）のスキルは発動不可
                     if (!IsSlotUnlocked(slot)) continue;
 
                     // CD 中はアーム開始しない
                     if (!_cooldowns[slot].IsReady(Time.time)) continue;
 
-                    bool isInstant = def.Targeting == SkillTargeting.Targeted;
+                    bool isInstant = def.Targeting == SkillTargeting.Targeted || def.Targeting == SkillTargeting.TargetedAlly;
                     var action = _castLogic.HandleKeyDown(slot, isInstant);
                     if (action == CastAction.Cast)
                     {
@@ -293,16 +302,15 @@ namespace Enigma.Ability
 
             switch (def.Targeting)
             {
-                case SkillTargeting.Directional:
-                    CastDirectional(slot, def, groundCursorPos, scale);
-                    break;
-                case SkillTargeting.GroundAoe:
-                    CastGroundAoe(slot, def, groundCursorPos, scale);
-                    break;
-                case SkillTargeting.Targeted:
-                    CastTargeted(slot, def, target, scale);
-                    break;
+                case SkillTargeting.Directional:  CastDirectional(slot, def, groundCursorPos, scale); break;
+                case SkillTargeting.GroundAoe:    CastGroundAoe(slot, def, groundCursorPos, scale); break;
+                case SkillTargeting.Targeted:     CastTargeted(slot, def, target, scale); break;
+                case SkillTargeting.TargetedAlly: CastTargetedAlly(slot, def, scale); break;
             }
+
+            if (def.Targeting != SkillTargeting.TargetedAlly)
+                ApplySelfBuffs(def);            // shield/heal を自分へ(TargetedAlly は味方へ別途)
+            TryDash(def, groundCursorPos, target);
         }
 
         private void CastDirectional(int slot, SkillDefinition def, Vector3 groundCursorPos, float scale)
@@ -319,6 +327,7 @@ namespace Enigma.Ability
 
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.identity);
             proj.Init(dir, def.ProjectileSpeed, def.Damage * scale, gameObject, lifetime);
+            proj.SetStatusEffects(def.StunDuration, def.RootDuration, def.SlowStrength, def.SlowDuration);
 
             // 発光コア + トレイル + 二段バースト（白コア小 + スロット色大）
             var color = SlotColor(slot);
@@ -338,6 +347,7 @@ namespace Enigma.Ability
 
             var telegraph = Instantiate(_telegraphPrefab, pos, Quaternion.identity);
             telegraph.Init(def.Radius, 0.8f, def.Damage * scale, gameObject);
+            telegraph.SetStatusEffects(def.StunDuration, def.RootDuration, def.SlowStrength, def.SlowDuration);
 
             // マズルバースト + 着弾地点に大きめバースト
             var color = SlotColor(slot);
@@ -358,6 +368,14 @@ namespace Enigma.Ability
             float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage * scale, gameObject);
             target.TakeDamage(finalDamage, gameObject);
 
+            var sc = StatusEffectController.GetOrAdd(target.gameObject);
+            if (sc != null)
+            {
+                if (def.StunDuration > 0f) sc.ApplyStun(def.StunDuration);
+                if (def.RootDuration > 0f) sc.ApplyRoot(def.RootDuration);
+                if (def.SlowStrength > 0f && def.SlowDuration > 0f) sc.ApplySlow(def.SlowStrength, def.SlowDuration);
+            }
+
             // 胸元→対象へビーム一閃 + 対象位置にバースト+小リング
             var color = SlotColor(slot);
             var from  = ChestPoint(transform);
@@ -366,6 +384,57 @@ namespace Enigma.Ability
             SkillVfx.TargetedHitVisuals(from, to, color);
             GameSfx.Play("skill_r_beam", _muzzle != null ? _muzzle.position : from);
             GameSfx.Play("skill_r_hit", target.transform.position, 0.8f);
+        }
+
+        // shield/heal を自分へ適用
+        private void ApplySelfBuffs(SkillDefinition def)
+        {
+            if (_health == null) return;
+            if (def.HealAmount > 0f) _health.Model.Heal(def.HealAmount);
+            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) _health.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+        }
+
+        // dash(自分)。Targeted は対象方向、それ以外はカーソル方向へ。
+        private void TryDash(SkillDefinition def, Vector3 groundCursorPos, HealthComponent target)
+        {
+            if (def.DashDistance <= 0f || _playerController == null) return;
+            Vector3 dir = (def.Targeting == SkillTargeting.Targeted && target != null)
+                ? (target.transform.position - transform.position)
+                : (groundCursorPos - transform.position);
+            _playerController.RequestDash(dir, def.DashDistance);
+        }
+
+        // 味方対象の回復+シールド。カーソル下の味方を探し、無ければ自分。
+        private void CastTargetedAlly(int slot, SkillDefinition def, float scale)
+        {
+            var ally = ResolveAllyUnderCursor(def.Range);
+            if (ally == null) ally = _health;
+            if (ally == null) return;
+            if (def.HealAmount > 0f) ally.Model.Heal(def.HealAmount);
+            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) ally.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+
+            // 演出: 胸元→対象へビーム + 対象にヒーリングバースト(緑系)
+            var color = new Color(0.36f, 0.84f, 0.42f, 1f);
+            var from  = ChestPoint(transform);
+            var to    = ChestPoint(ally.transform);
+            SkillVfx.TargetedHitVisuals(from, to, color);
+            SkillVfx.SpawnBurst(ally.transform.position, color, 0.5f, 2.5f, 0.4f);
+            GameSfx.Play("skill_r_hit", ally.transform.position, 0.8f);
+        }
+
+        // カーソル下にいる味方(同チーム, 射程内, 自分以外)を返す。無ければ null。
+        private HealthComponent ResolveAllyUnderCursor(float range)
+        {
+            var cam = Camera.main; var mouse = Mouse.current;
+            if (cam == null || mouse == null) return null;
+            var ray = cam.ScreenPointToRay(new Vector3(mouse.position.ReadValue().x, mouse.position.ReadValue().y, 0f));
+            if (!Physics.Raycast(ray, out var hit, 200f)) return null;
+            var hc = hit.collider.GetComponentInParent<HealthComponent>();
+            if (hc == null || hc.gameObject == gameObject) return null;
+            // 同チームのみ(CanDamageTarget が false = 味方)
+            if (CanDamageTarget(hc.gameObject)) return null;
+            if (Vector3.Distance(transform.position, hc.transform.position) > range) return null;
+            return hc;
         }
 
         // キャスター/対象の「胸元」高さ(足元 +1.2m)を返す。ビームの見栄え用。

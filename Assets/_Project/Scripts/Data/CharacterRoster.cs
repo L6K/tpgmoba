@@ -50,10 +50,18 @@ namespace Enigma.Data
             public float windup;
             public float recovery;
             public string description;
+            public float stunDuration;
+            public float rootDuration;
+            public float slowStrength;
+            public float slowDuration;
+            public float shieldAmount;
+            public float shieldDuration;
+            public float healAmount;
+            public float dashDistance;
         }
 
         private static readonly string[] _validSlots = { "Q", "E", "R" };
-        private static readonly string[] _validTargetings = { "Directional", "GroundAoe", "Targeted" };
+        private static readonly string[] _validTargetings = { "Directional", "GroundAoe", "Targeted", "TargetedAlly" };
 
         /// <summary>
         /// JSON 文字列を検証済みの ParsedCharacter[] へ変換する。
@@ -113,7 +121,7 @@ namespace Enigma.Data
 
                     if (Array.IndexOf(_validTargetings, sk.targeting) < 0)
                         throw new FormatException(
-                            $"{skWhere}: targeting '{sk.targeting}' は不正です（許可: Directional/GroundAoe/Targeted）。");
+                            $"{skWhere}: targeting '{sk.targeting}' は不正です（許可: Directional/GroundAoe/Targeted/TargetedAlly）。");
                 }
             }
 

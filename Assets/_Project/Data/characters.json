@@ -42,7 +42,9 @@
           "projectileSpeed": 0,
           "windup": 0.25,
           "recovery": 0.4,
-          "description": "指定地点に魔法陣を展開し、範囲内の敵全てにダメージ"
+          "description": "指定地点に魔法陣を展開し、範囲内の敵全てにダメージ",
+          "slowStrength": 0.35,
+          "slowDuration": 1.5
         },
         {
           "slot": "R",
@@ -55,7 +57,8 @@
           "projectileSpeed": 0,
           "windup": 0.35,
           "recovery": 0.5,
-          "description": "対象1体の魔法回路を暴走させ、大ダメージを与える"
+          "description": "対象1体の魔法回路を暴走させ、大ダメージを与える",
+          "stunDuration": 0.75
         }
       ]
     },
@@ -86,7 +89,9 @@
           "projectileSpeed": 20,
           "windup": 0.3,
           "recovery": 0.45,
-          "description": "正面へ大剣を振り抜く。射程は短いが威力が高い"
+          "description": "正面へ大剣を振り抜く。射程は短いが威力が高い",
+          "shieldAmount": 60,
+          "shieldDuration": 3
         },
         {
           "slot": "E",
@@ -99,7 +104,8 @@
           "projectileSpeed": 0,
           "windup": 0.3,
           "recovery": 0.4,
-          "description": "足元の大地を砕き、周囲の敵にダメージ"
+          "description": "足元の大地を砕き、周囲の敵にダメージ",
+          "stunDuration": 1.0
         },
         {
           "slot": "R",
@@ -169,7 +175,8 @@
           "projectileSpeed": 0,
           "windup": 0.3,
           "recovery": 0.45,
-          "description": "対象に死の刻印を刻む。単体への最大火力"
+          "description": "対象に死の刻印を刻む。単体への最大火力",
+          "dashDistance": 5
         }
       ]
     },
@@ -213,7 +220,9 @@
           "projectileSpeed": 0,
           "windup": 0.25,
           "recovery": 0.4,
-          "description": "炸裂弾を撃ち込み、範囲内の敵にダメージ"
+          "description": "炸裂弾を撃ち込み、範囲内の敵にダメージ",
+          "slowStrength": 0.4,
+          "slowDuration": 1.5
         },
         {
           "slot": "R",
@@ -270,12 +279,14 @@
           "projectileSpeed": 0,
           "windup": 0.3,
           "recovery": 0.4,
-          "description": "広範囲の重力場を生成。ダメージは低いが面で制圧する"
+          "description": "広範囲の重力場を生成。ダメージは低いが面で制圧する",
+          "slowStrength": 0.3,
+          "slowDuration": 2
         },
         {
           "slot": "R",
           "name": "超新星",
-          "targeting": "Targeted",
+          "targeting": "TargetedAlly",
           "damage": 100,
           "range": 14,
           "radius": 0,
@@ -283,7 +294,10 @@
           "projectileSpeed": 0,
           "windup": 0.4,
           "recovery": 0.5,
-          "description": "対象の頭上で小さな星を爆発させる"
+          "description": "対象の頭上で小さな星を爆発させる",
+          "healAmount": 180,
+          "shieldAmount": 120,
+          "shieldDuration": 4
         }
       ]
     },
@@ -314,7 +328,8 @@
           "projectileSpeed": 35,
           "windup": 0.25,
           "recovery": 0.4,
-          "description": "機械鎖を射出して敵を捉える"
+          "description": "機械鎖を射出して敵を捉える",
+          "rootDuration": 1.0
         },
         {
           "slot": "E",
@@ -340,7 +355,8 @@
           "projectileSpeed": 0,
           "windup": 0.35,
           "recovery": 0.5,
-          "description": "狩猟AIを解放し、対象1体に喰らいつく"
+          "description": "狩猟AIを解放し、対象1体に喰らいつく",
+          "healAmount": 80
         }
       ]
     }

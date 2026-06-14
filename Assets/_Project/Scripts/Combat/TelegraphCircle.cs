@@ -12,6 +12,7 @@ namespace Enigma.Combat
         private float      _damage;
         private float      _radius;
         private GameObject _owner;
+        private float      _stun, _root, _slowStrength, _slowDuration;
 
         // 予兆演出の状態
         private MeshRenderer          _bodyRenderer;
@@ -40,6 +41,24 @@ namespace Enigma.Combat
             SetupTelegraphVisual();
 
             StartCoroutine(ExplodeAfter(delaySeconds));
+        }
+
+        public void SetStatusEffects(float stun, float root, float slowStrength, float slowDuration)
+        {
+            _stun         = stun;
+            _root         = root;
+            _slowStrength = slowStrength;
+            _slowDuration = slowDuration;
+        }
+
+        private void ApplyStatusTo(GameObject go)
+        {
+            if (_stun <= 0f && _root <= 0f && _slowStrength <= 0f) return;
+            var sc = StatusEffectController.GetOrAdd(go);
+            if (sc == null) return;
+            if (_stun > 0f) sc.ApplyStun(_stun);
+            if (_root > 0f) sc.ApplyRoot(_root);
+            if (_slowStrength > 0f && _slowDuration > 0f) sc.ApplySlow(_slowStrength, _slowDuration);
         }
 
         // 本体塗り円の MPB と、明るい同色の外周エッジリングを組み立てる。
@@ -165,6 +184,9 @@ namespace Enigma.Combat
                         hc.TakeDamage(finalDamage, _owner);
                     else
                         damageable.TakeDamage(finalDamage);
+
+                    if (damageable is HealthComponent hcTarget)
+                        ApplyStatusTo(hcTarget.gameObject);
                 }
             }
 

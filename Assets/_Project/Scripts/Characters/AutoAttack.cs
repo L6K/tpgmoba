@@ -27,9 +27,10 @@ namespace Enigma.Character
         // AA モーション中(準備〜後隙)にターゲットへ向き直る速度
         private const float FaceTurnSpeed = 14f;
 
-        private AttackCooldown  _cooldown;
-        private TargetingSystem _targeting;
-        private Transform       _faceTarget;
+        private AttackCooldown         _cooldown;
+        private TargetingSystem        _targeting;
+        private Transform              _faceTarget;
+        private StatusEffectController _statusEffects;
 
         // MatchBootstrap など composition root からピック済みステータスを反映する。
         // Awake 済みなら CD インスタンスも作り直す
@@ -44,8 +45,9 @@ namespace Enigma.Character
 
         private void Awake()
         {
-            _cooldown  = new AttackCooldown(_attackCooldown);
-            _targeting = GetComponent<TargetingSystem>();
+            _cooldown      = new AttackCooldown(_attackCooldown);
+            _targeting     = GetComponent<TargetingSystem>();
+            _statusEffects = StatusEffectController.GetOrAdd(gameObject);
         }
 
         private void Update()
@@ -63,6 +65,7 @@ namespace Enigma.Character
             // Windup 中はクールダウンを消費しない
             if (_motor != null && _motor.Motion.Phase == AttackPhase.Windup) return;
 
+            if (_statusEffects != null && !_statusEffects.CanAct) return;
             if (!_cooldown.TryConsume(Time.time)) return;
             if (_projectilePrefab == null || _muzzle == null) return;
 

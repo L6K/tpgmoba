@@ -22,3 +22,11 @@ MonoBehaviour:
   ProjectileSpeed: 0
   WindupSeconds: 0.35
   RecoverySeconds: 0.5
+  StunDuration: 0
+  RootDuration: 0
+  SlowStrength: 0
+  SlowDuration: 0
+  ShieldAmount: 0
+  ShieldDuration: 0
+  HealAmount: 80
+  DashDistance: 0

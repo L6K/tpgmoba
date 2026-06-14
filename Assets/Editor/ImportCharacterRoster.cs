@@ -88,6 +88,14 @@ namespace Enigma.EditorTools
                     skill.ProjectileSpeed = sk.projectileSpeed;
                     skill.WindupSeconds   = sk.windup;
                     skill.RecoverySeconds = sk.recovery;
+                    skill.StunDuration    = sk.stunDuration;
+                    skill.RootDuration    = sk.rootDuration;
+                    skill.SlowStrength    = sk.slowStrength;
+                    skill.SlowDuration    = sk.slowDuration;
+                    skill.ShieldAmount    = sk.shieldAmount;
+                    skill.ShieldDuration  = sk.shieldDuration;
+                    skill.HealAmount      = sk.healAmount;
+                    skill.DashDistance    = sk.dashDistance;
 
                     if (isNewSkill)
                     {
@@ -307,8 +315,9 @@ namespace Enigma.EditorTools
             {
                 case "Directional": return SkillTargeting.Directional;
                 case "GroundAoe":   return SkillTargeting.GroundAoe;
-                case "Targeted":    return SkillTargeting.Targeted;
-                default:            return SkillTargeting.Directional;
+                case "Targeted":     return SkillTargeting.Targeted;
+                case "TargetedAlly": return SkillTargeting.TargetedAlly;
+                default:             return SkillTargeting.Directional;
             }
         }
 

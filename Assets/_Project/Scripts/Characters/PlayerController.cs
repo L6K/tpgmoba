@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Enigma.Combat;
 
 namespace Enigma.Character
 {
@@ -20,6 +21,9 @@ namespace Enigma.Character
         private CharacterController _cc;
         private float _verticalVelocity;
         private PlayerItems _playerItems;
+        private StatusEffectController _statusEffects;
+        private float _dashTimeRemaining;
+        private Vector3 _dashVelocity;
 
         // characters.json を正とするピック済み移動速度を反映する（composition root から呼ぶ）
         public void SetMoveSpeed(float moveSpeed)
@@ -29,12 +33,37 @@ namespace Enigma.Character
 
         private void Awake()
         {
-            _cc          = GetComponent<CharacterController>();
-            _playerItems = GetComponent<PlayerItems>();
+            _cc           = GetComponent<CharacterController>();
+            _playerItems  = GetComponent<PlayerItems>();
+            _statusEffects = StatusEffectController.GetOrAdd(gameObject);
+        }
+
+        // dir は水平方向(正規化不要、内部で正規化)。distance(m) を duration 秒で移動するダッシュ。
+        public void RequestDash(Vector3 dir, float distance, float duration = 0.15f)
+        {
+            if (duration <= 0f || distance <= 0f) return;
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
+            _dashVelocity = dir.normalized * (distance / duration);
+            _dashTimeRemaining = duration;
         }
 
         private void Update()
         {
+            if (_dashTimeRemaining > 0f)
+            {
+                _dashTimeRemaining -= Time.deltaTime;
+                if (_cc.isGrounded && _verticalVelocity < 0f) _verticalVelocity = -2f;
+                _verticalVelocity += Gravity * Time.deltaTime;
+                var dstep = _dashVelocity * Time.deltaTime;
+                dstep.y = _verticalVelocity * Time.deltaTime;
+                _cc.Move(dstep);
+                var look = _dashVelocity; look.y = 0f;
+                if (look.sqrMagnitude > 0.0001f)
+                    transform.rotation = MovementLogic.RotateTowards(transform.rotation, look.normalized, _turnSpeedDegrees * Time.deltaTime);
+                return;
+            }
+
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
 
@@ -48,7 +77,8 @@ namespace Enigma.Character
             bool hasInput = input != Vector2.zero;
 
             // Windup 中は移動入力を無視（重力は適用継続）
-            bool movementLocked = _motor != null && _motor.Motion.MovementLocked;
+            bool ccImmobile    = _statusEffects != null && !_statusEffects.CanMove;
+            bool movementLocked = (_motor != null && _motor.Motion.MovementLocked) || ccImmobile;
 
             // 移動入力があり Recovery 中はリカバリをキャンセルしてから移動
             if (hasInput && _motor != null && _motor.Motion.Phase == AttackPhase.Recovery)
@@ -66,7 +96,7 @@ namespace Enigma.Character
                 _verticalVelocity = -2f;
             _verticalVelocity += Gravity * Time.deltaTime;
 
-            var motion = moveDir * (_moveSpeed * (_playerItems != null ? _playerItems.MoveSpeedMultiplier : 1f) * Time.deltaTime);
+            var motion = moveDir * (_moveSpeed * (_playerItems != null ? _playerItems.MoveSpeedMultiplier : 1f) * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f) * Time.deltaTime);
             motion.y = _verticalVelocity * Time.deltaTime;
             _cc.Move(motion);
 

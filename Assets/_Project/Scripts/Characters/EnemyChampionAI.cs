@@ -74,6 +74,7 @@ namespace Enigma.Character
         private CharacterController _controller;
         private HealthComponent _health;
         private TeamTag _teamTag;
+        private StatusEffectController _statusEffects;
 
         private LaneBotState _state = LaneBotState.Push;
         private int _waypointIndex;
@@ -122,6 +123,7 @@ namespace Enigma.Character
             _health         = GetComponent<HealthComponent>();
             _teamTag        = GetComponent<TeamTag>();
             _attackCooldown = new AttackCooldown(_attackCdSeconds);
+            _statusEffects  = StatusEffectController.GetOrAdd(gameObject);
         }
 
         /// <summary>
@@ -481,7 +483,10 @@ namespace Enigma.Character
                 _verticalVelocity = -1f;
             _verticalVelocity += Gravity * Time.deltaTime;
 
-            var motion = horizontal * _moveSpeed;
+            if (_statusEffects != null && !_statusEffects.CanMove)
+                horizontal = Vector3.zero;
+            float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f);
+            var motion = horizontal * speed;
             motion.y = _verticalVelocity;
             _controller.Move(motion * Time.deltaTime);
 
@@ -602,6 +607,7 @@ namespace Enigma.Character
 
         private void FaceAndAttack(HealthComponent target, bool allowSkills)
         {
+            if (_statusEffects != null && !_statusEffects.CanAct) return;
             if (target == null) return;
 
             var to = target.transform.position - transform.position;
@@ -652,10 +658,14 @@ namespace Enigma.Character
 
             switch (def.Targeting)
             {
-                case SkillTargeting.Directional: CastBotDirectional(slot, def, target); break;
-                case SkillTargeting.GroundAoe:   CastBotGroundAoe(slot, def, target);   break;
-                case SkillTargeting.Targeted:    CastBotTargeted(slot, def, target);    break;
+                case SkillTargeting.Directional:  CastBotDirectional(slot, def, target);  break;
+                case SkillTargeting.GroundAoe:    CastBotGroundAoe(slot, def, target);    break;
+                case SkillTargeting.Targeted:     CastBotTargeted(slot, def, target);     break;
+                case SkillTargeting.TargetedAlly: CastBotTargetedAlly(def);              break;
             }
+
+            if (def.Targeting != SkillTargeting.TargetedAlly)
+                ApplyBotSelfBuffs(def);
 
             // スキル発射でも攻撃モーションを再生する
             _clipSwitcher?.PlayAttack(0.45f);
@@ -686,6 +696,7 @@ namespace Enigma.Character
 
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, def.ProjectileSpeed, def.Damage, gameObject, lifetime);
+            proj.SetStatusEffects(def.StunDuration, def.RootDuration, def.SlowStrength, def.SlowDuration);
 
             // 発光コア + トレイル + 二段バースト（プレイヤー側と共通化）
             var color = SkillSlotColor(slot);
@@ -703,6 +714,7 @@ namespace Enigma.Character
 
             var telegraph = Instantiate(_telegraphPrefab, pos, Quaternion.identity);
             telegraph.Init(def.Radius, 0.8f, def.Damage, gameObject);
+            telegraph.SetStatusEffects(def.StunDuration, def.RootDuration, def.SlowStrength, def.SlowDuration);
 
             var color = SkillSlotColor(slot);
             SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : transform.position, color, 0.3f, 1.2f, 0.25f);
@@ -725,6 +737,14 @@ namespace Enigma.Character
             float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage, gameObject);
             target.TakeDamage(finalDamage, gameObject);
 
+            var sc = StatusEffectController.GetOrAdd(target.gameObject);
+            if (sc != null)
+            {
+                if (def.StunDuration > 0f) sc.ApplyStun(def.StunDuration);
+                if (def.RootDuration > 0f) sc.ApplyRoot(def.RootDuration);
+                if (def.SlowStrength > 0f && def.SlowDuration > 0f) sc.ApplySlow(def.SlowStrength, def.SlowDuration);
+            }
+
             // 胸元→対象へビーム一閃 + バースト+小リング（プレイヤー側と共通化）
             var color = SkillSlotColor(slot);
             var from  = transform.position + Vector3.up * 1.2f;
@@ -733,6 +753,26 @@ namespace Enigma.Character
             SkillVfx.TargetedHitVisuals(from, to, color);
             GameSfx.Play("skill_r_beam", _muzzle != null ? _muzzle.position : from);
             GameSfx.Play("skill_r_hit", target.transform.position, 0.8f);
+        }
+
+        // ボットの TargetedAlly: 簡易に自分を回復+シールド（味方探索は省略）
+        private void CastBotTargetedAlly(SkillDefinition def)
+        {
+            var hc = GetComponent<HealthComponent>();
+            if (hc == null) return;
+            if (def.HealAmount > 0f) hc.Model.Heal(def.HealAmount);
+            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+            var color = new Color(0.36f, 0.84f, 0.42f, 1f);
+            SkillVfx.SpawnBurst(transform.position, color, 0.5f, 2.5f, 0.4f);
+        }
+
+        // ボット自身へ shield/heal を適用（プレイヤー SkillCaster.ApplySelfBuffs のミラー）
+        private void ApplyBotSelfBuffs(SkillDefinition def)
+        {
+            var hc = GetComponent<HealthComponent>();
+            if (hc == null) return;
+            if (def.HealAmount > 0f) hc.Model.Heal(def.HealAmount);
+            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
         }
 
         // スロット色（プレイヤー SkillCaster と同系: Q=シアン, E=マゼンタ, R=ゴールド）

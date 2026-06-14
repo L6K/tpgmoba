@@ -13,12 +13,20 @@ MonoBehaviour:
   m_Name: Skill_garon_W
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u5927\u5730\u306E\u5486\u54EE"
-  Description: "\u6307\u5B9A\u5730\u70B9\u306E\u5730\u9762\u3092\u53E9\u304D\u3064\u3051\u3001\u7BC4\u56F2\u5185\u306E\u6575\u306B\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u308B\u3002"
+  Description: "\u8DB3\u5143\u306E\u5927\u5730\u3092\u7815\u304D\u3001\u5468\u56F2\u306E\u6575\u306B\u30C0\u30E1\u30FC\u30B8"
   Targeting: 1
   Damage: 30
   Range: 7
   Radius: 4
   CooldownSeconds: 10
   ProjectileSpeed: 0
-  WindupSeconds: 0.35
-  RecoverySeconds: 0.45
+  WindupSeconds: 0.3
+  RecoverySeconds: 0.4
+  StunDuration: 1
+  RootDuration: 0
+  SlowStrength: 0
+  SlowDuration: 0
+  ShieldAmount: 0
+  ShieldDuration: 0
+  HealAmount: 0
+  DashDistance: 0

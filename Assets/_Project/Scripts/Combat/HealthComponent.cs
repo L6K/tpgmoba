@@ -31,5 +31,10 @@ namespace Enigma.Combat
             if (amount > 0f)
                 Damaged?.Invoke(amount);
         }
+
+        private void Update()
+        {
+            Model.Tick(Time.deltaTime);
+        }
     }
 }

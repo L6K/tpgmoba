@@ -13,6 +13,7 @@ namespace Enigma.Character
         private float _damage;
         private GameObject _owner;
         private float _lifeTimer;
+        private float _stun, _root, _slowStrength, _slowDuration;
 
         private const float DefaultLifetime = 1.5f;
 
@@ -28,6 +29,14 @@ namespace Enigma.Character
         }
 
         private float _lifetime = DefaultLifetime;
+
+        public void SetStatusEffects(float stun, float root, float slowStrength, float slowDuration)
+        {
+            _stun         = stun;
+            _root         = root;
+            _slowStrength = slowStrength;
+            _slowDuration = slowDuration;
+        }
 
         private void Update()
         {
@@ -57,7 +66,10 @@ namespace Enigma.Character
             {
                 float finalDamage = DamageUtility.ApplyTeamBuff(_damage, _owner);
                 if (damageable is HealthComponent hc)
+                {
                     hc.TakeDamage(finalDamage, _owner);
+                    ApplyStatusTo(hc.gameObject);
+                }
                 else
                     damageable.TakeDamage(finalDamage);
 
@@ -74,6 +86,16 @@ namespace Enigma.Character
             SkillVfx.SpawnBurst(transform.position, hitColor, 0.15f, 0.7f, 0.25f);
 
             Destroy(gameObject);
+        }
+
+        private void ApplyStatusTo(GameObject go)
+        {
+            if (_stun <= 0f && _root <= 0f && _slowStrength <= 0f) return;
+            var sc = Enigma.Combat.StatusEffectController.GetOrAdd(go);
+            if (sc == null) return;
+            if (_stun > 0f) sc.ApplyStun(_stun);
+            if (_root > 0f) sc.ApplyRoot(_root);
+            if (_slowStrength > 0f && _slowDuration > 0f) sc.ApplySlow(_slowStrength, _slowDuration);
         }
 
         // 弾に付いたトレイル色をヒット演出色として流用する。無ければ白。
