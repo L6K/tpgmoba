@@ -47,6 +47,9 @@ namespace Enigma.Ability
         // カーソル→地面の交差点（毎フレーム更新）
         private Vector3 _groundCursorPos;
 
+        // 方向インジケーター（地面に寝た帯）を真上から見えるよう両面化する一度きりの初期化フラグ
+        private bool _dirIndicatorDoubleSided;
+
         private StatusEffectController _statusEffects;
         private PlayerController _playerController;
         private HealthComponent _health;
@@ -265,10 +268,24 @@ namespace Enigma.Ability
 
             if (def.Targeting == SkillTargeting.Directional && _directionIndicator != null)
             {
+                EnsureDirIndicatorDoubleSided();
+
                 var dir = (_groundCursorPos - transform.position);
                 dir.y = 0f;
                 if (dir.sqrMagnitude > 0.001f)
-                    _directionIndicator.transform.rotation = Quaternion.LookRotation(dir.normalized, Vector3.up);
+                {
+                    var nd    = dir.normalized;
+                    float range = def.Range > 0f ? def.Range : 8f;
+                    var t     = _directionIndicator.transform;
+
+                    // 足元の地面に「寝た帯」として敷く。原点=プレイヤー足元、長さ=Range をカーソル方向へ伸ばす。
+                    // Quad は面=local +Z・長さ=local +Y。LookRotation(up, nd) で面を上向き・長さ方向を照準へ向ける。
+                    var origin = new Vector3(transform.position.x, GroundLevelY() + 0.05f, transform.position.z);
+                    t.position   = origin + nd * (range * 0.5f);
+                    t.rotation   = Quaternion.LookRotation(Vector3.up, nd);
+                    // プレイヤールートは等倍前提。幅 0.6m・長さ Range の帯にする
+                    t.localScale = new Vector3(0.6f, range, 1f);
+                }
             }
             else if (def.Targeting == SkillTargeting.GroundAoe && _aoeIndicator != null)
             {
@@ -279,6 +296,16 @@ namespace Enigma.Ability
                 pos.y      = GroundLevelY() + 0.05f; // 床に接地させる(ピボット高さだと浮く)
                 _aoeIndicator.transform.position = pos;
             }
+        }
+
+        // 方向インジケーター（Quad）は URP/Unlit 既定で片面(Back cull)のため、地面に寝かせると
+        // カメラ角度によっては裏面になり消える。実体マテリアルを両面(_Cull=Off)へ一度だけ切り替える。
+        private void EnsureDirIndicatorDoubleSided()
+        {
+            if (_dirIndicatorDoubleSided || _directionIndicator == null) return;
+            if (_directionIndicator.TryGetComponent<Renderer>(out var r) && r.material != null)
+                r.material.SetFloat("_Cull", 0f); // CullMode.Off
+            _dirIndicatorDoubleSided = true;
         }
 
         private void TryCast(int slot)
@@ -348,7 +375,9 @@ namespace Enigma.Ability
         {
             if (_projectilePrefab == null || _muzzle == null) return;
 
-            var dir = (groundCursorPos - _muzzle.position);
+            // 照準は手ボーンに付いた _muzzle ではなくプレイヤー胴体中心から取る。
+            // _muzzle は攻撃アニメで手が振れるとカーソル方向を歪ませるため、発射位置のみ _muzzle を使う。
+            var dir = (groundCursorPos - transform.position);
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.001f) dir = transform.forward;
             dir.Normalize();
