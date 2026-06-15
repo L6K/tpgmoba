@@ -7,6 +7,7 @@ using Enigma.Ability;
 using Enigma.Core;
 using Enigma.Data;
 using Enigma.Character;
+using Enigma.GameModes;
 
 namespace Enigma.UI
 {
@@ -22,6 +23,7 @@ namespace Enigma.UI
 
         // タイマー
         private Label _timerLabel;
+        private Label _objectiveLabel;
 
         // HP バー
         private VisualElement _hpFill;
@@ -100,6 +102,7 @@ namespace Enigma.UI
             var root = _uiDocument.rootVisualElement;
 
             _timerLabel = root.Q<Label>("hud-timer");
+            _objectiveLabel = root.Q<Label>("hud-objective");
             _hpBarBg    = root.Q<VisualElement>("hud-hp-bar-bg");
             _hpFill     = root.Q<VisualElement>("hud-hp-fill");
             _hpDamage   = root.Q<VisualElement>("hud-hp-damage");
@@ -289,6 +292,7 @@ namespace Enigma.UI
         private void Update()
         {
             UpdateTimer();
+            UpdateObjective();
             UpdateHp();
             UpdateSkills();
             UpdateBuff();
@@ -303,6 +307,39 @@ namespace Enigma.UI
             int   minutes = (int)(elapsed / 60f);
             int   seconds = (int)(elapsed % 60f);
             _timerLabel.text = $"{minutes:D2}:{seconds:D2}";
+        }
+
+        // 中央オブジェクト(エニグマ・コア)の状態とカウントダウンを表示する
+        private void UpdateObjective()
+        {
+            if (_objectiveLabel == null) return;
+
+            var dir = CentralObjectiveDirector.Instance;
+            if (dir == null || !dir.HasObjective)
+            {
+                _objectiveLabel.style.display = DisplayStyle.None;
+                return;
+            }
+
+            _objectiveLabel.style.display = DisplayStyle.Flex;
+            _objectiveLabel.RemoveFromClassList("hud-objective--warning");
+            _objectiveLabel.RemoveFromClassList("hud-objective--active");
+
+            switch (dir.State)
+            {
+                case ObjectiveState.Active:
+                    _objectiveLabel.text = "エニグマ・コア 出現中";
+                    _objectiveLabel.AddToClassList("hud-objective--active");
+                    break;
+                case ObjectiveState.Warning:
+                    _objectiveLabel.text = $"エニグマ・コア 出現まもなく ({Mathf.CeilToInt(dir.SecondsUntilSpawn)}s)";
+                    _objectiveLabel.AddToClassList("hud-objective--warning");
+                    break;
+                default:
+                    int s = Mathf.Max(0, Mathf.CeilToInt(dir.SecondsUntilSpawn));
+                    _objectiveLabel.text = $"エニグマ・コア 出現まで {s / 60}:{s % 60:00}";
+                    break;
+            }
         }
 
         private void UpdateHp()

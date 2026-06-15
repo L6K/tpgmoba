@@ -7,6 +7,8 @@
         <!-- 上部中央: タイマー -->
         <ui:VisualElement name="hud-timer-container" class="hud-timer-container">
             <ui:Label name="hud-timer" class="hud-timer" text="00:00" />
+            <!-- 中央オブジェクト(エニグマ・コア)の状態/出現カウントダウン -->
+            <ui:Label name="hud-objective" class="hud-objective" text="" />
         </ui:VisualElement>
 
         <!-- チームバフ残り時間（ミニマップ上） -->

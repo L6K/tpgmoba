@@ -63,6 +63,25 @@
     letter-spacing: 3px;
 }
 
+/* 中央オブジェクト状態(タイマー直下)。通常はシアン白、予告中は橙で強調 */
+.hud-objective {
+    font-size: 12px;
+    color: rgb(200, 235, 255);
+    -unity-text-align: middle-center;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+
+.hud-objective--warning {
+    color: rgb(255, 180, 70);
+    -unity-font-style: bold;
+}
+
+.hud-objective--active {
+    color: rgb(120, 230, 140);
+    -unity-font-style: bold;
+}
+
 /* ── チームバフ残り時間（ミニマップ上 16px） ─────────── */
 .hud-buff {
     color: var(--color-gold-bright);
