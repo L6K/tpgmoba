@@ -348,6 +348,20 @@
     transition: width 0.12s ease-out;
 }
 
+/* 余剰シールド: HP バーの上に重ねる半透明の白青オーバーレイ + 左端に光る境界線 */
+.hud-hp-shield-over {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background-color: rgba(210, 240, 255, 0.4);
+    border-left-width: 2px;
+    border-left-color: rgba(225, 245, 255, 0.95);
+    border-radius: 1px;
+    transition: left 0.12s ease-out, width 0.12s ease-out;
+}
+
 /* HP テキスト: バー中央に羊皮紙色で重ねる */
 .hud-hp-text {
     position: absolute;

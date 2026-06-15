@@ -108,16 +108,25 @@ namespace Enigma.Character
 
             if (_dashTimeRemaining > 0f)
             {
-                _dashTimeRemaining -= Time.deltaTime;
-                if (_cc.isGrounded && _verticalVelocity < 0f) _verticalVelocity = -2f;
-                _verticalVelocity += Gravity * Time.deltaTime;
-                var dstep = _dashVelocity * Time.deltaTime;
-                dstep.y = _verticalVelocity * Time.deltaTime;
-                _cc.Move(dstep);
-                var look = _dashVelocity; look.y = 0f;
-                if (look.sqrMagnitude > 0.0001f)
-                    transform.rotation = MovementLogic.RotateTowards(transform.rotation, look.normalized, _turnSpeedDegrees * Time.deltaTime);
-                return;
+                // ダッシュ中に Root/Stun を受けたら水平ダッシュを即中断する（重力は通常移動側で継続）
+                if (_statusEffects != null && !_statusEffects.CanMove)
+                {
+                    _dashTimeRemaining = 0f;
+                    _dashVelocity      = Vector3.zero;
+                }
+                else
+                {
+                    _dashTimeRemaining -= Time.deltaTime;
+                    if (_cc.isGrounded && _verticalVelocity < 0f) _verticalVelocity = -2f;
+                    _verticalVelocity += Gravity * Time.deltaTime;
+                    var dstep = _dashVelocity * Time.deltaTime;
+                    dstep.y = _verticalVelocity * Time.deltaTime;
+                    _cc.Move(dstep);
+                    var look = _dashVelocity; look.y = 0f;
+                    if (look.sqrMagnitude > 0.0001f)
+                        transform.rotation = MovementLogic.RotateTowards(transform.rotation, look.normalized, _turnSpeedDegrees * Time.deltaTime);
+                    return;
+                }
             }
 
             var keyboard = Keyboard.current;

@@ -32,6 +32,7 @@ namespace Enigma.UI
         private VisualElement _hpFill;
         private VisualElement _hpDamage;
         private VisualElement _hpShield;
+        private VisualElement _hpShieldOver;
         private Label         _hpText;
         private VisualElement _hpBarBg;
         private float         _lastMaxHp = -1f;
@@ -117,6 +118,7 @@ namespace Enigma.UI
             _hpFill     = root.Q<VisualElement>("hud-hp-fill");
             _hpDamage   = root.Q<VisualElement>("hud-hp-damage");
             _hpShield   = root.Q<VisualElement>("hud-hp-shield");
+            _hpShieldOver = root.Q<VisualElement>("hud-hp-shield-over");
             _hpText     = root.Q<Label>("hud-hp-text");
             _buffLabel  = root.Q<Label>("hud-buff");
             _levelLabel = root.Q<Label>("hud-level");
@@ -457,9 +459,18 @@ namespace Enigma.UI
             {
                 float hpFrac     = maxHp > 0f ? Mathf.Clamp01(model.CurrentHp / maxHp) : 0f;
                 float shieldFrac = maxHp > 0f ? Mathf.Clamp01(model.Shield / maxHp) : 0f;
-                float shieldW    = Mathf.Min(shieldFrac, 1f - hpFrac); // バー幅を超えないようにする
+                float fitW       = Mathf.Min(shieldFrac, 1f - hpFrac); // 空きHPに収まる分
                 _hpShield.style.left  = Length.Percent(hpFrac * 100f);
-                _hpShield.style.width = Length.Percent(shieldW * 100f);
+                _hpShield.style.width = Length.Percent(fitW * 100f);
+
+                // 空きに収まらない余剰分は、HPバー右端から左へ半透明オーバーレイで重ねる。
+                // 満HP（hpFrac==1）でもシールドが帯として見えるようになる。
+                if (_hpShieldOver != null)
+                {
+                    float overflow = Mathf.Clamp01(shieldFrac - fitW);
+                    _hpShieldOver.style.left  = Length.Percent((1f - overflow) * 100f);
+                    _hpShieldOver.style.width = Length.Percent(overflow * 100f);
+                }
             }
 
             // ダメージトレイル: 減少時は delay 付き transition で遅れて縮む。回復時は即追従。

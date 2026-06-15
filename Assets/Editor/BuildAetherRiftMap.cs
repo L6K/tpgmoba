@@ -3381,15 +3381,31 @@ public static class BuildAetherRiftMap
             int leafTone = rng.Next(0, 3);
             ApplyNatureMaterials(treeGo, sp, leafTone);
 
-            // コライダー: 幹相当の細い鉛直ポール。
-            // 木は euler X=270 で立たせている(見た目の縦軸=ローカルZ)ため、direction を Z(2) にし
-            // center もローカルZへ。direction=Y のままだと長軸が世界水平に寝て巨大な横倒し壁になる。
+            // コライダー: 幹相当の細い鉛直カプセル。
+            // FBX ごとに直立補正の有無・ローカル軸が異なるため、固定 direction は横倒し壁の原因になる
+            // （Y-up モデルは補正されず、direction=2 だと長軸が世界水平に寝て巨大な透明壁になっていた）。
+            // 最終姿勢から「世界鉛直に最も近いローカル軸」を判定し、その軸に合わせて collider を組む。
             float capHeight = targetHeight * styleMul;
+            Physics.SyncTransforms();
+            var tr = treeGo.transform;
+            // 世界の上方向を木ローカルへ変換し、最大成分の軸を縦軸とする
+            Vector3 localUp = tr.InverseTransformDirection(Vector3.up);
+            int dir = 0; float maxAbs = Mathf.Abs(localUp.x);
+            if (Mathf.Abs(localUp.y) > maxAbs) { dir = 1; maxAbs = Mathf.Abs(localUp.y); }
+            if (Mathf.Abs(localUp.z) > maxAbs) { dir = 2; }
             var cap = treeGo.AddComponent<CapsuleCollider>();
-            cap.direction = 2; // Z 軸(回転後に世界鉛直)
-            cap.center = new Vector3(0f, 0f, capHeight * 0.5f);
-            cap.radius = Mathf.Max(0.25f, capHeight * 0.06f);
-            cap.height = capHeight;
+            cap.direction = dir;
+            // 中心: 幹の中点 = 世界 (tx, capHeight/2, tz) をローカルへ変換
+            cap.center = tr.InverseTransformPoint(new Vector3(tx, capHeight * 0.5f, tz));
+            // height/radius はローカル値。CapsuleCollider は direction 軸を lossyScale[dir]、
+            // 半径を他2軸の最大 lossyScale で拡大するため、世界寸法へ割り戻す。
+            Vector3 ls = tr.lossyScale;
+            float axisScale   = dir == 0 ? Mathf.Abs(ls.x) : dir == 1 ? Mathf.Abs(ls.y) : Mathf.Abs(ls.z);
+            float radialScale = dir == 0 ? Mathf.Max(Mathf.Abs(ls.y), Mathf.Abs(ls.z))
+                              : dir == 1 ? Mathf.Max(Mathf.Abs(ls.x), Mathf.Abs(ls.z))
+                                         : Mathf.Max(Mathf.Abs(ls.x), Mathf.Abs(ls.y));
+            cap.height = capHeight / Mathf.Max(1e-4f, axisScale);
+            cap.radius = Mathf.Max(0.25f, capHeight * 0.06f) / Mathf.Max(1e-4f, radialScale);
         }
         else
         {

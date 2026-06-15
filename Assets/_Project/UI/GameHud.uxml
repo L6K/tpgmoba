@@ -94,8 +94,10 @@
                     <ui:VisualElement name="hud-hp-bar-bg" class="hud-hp-bar-bg">
                         <ui:VisualElement name="hud-hp-damage" class="hud-hp-damage" />
                         <ui:VisualElement name="hud-hp-fill" class="hud-hp-fill" />
-                        <!-- シールド帯: HP フィルの上に左詰めで重ねる（幅は Shield/MaxHp） -->
+                        <!-- シールド帯: HP フィルの右隣に「追加耐久」として描く（幅は空きHPに収まる分） -->
                         <ui:VisualElement name="hud-hp-shield" class="hud-hp-shield" />
+                        <!-- 余剰シールド: 空きに収まらない分を HP バー右端から半透明オーバーレイで重ねる（満HPでも可視） -->
+                        <ui:VisualElement name="hud-hp-shield-over" class="hud-hp-shield-over" />
                         <!-- HP テキストをバー中央に重ねる -->
                         <ui:Label name="hud-hp-text" class="hud-hp-text" text="200 / 200" />
                     </ui:VisualElement>

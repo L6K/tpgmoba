@@ -206,13 +206,22 @@ namespace Enigma.Character
             // ダッシュ中は通常の知覚/移動を上書きして踏み込みを優先する
             if (_dashTimeRemaining > 0f)
             {
-                _dashTimeRemaining -= Time.deltaTime;
-                if (_controller.isGrounded && _verticalVelocity < 0f) _verticalVelocity = -1f;
-                _verticalVelocity += Gravity * Time.deltaTime;
-                var step = _dashVelocity * Time.deltaTime;
-                step.y = _verticalVelocity * Time.deltaTime;
-                _controller.Move(step);
-                return;
+                // ダッシュ中に Root/Stun を受けたら水平ダッシュを即中断する
+                if (_statusEffects != null && !_statusEffects.CanMove)
+                {
+                    _dashTimeRemaining = 0f;
+                    _dashVelocity      = Vector3.zero;
+                }
+                else
+                {
+                    _dashTimeRemaining -= Time.deltaTime;
+                    if (_controller.isGrounded && _verticalVelocity < 0f) _verticalVelocity = -1f;
+                    _verticalVelocity += Gravity * Time.deltaTime;
+                    var step = _dashVelocity * Time.deltaTime;
+                    step.y = _verticalVelocity * Time.deltaTime;
+                    _controller.Move(step);
+                    return;
+                }
             }
 
             _senseTimer -= Time.deltaTime;
