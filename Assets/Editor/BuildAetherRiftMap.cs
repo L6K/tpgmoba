@@ -70,7 +70,8 @@ public static class BuildAetherRiftMap
             ground.name = "Ground";
             // Cylinder メッシュは高さ2のため scaleY=0.5 で天面が y=0 になる
             ground.transform.position   = new Vector3(0f, -0.5f, 0f);
-            ground.transform.localScale = new Vector3(150f, 0.5f, 150f);
+            // 拡張したベースポケット(後方-74)を内包できるよう地面を r75→80 へ
+            ground.transform.localScale = new Vector3(160f, 0.5f, 160f);
             UseFlatMeshCollider(ground, keepCollider: true);
             SetStatic(ground);
             // 草原グリーン
@@ -396,8 +397,8 @@ public static class BuildAetherRiftMap
             var baseBlue = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseBlue.name = "Base_Blue";
             baseBlue.transform.position   = new Vector3(-56f, 0.5f, 0f);
-            // 3v3 集団戦が窮屈にならないよう基壇を拡張（半径 11→14）。ポケット壁(内14.4)の内側に収める
-            baseBlue.transform.localScale = new Vector3(28f, 0.5f, 28f);
+            // LoL 風にリスポーン付近を広く: 基壇 半径 14→17（ポケット壁 内17.4 の内側に収める）
+            baseBlue.transform.localScale = new Vector3(34f, 0.5f, 34f);
             UseFlatMeshCollider(baseBlue, keepCollider: true);
             SetStatic(baseBlue);
             SetMat(baseBlue, matBlue);
@@ -405,7 +406,7 @@ public static class BuildAetherRiftMap
             var baseRed = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseRed.name = "Base_Red";
             baseRed.transform.position   = new Vector3(56f, 0.5f, 0f);
-            baseRed.transform.localScale = new Vector3(28f, 0.5f, 28f);
+            baseRed.transform.localScale = new Vector3(34f, 0.5f, 34f);
             UseFlatMeshCollider(baseRed, keepCollider: true);
             SetStatic(baseRed);
             SetMat(baseRed, matRed);
@@ -604,7 +605,7 @@ public static class BuildAetherRiftMap
         // 9. プレイヤー
         // 泉/スポーンは基地最奥（ネクサス -48 の後方）に配置。LoL のフォーメーション:
         // 奥=泉 → 手前=ネクサス → レーンへ、の並びにして窮屈さを解消する。
-        var playerSpawnPos = new Vector3(-62f, 1.1f, 0f);
+        var playerSpawnPos = new Vector3(-64f, 1.1f, 0f);
         var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         player.name = "Player";
         player.tag  = "Player";
@@ -742,7 +743,7 @@ public static class BuildAetherRiftMap
         // 泉回復(青ベースの泉付近で毎秒回復)
         var playerFountain   = player.AddComponent<Enigma.Combat.FountainRegen>();
         var soPlayerFountain = new SerializedObject(playerFountain);
-        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-62f, 1.1f, 0f);
+        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-64f, 1.1f, 0f);
         soPlayerFountain.ApplyModifiedPropertiesWithoutUndo();
 
         // MatchBootstrap: ピック済みキャラのスキル・ステータスを Start 時に注入する
@@ -970,13 +971,13 @@ public static class BuildAetherRiftMap
     private const float TubeLaneInnerR = 50.0f;
     private const float TubeLaneOuterR = 51.8f;
     private const float TubeHeight     = 2.0f;
-    // 3v3 集団戦が余裕を持って行える広さに拡張（内 11.4→14.4 / 外 12.8→15.8）。基壇 r14 を内包する
-    private const float TubePocketInnerR = 14.4f;
-    private const float TubePocketOuterR = 15.8f;
+    // LoL 風にリスポーン付近を広く拡張（内 14.4→17.4 / 外 15.8→18.4）。基壇 r17 を内包する
+    private const float TubePocketInnerR = 17.4f;
+    private const float TubePocketOuterR = 18.4f;
     // ポケット弧をレーン弧の壁体内部へ食い込ませる延長角（継ぎ目スリットを構造的に排除）
     private const float PocketEndExtendDeg = 5f;
     // レーン側開口（ベース正面=原点方向）の半角。ポケット半径に依らず固定角で開口を切り出す。
-    private const float PocketOpeningHalfDeg = 52f;
+    private const float PocketOpeningHalfDeg = 64f;
 
     /// <summary>
     /// 連続円弧帯メッシュ（CreateWallBandMesh）の衝突チューブを生成し "OuterBoundary" 親 GO に

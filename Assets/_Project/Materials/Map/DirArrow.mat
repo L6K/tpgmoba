@@ -93,7 +93,7 @@ Material:
     - _Blend: 0
     - _BlendMode: 0
     - _BlendOp: 0
-    - _Cull: 2
+    - _Cull: 0
     - _CullMode: 2
     - _Cutoff: 0.5
     - _DistortionBlendMode: 0

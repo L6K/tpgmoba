@@ -5,7 +5,7 @@ using Enigma.Character;
 namespace Enigma.Tests
 {
     /// <summary>
-    /// OutOfBoundsLogic の純粋関数テスト。境界半径（レーン外周 51.8 / ポケット外周 14.4）と
+    /// OutOfBoundsLogic の純粋関数テスト。境界半径（レーン外周 51.8 / ポケット外周 17.4）と
     /// 救出地点（半径 45・同一角度）の整合を検証する。
     /// </summary>
     public sealed class OutOfBoundsLogicTests
@@ -36,8 +36,8 @@ namespace Enigma.Tests
         [Test]
         public void OutsidePocket_IsOutOfBounds()
         {
-            // 赤ベース中心から +x へ 16（ポケット外周 14.4 超）かつ中心距離 72 → 場外
-            Assert.IsTrue(OutOfBoundsLogic.IsOutOfBounds(72f, 0f));
+            // 赤ベース中心から +x へ 18（ポケット外周 17.4 超）かつ中心距離 74 → 場外
+            Assert.IsTrue(OutOfBoundsLogic.IsOutOfBounds(74f, 0f));
         }
 
         [Test]
