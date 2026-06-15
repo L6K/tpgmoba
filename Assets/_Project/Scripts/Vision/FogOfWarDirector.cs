@@ -31,6 +31,9 @@ namespace Enigma.Vision
             go.AddComponent<FogOfWarDirector>();
         }
 
+        /// <summary>ミニマップ等が可視判定を問い合わせるためのアクセサ。</summary>
+        public static FogOfWarDirector Instance { get; private set; }
+
         private VisionRevealModel _model;
         private TeamId            _playerTeam   = TeamId.Neutral;
         private bool              _teamResolved;
@@ -53,6 +56,21 @@ namespace Enigma.Vision
         private void Awake()
         {
             _model = new VisionRevealModel(LingerSeconds);
+            Instance = this;
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this) Instance = null;
+        }
+
+        /// <summary>
+        /// 指定 GameObject（GetInstanceID）が「霧で隠すべき敵動的ユニットで、かつ現在不可視」なら true。
+        /// 追跡対象外（味方・構造物・未登録）は false（=隠さない）。ミニマップのドット表示判定に使う。
+        /// </summary>
+        public bool IsHidden(int instanceId)
+        {
+            return _foggables.TryGetValue(instanceId, out var fog) && !fog.Visible;
         }
 
         private void Update()

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Enigma.Combat;
+using Enigma.Vision;
 
 namespace Enigma.Minimap
 {
@@ -87,8 +88,11 @@ namespace Enigma.Minimap
                 }
 
                 bool alive = IsAlive(target);
-                dot.style.display = alive ? DisplayStyle.Flex : DisplayStyle.None;
-                if (!alive) continue;
+                // Fog of War: 視界外の敵動的ユニットはミニマップからも隠す（味方・構造物は対象外）
+                bool fogHidden = FogOfWarDirector.Instance != null
+                              && FogOfWarDirector.Instance.IsHidden(target.gameObject.GetInstanceID());
+                dot.style.display = (alive && !fogHidden) ? DisplayStyle.Flex : DisplayStyle.None;
+                if (!alive || fogHidden) continue;
 
                 float dotSize = _dotSizes.TryGetValue(target, out var s) ? s : SizeChampion;
 
