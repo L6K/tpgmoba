@@ -3324,10 +3324,13 @@ public static class BuildAetherRiftMap
             int leafTone = rng.Next(0, 3);
             ApplyNatureMaterials(treeGo, sp, leafTone);
 
-            // コライダー: 幹相当の半径（正規化後の樹高に比例）。
+            // コライダー: 幹相当の細い鉛直ポール。
+            // 木は euler X=270 で立たせている(見た目の縦軸=ローカルZ)ため、direction を Z(2) にし
+            // center もローカルZへ。direction=Y のままだと長軸が世界水平に寝て巨大な横倒し壁になる。
             float capHeight = targetHeight * styleMul;
             var cap = treeGo.AddComponent<CapsuleCollider>();
-            cap.center = new Vector3(0f, capHeight * 0.5f, 0f);
+            cap.direction = 2; // Z 軸(回転後に世界鉛直)
+            cap.center = new Vector3(0f, 0f, capHeight * 0.5f);
             cap.radius = Mathf.Max(0.25f, capHeight * 0.06f);
             cap.height = capHeight;
         }
