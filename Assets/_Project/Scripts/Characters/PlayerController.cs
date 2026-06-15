@@ -19,6 +19,7 @@ namespace Enigma.Character
         private static readonly int SpeedParam = Animator.StringToHash("Speed");
 
         private const float Gravity = -20f;
+        private const float JumpSpeed = 8f;
 
         private CharacterController _cc;
         private float _verticalVelocity;
@@ -104,9 +105,15 @@ namespace Enigma.Character
                 ? Vector3.zero
                 : MovementLogic.CameraRelativeMove(input, cameraYaw);
 
-            // 重力
-            if (_cc.isGrounded && _verticalVelocity < 0f)
+            // ジャンプ(スペース): 接地中かつ移動可能(スタン/ルート/Windup でない)時のみ
+            if (_cc.isGrounded && keyboard.spaceKey.wasPressedThisFrame && !movementLocked)
+            {
+                _verticalVelocity = JumpSpeed;
+            }
+            else if (_cc.isGrounded && _verticalVelocity < 0f)
+            {
                 _verticalVelocity = -2f;
+            }
             _verticalVelocity += Gravity * Time.deltaTime;
 
             var motion = moveDir * (_moveSpeed * (_playerItems != null ? _playerItems.MoveSpeedMultiplier : 1f) * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f) * ObjectiveMoveSpeedMultiplier() * Time.deltaTime);

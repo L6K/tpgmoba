@@ -241,6 +241,11 @@ namespace Enigma.Ability
             }
         }
 
+        // 地点AoE を床に接地させるための地面 Y。プレイヤーのピボットはカプセル中心(足元+約1m)なので
+        // そのまま使うと AoE が浮く。足元相当へ下げる(平坦マップ前提。起伏対応は将来 地面レイキャスト)。
+        private const float FootOffsetY = 1.0f;
+        private float GroundLevelY() => transform.position.y - FootOffsetY;
+
         private void UpdateArmedIndicator(int slot)
         {
             var def = (slot >= 0 && slot < 4) ? _skills[slot] : null;
@@ -259,7 +264,7 @@ namespace Enigma.Ability
                 dir.y      = 0f;
                 float dist = Mathf.Min(dir.magnitude, def.Range);
                 var   pos  = transform.position + dir.normalized * dist;
-                pos.y      = transform.position.y + 0.05f;
+                pos.y      = GroundLevelY() + 0.05f; // 床に接地させる(ピボット高さだと浮く)
                 _aoeIndicator.transform.position = pos;
             }
         }
@@ -357,7 +362,7 @@ namespace Enigma.Ability
             dir.y      = 0f;
             float dist = Mathf.Min(dir.magnitude, def.Range);
             var   pos  = transform.position + (dir.sqrMagnitude > 0.001f ? dir.normalized * dist : transform.forward * dist);
-            pos.y      = transform.position.y;
+            pos.y      = GroundLevelY(); // 床に接地(ピボット高さだと浮く)
 
             var telegraph = Instantiate(_telegraphPrefab, pos, Quaternion.identity);
             telegraph.Init(def.Radius, 0.8f, def.Damage * scale, gameObject);

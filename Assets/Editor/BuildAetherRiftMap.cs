@@ -595,7 +595,7 @@ public static class BuildAetherRiftMap
         WireCharacterSkills("Char_nova",  new[] { novaQ, novaW, novaE, (SkillDefinition)null });
 
         // 9. プレイヤー
-        var playerSpawnPos = new Vector3(-52f, 1.1f, 10f);
+        var playerSpawnPos = new Vector3(-52f, 1.1f, 0f);
         var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         player.name = "Player";
         player.tag  = "Player";
@@ -733,7 +733,7 @@ public static class BuildAetherRiftMap
         // 泉回復(青ベースの泉付近で毎秒回復)
         var playerFountain   = player.AddComponent<Enigma.Combat.FountainRegen>();
         var soPlayerFountain = new SerializedObject(playerFountain);
-        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-52f, 1.1f, 10f);
+        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-52f, 1.1f, 0f);
         soPlayerFountain.ApplyModifiedPropertiesWithoutUndo();
 
         // MatchBootstrap: ピック済みキャラのスキル・ステータスを Start 時に注入する
