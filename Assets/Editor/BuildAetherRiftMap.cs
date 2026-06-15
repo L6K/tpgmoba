@@ -426,6 +426,11 @@ public static class BuildAetherRiftMap
                 ("Tower_BMidBot", 220f, matBlue),
                 ("Tower_RBot",    320f, matRed),
                 ("Tower_RMidBot", 340f, matRed),
+                // ベース前(リスポーン地点前)の最後のタワー。各レーン本陣寄りに1基ずつ、最も固い。
+                ("Tower_BBaseTop", 170f, matBlue),
+                ("Tower_BBaseBot", 190f, matBlue),
+                ("Tower_RBaseTop",  10f, matRed),
+                ("Tower_RBaseBot", 350f, matRed),
             };
 
             foreach (var (tname, theta, tmat) in towerDefs)
@@ -437,9 +442,9 @@ public static class BuildAetherRiftMap
 
                 // 接地位置 y=0。チームはタワー名の B/R プレフィックスで判定
                 bool isBlue = tname.StartsWith("Tower_B");
-                // 外側タワー(名前に "Mid" を含む)=600、本陣寄りの内側タワー=800。
+                // 外側タワー("Mid")=600、内側タワー=800、ベース前("Base")=1000。
                 // 本陣防衛ほど固くして、ウェーブで段階的に折り進む設計にする。
-                float towerHp = tname.Contains("Mid") ? 600f : 800f;
+                float towerHp = tname.Contains("Base") ? 1000f : tname.Contains("Mid") ? 600f : 800f;
                 PlaceTower(tname, tPos, tmat, null, towerModel, isBlue, towerHp);
 
                 // 足元チーム色リング
