@@ -72,6 +72,9 @@ namespace Enigma.Character
         private const int SkillSlotCount = 3;
 
         private CharacterController _controller;
+        // ダッシュ(veil R 等の対象ブリンク)。発動中は通常移動を上書きする
+        private float   _dashTimeRemaining;
+        private Vector3 _dashVelocity;
         private HealthComponent _health;
         private TeamTag _teamTag;
         private StatusEffectController _statusEffects;
@@ -185,6 +188,18 @@ namespace Enigma.Character
         private void Update()
         {
             if (_isDead) return;
+
+            // ダッシュ中は通常の知覚/移動を上書きして踏み込みを優先する
+            if (_dashTimeRemaining > 0f)
+            {
+                _dashTimeRemaining -= Time.deltaTime;
+                if (_controller.isGrounded && _verticalVelocity < 0f) _verticalVelocity = -1f;
+                _verticalVelocity += Gravity * Time.deltaTime;
+                var step = _dashVelocity * Time.deltaTime;
+                step.y = _verticalVelocity * Time.deltaTime;
+                _controller.Move(step);
+                return;
+            }
 
             _senseTimer -= Time.deltaTime;
             if (_senseTimer <= 0f)
@@ -494,6 +509,16 @@ namespace Enigma.Character
                               forward: move == LaneMove.Forward);
         }
 
+        // dir 方向へ distance(m) を duration 秒で踏み込むダッシュを要求する(プレイヤー側 RequestDash のミラー)
+        private void RequestDash(Vector3 dir, float distance, float duration = 0.15f)
+        {
+            if (duration <= 0f || distance <= 0f) return;
+            dir.y = 0f;
+            if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
+            _dashVelocity = dir.normalized * (distance / duration);
+            _dashTimeRemaining = duration;
+        }
+
         // 移動意図があるのにほぼ動けない状態が続いたら、障害物(タワー等)に
         // 引っかかったとみなして目標ウェイポイントを1つ進める
         private void UpdateStuckEscape(bool wantsToMove, bool forward)
@@ -744,6 +769,10 @@ namespace Enigma.Character
                 if (def.RootDuration > 0f) sc.ApplyRoot(def.RootDuration);
                 if (def.SlowStrength > 0f && def.SlowDuration > 0f) sc.ApplySlow(def.SlowStrength, def.SlowDuration);
             }
+
+            // 対象へブリンク(veil R 等)
+            if (def.DashDistance > 0f)
+                RequestDash(target.transform.position - transform.position, def.DashDistance);
 
             // 胸元→対象へビーム一閃 + バースト+小リング（プレイヤー側と共通化）
             var color = SkillSlotColor(slot);
