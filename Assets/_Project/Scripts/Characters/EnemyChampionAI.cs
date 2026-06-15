@@ -6,6 +6,7 @@ using Enigma.Audio;
 using Enigma.Combat;
 using Enigma.Core;
 using Enigma.GameModes;
+using Enigma.Vfx;
 
 namespace Enigma.Character
 {
@@ -61,6 +62,9 @@ namespace Enigma.Character
         private const float SenseInterval = 0.3f;
 
         private const float ProjectileSpeed  = 30f;
+
+        // AA ビームのネオン着色に使う champion 別プロファイル。ApplyCharacter で CharId から解決。
+        private ChampionVfx _championVfx = ChampionVfx.Zeph;
 
         private const float RespawnDelay = 8f;
 
@@ -156,6 +160,9 @@ namespace Enigma.Character
             if (data.AttackDamage > 0f)    _attackDamage    = data.AttackDamage;
             if (data.AttackRange > 0f)     _attackRange     = data.AttackRange;
             if (data.AttackCooldown > 0f)  _attackCdSeconds = data.AttackCooldown;
+
+            // AA ビームのネオン着色用に champion プロファイルを解決（プレイヤー側 AutoAttack と同経路）
+            _championVfx = AttackVfxProfiles.Parse(data.CharId);
 
             _attackCooldown = new AttackCooldown(_attackCdSeconds);
 
@@ -818,6 +825,12 @@ namespace Enigma.Character
             // ビーム見た目を進行方向へ向けるため LookRotation を与える
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, ProjectileSpeed, _attackDamage, gameObject);
+
+            // champion 別ネオン着色（プレイヤー側 AutoAttack と同経路）
+            var profile = AttackVfxProfiles.For(_championVfx);
+            SkillVfx.TintBeamProjectile(proj.gameObject, profile);
+            SkillVfx.SpawnMuzzleFlash(_muzzle.position, dir, profile);
+
             GameSfx.PlayVariant("aa_fire", 3, _muzzle.position, 0.6f);
             _clipSwitcher?.PlayAttack(0.45f);
         }
