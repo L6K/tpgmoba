@@ -69,6 +69,10 @@ namespace Enigma.Character
                 {
                     hc.TakeDamage(finalDamage, _owner);
                     ApplyStatusTo(hc.gameObject);
+
+                    // 操作プレイヤーが当てた一撃だけ手応え演出(微シェイク+大技ヒットストップ)
+                    if (_owner != null && _owner.GetComponent<PlayerController>() != null)
+                        Enigma.Vfx.AttackJuice.PlayerLandedHit(finalDamage, hc.Model.MaxHp, false);
                 }
                 else
                     damageable.TakeDamage(finalDamage);
