@@ -10,7 +10,7 @@ namespace Enigma.Character
     {
         // 衝突チューブの外殻半径と一致させる（BuildAetherRiftMap の TubeLaneOuterR / TubePocketInnerR）
         private const float LaneOuterRadius   = 51.8f;
-        private const float PocketInnerRadius = 11.4f;
+        private const float PocketInnerRadius = 14.4f;
         private const float BaseOffsetX       = 56f;
         // 救出先の半径（レーンアーク中央 R=45 付近）
         private const float LaneRescueRadius  = 45f;

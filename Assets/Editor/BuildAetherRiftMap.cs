@@ -383,6 +383,9 @@ public static class BuildAetherRiftMap
         ApplyWutheringRamp(matJunglePath);
         PlaceJunglePathsAndCamps(matJunglePath);
 
+        // ---- 森とレーンの間の壁（レーンリング内縁に沿った壁。パス/川口だけ開口）----
+        PlaceJungleLaneWalls();
+
         // ---- 地表植生の散布（草タフト・小石）----
         ScatterGroundVegetation();
 
@@ -391,7 +394,8 @@ public static class BuildAetherRiftMap
             var baseBlue = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseBlue.name = "Base_Blue";
             baseBlue.transform.position   = new Vector3(-56f, 0.5f, 0f);
-            baseBlue.transform.localScale = new Vector3(22f, 0.5f, 22f);
+            // 3v3 集団戦が窮屈にならないよう基壇を拡張（半径 11→14）。ポケット壁(内14.4)の内側に収める
+            baseBlue.transform.localScale = new Vector3(28f, 0.5f, 28f);
             UseFlatMeshCollider(baseBlue, keepCollider: true);
             SetStatic(baseBlue);
             SetMat(baseBlue, matBlue);
@@ -399,15 +403,16 @@ public static class BuildAetherRiftMap
             var baseRed = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseRed.name = "Base_Red";
             baseRed.transform.position   = new Vector3(56f, 0.5f, 0f);
-            baseRed.transform.localScale = new Vector3(22f, 0.5f, 22f);
+            baseRed.transform.localScale = new Vector3(28f, 0.5f, 28f);
             UseFlatMeshCollider(baseRed, keepCollider: true);
             SetStatic(baseRed);
             SetMat(baseRed, matRed);
         }
 
-        // タイタン: pos(±56, 4, 0)
-        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-56f, 4f, 0f), matBlue);
-        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 56f, 4f, 0f), matRed);
+        // タイタン=ネクサス: LoL のネクサス同様、泉(基地奥)の手前=開口側に大きく配置して
+        // 「これが壊れたら負ける」目標物だと一目で分かるようにする。
+        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-48f, 7f, 0f), matBlue);
+        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 48f, 7f, 0f), matRed);
 
         // タワー8基: Kenney tower-square.fbx (フォールバック: Cylinder)
         // TOP: θ=160°,140° (Blue)、θ=40°,20° (Red)
@@ -426,11 +431,6 @@ public static class BuildAetherRiftMap
                 ("Tower_BMidBot", 220f, matBlue),
                 ("Tower_RBot",    320f, matRed),
                 ("Tower_RMidBot", 340f, matRed),
-                // ベース前(リスポーン地点前)の最後のタワー。各レーン本陣寄りに1基ずつ、最も固い。
-                ("Tower_BBaseTop", 170f, matBlue),
-                ("Tower_BBaseBot", 190f, matBlue),
-                ("Tower_RBaseTop",  10f, matRed),
-                ("Tower_RBaseBot", 350f, matRed),
             };
 
             foreach (var (tname, theta, tmat) in towerDefs)
@@ -442,9 +442,9 @@ public static class BuildAetherRiftMap
 
                 // 接地位置 y=0。チームはタワー名の B/R プレフィックスで判定
                 bool isBlue = tname.StartsWith("Tower_B");
-                // 外側タワー("Mid")=600、内側タワー=800、ベース前("Base")=1000。
+                // 外側タワー(名前に "Mid" を含む)=600、本陣寄りの内側タワー=800。
                 // 本陣防衛ほど固くして、ウェーブで段階的に折り進む設計にする。
-                float towerHp = tname.Contains("Base") ? 1000f : tname.Contains("Mid") ? 600f : 800f;
+                float towerHp = tname.Contains("Mid") ? 600f : 800f;
                 PlaceTower(tname, tPos, tmat, null, towerModel, isBlue, towerHp);
 
                 // 足元チーム色リング
@@ -600,7 +600,9 @@ public static class BuildAetherRiftMap
         WireCharacterSkills("Char_nova",  new[] { novaQ, novaW, novaE, (SkillDefinition)null });
 
         // 9. プレイヤー
-        var playerSpawnPos = new Vector3(-52f, 1.1f, 0f);
+        // 泉/スポーンは基地最奥（ネクサス -48 の後方）に配置。LoL のフォーメーション:
+        // 奥=泉 → 手前=ネクサス → レーンへ、の並びにして窮屈さを解消する。
+        var playerSpawnPos = new Vector3(-62f, 1.1f, 0f);
         var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         player.name = "Player";
         player.tag  = "Player";
@@ -738,7 +740,7 @@ public static class BuildAetherRiftMap
         // 泉回復(青ベースの泉付近で毎秒回復)
         var playerFountain   = player.AddComponent<Enigma.Combat.FountainRegen>();
         var soPlayerFountain = new SerializedObject(playerFountain);
-        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-52f, 1.1f, 0f);
+        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-62f, 1.1f, 0f);
         soPlayerFountain.ApplyModifiedPropertiesWithoutUndo();
 
         // MatchBootstrap: ピック済みキャラのスキル・ステータスを Start 時に注入する
@@ -966,12 +968,13 @@ public static class BuildAetherRiftMap
     private const float TubeLaneInnerR = 50.0f;
     private const float TubeLaneOuterR = 51.8f;
     private const float TubeHeight     = 2.0f;
-    private const float TubePocketInnerR = 11.4f;
-    private const float TubePocketOuterR = 12.8f;
+    // 3v3 集団戦が余裕を持って行える広さに拡張（内 11.4→14.4 / 外 12.8→15.8）。基壇 r14 を内包する
+    private const float TubePocketInnerR = 14.4f;
+    private const float TubePocketOuterR = 15.8f;
     // ポケット弧をレーン弧の壁体内部へ食い込ませる延長角（継ぎ目スリットを構造的に排除）
     private const float PocketEndExtendDeg = 5f;
-    // レーン側開口を切り出す閾値: ベース円周上でマップ中心距離がこの値となる角を境界とする
-    private const float PocketOpeningDistThreshold = 49.6f;
+    // レーン側開口（ベース正面=原点方向）の半角。ポケット半径に依らず固定角で開口を切り出す。
+    private const float PocketOpeningHalfDeg = 52f;
 
     /// <summary>
     /// 連続円弧帯メッシュ（CreateWallBandMesh）の衝突チューブを生成し "OuterBoundary" 親 GO に
@@ -1000,15 +1003,11 @@ public static class BuildAetherRiftMap
         PlaceWallBand(parent, "BoundaryTubeRing_North", TubeLaneInnerR, TubeLaneOuterR, TubeHeight, ringSegs, 12f, 168f, matBoundary);
         PlaceWallBand(parent, "BoundaryTubeRing_South", TubeLaneInnerR, TubeLaneOuterR, TubeHeight, ringSegs, 192f, 348f, matBoundary);
 
-        // --- B2. ベースポケット2つ: [11.4, 12.8]・高さ2.0 ---
-        // レーン側開口（マップ中心距離 >= 49.6）を除いた外側区間 + 両端 5° 延長。
-        // ベース円（中心±56・半径12）周上で中心距離 = 49.6 となる角を余弦定理で逆算:
-        //   d^2 = 56^2 + 12^2 + 2*56*12*cos(φ)  （φ は base-local 角、+x 基準）
+        // --- B2. ベースポケット2つ: [14.4, 15.8]・高さ2.0 ---
+        // レーン側（ベース正面=原点方向）に固定半角の開口を残し、それ以外を壁で囲う + 両端 5° 延長。
         //   Blue: 中心は -56、レーン側(=+x, 原点方向)は φ≈0 → 開口は |φ| < φ0
         //   Red : 中心は +56、レーン側(=-x)は φ≈180 → 開口は |φ-180| < φ0
-        float cosPhi0 = (3136f + 144f - PocketOpeningDistThreshold * PocketOpeningDistThreshold) / 1344f;
-        cosPhi0 = Mathf.Clamp(cosPhi0, -1f, 1f);
-        float phi0Deg = Mathf.Acos(cosPhi0) * Mathf.Rad2Deg;  // ≈ 52.41°（開口の半角）
+        float phi0Deg = PocketOpeningHalfDeg;  // 開口の半角（ベース正面 ±）
 
         // Blue: 壁弧 = [phi0, 360 - phi0]、両端 5° 延長
         float blueStart = phi0Deg - PocketEndExtendDeg;
@@ -2062,9 +2061,19 @@ public static class BuildAetherRiftMap
         var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         go.name              = name;
         go.transform.position   = pos;
-        go.transform.localScale = new Vector3(4f, 6f, 4f);
+        // 大型化して接地（高さ14m＝最も背の高い構造物）。pos.y=7 でカプセル底が y=0 に来る
+        go.transform.localScale = new Vector3(4.5f, 7f, 4.5f);
         SetStatic(go);
         SetMat(go, mat);
+
+        // 足元のチーム色リング: ネクサスの位置と所属を遠目でも識別しやすくする
+        var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        ring.name = $"{name}_Ring";
+        ring.transform.position   = new Vector3(pos.x, 0.1f, pos.z);
+        ring.transform.localScale = new Vector3(11f, 0.05f, 11f);
+        UseFlatMeshCollider(ring, keepCollider: false);
+        SetStatic(ring);
+        SetMat(ring, mat);
 
         var hc = go.AddComponent<HealthComponent>();
         var soHc = new SerializedObject(hc);
@@ -2811,6 +2820,49 @@ public static class BuildAetherRiftMap
     {
         if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
         else if (mat.HasProperty("_Color")) mat.SetColor("_Color", color);
+    }
+
+    // ---- 森とレーンの壁 ----
+
+    /// <summary>
+    /// レーンリング内縁（半径 38.5〜39.8）に沿って壁弧を立て、ジャングル（中央側）とレーン（外周リング）を
+    /// 分離する。LoL のように決められた入口でのみ行き来できるよう、以下にだけ開口を残す:
+    ///   - ジャングルパス入口 θ=45/135/225/315°（各 ±8°）
+    ///   - 川がリングと交わる口 θ=90/270°（各 ±13°）
+    /// 衝突＝見た目一致の円弧帯メッシュ(PlaceWallBandAt)を使い、継ぎ目の透明壁/すり抜けを防ぐ。
+    /// </summary>
+    private static void PlaceJungleLaneWalls()
+    {
+        var mat = GetOrCreateMat("JungleLaneWall", new Color(0.46f, 0.50f, 0.40f));
+        ApplyWutheringRamp(mat);
+
+        var parent = new GameObject("JungleLaneWalls");
+        SetStatic(parent);
+
+        const float innerR = 38.5f;
+        const float outerR = 39.8f;
+        const float height = 2.5f;
+        const float stepDeg = 3.75f;
+
+        // 開口(start,end)を除いた壁弧。[0,360) を一周し、各開口の隙間を空ける。
+        (float start, float end)[] wallArcs =
+        {
+            ( 53f,  77f),   // 45°パス口 と 90°川口 の間
+            (103f, 127f),   // 90°川口 と 135°パス口 の間
+            (143f, 217f),   // 135°パス口 と 225°パス口 の間（青ベース側・180°を含む長弧）
+            (233f, 257f),   // 225°パス口 と 270°川口 の間
+            (283f, 307f),   // 270°川口 と 315°パス口 の間
+            (323f, 397f),   // 315°パス口 と 45°パス口 の間（赤ベース側・0°を含む長弧）
+        };
+
+        int i = 0;
+        foreach (var (start, end) in wallArcs)
+        {
+            int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
+            PlaceWallBandAt(parent, $"JungleLaneWall_{i:D2}", Vector3.zero,
+                innerR, outerR, height, segs, start, end, mat);
+            i++;
+        }
     }
 
     // ---- ジャングルパスとキャンプ配置 ----
