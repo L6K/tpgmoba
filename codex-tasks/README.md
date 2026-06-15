@@ -19,7 +19,7 @@
 | 04 | [04-objective-spawn-timer.md](04-objective-spawn-timer.md) | ObjectiveSpawnTimerModel（中央オブジェクトの出現/再出現/予告タイミングの plain C# + テスト）。提案P0「中央オブジェクト主役化」の土台 | ✅ 完了・レビュー合格（EditMode全361件緑・CentralObjectiveDirectorで実機ライフサイクル確認）: [report](04-objective-spawn-timer-report.md) |
 | 05 | [05-integration-review.md](05-integration-review.md) | 結合コード（D/E/P0 の MonoBehaviour層、テスト無し）の静的レビュー。バグ/リスクを report に書くだけ（修正なし） | ✅ 完了: [report](05-integration-review-report.md)（High2/Med4/Low2 検出→全件修正済 `fbb858b4`） |
 | 06 | [06-fix-rereview.md](06-fix-rereview.md) | 05 指摘の修正（`fbb858b4`）の再レビュー。各指摘の解消/退行を確認 | ✅ 完了 [report](06-fix-rereview-report.md) |
-| 07 | [07-objective-buff-model.md](07-objective-buff-model.md) | ObjectiveBuffModel（中央オブジェクト報酬バフの多種別・時間管理 plain C# + テスト）。次タスク①「中央オブジェクト完遂」の土台 | 未着手 |
-| 08 | [08-bot-macro-decision-model.md](08-bot-macro-decision-model.md) | BotMacroDecisionModel（集合/撤退/押し/守り/ファーム判断の純関数 + テスト）。次タスク②「Botマクロ判断」の土台 | 未着手 |
+| 07 | [07-objective-buff-model.md](07-objective-buff-model.md) | ObjectiveBuffModel（中央オブジェクト報酬バフの多種別・時間管理 plain C# + テスト）。次タスク①「中央オブジェクト完遂」の土台 | ✅ 完了（EditMode `dotnet test` 緑）: [report](07-objective-buff-model-report.md) |
+| 08 | [08-bot-macro-decision-model.md](08-bot-macro-decision-model.md) | BotMacroDecisionModel（集合/撤退/押し/守り/ファーム判断の純関数 + テスト）。次タスク②「Botマクロ判断」の土台 | ✅ 完了（EditMode `dotnet test` 緑）: [report](08-bot-macro-decision-model-report.md) |
 
 参考: [assets-image-manifest.md](assets-image-manifest.md) — 画像アセット(効果5/スキル18/ポートレート5)の生成は **5.5** 担当・**後回し**。
