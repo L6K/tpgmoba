@@ -1,6 +1,8 @@
 using UnityEngine;
 using Enigma.Audio;
 using Enigma.Combat;
+using Enigma.Ability;
+using Enigma.Vfx;
 
 namespace Enigma.Character
 {
@@ -31,6 +33,13 @@ namespace Enigma.Character
         private TargetingSystem        _targeting;
         private Transform              _faceTarget;
         private StatusEffectController _statusEffects;
+
+        // AA ビーム/マズルのネオン着色に使う champion 別プロファイル。
+        // 未設定(ピック未適用)時は既定の Zeph。MatchBootstrap / BotChampionBootstrap が CharId で設定する
+        private ChampionVfx _championVfx = ChampionVfx.Zeph;
+
+        /// <summary>characters.json の id（"zeph"/"garon"…）から VFX プロファイルを解決して保持する。</summary>
+        public void SetChampion(string charId) => _championVfx = AttackVfxProfiles.Parse(charId);
 
         // MatchBootstrap など composition root からピック済みステータスを反映する。
         // Awake 済みなら CD インスタンスも作り直す
@@ -116,6 +125,12 @@ namespace Enigma.Character
             // ビーム見た目を進行方向へ向けるため LookRotation を与える
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, _projectileSpeed, _attackDamage, gameObject);
+
+            // champion 別ネオン着色: 弾本体/トレイルを per-instance で染め、発射口にフラッシュ
+            var profile = AttackVfxProfiles.For(_championVfx);
+            SkillVfx.TintBeamProjectile(proj.gameObject, profile);
+            SkillVfx.SpawnMuzzleFlash(_muzzle.position, dir, profile);
+
             GameSfx.PlayVariant("aa_fire", 3, _muzzle.position, 0.7f);
         }
     }

@@ -57,7 +57,11 @@ namespace Enigma.Core
             }
 
             var autoAttack = _autoAttack != null ? _autoAttack : GetComponent<AutoAttack>();
-            autoAttack?.Configure(picked.AttackDamage, picked.AttackRange, picked.AttackCooldown);
+            if (autoAttack != null)
+            {
+                autoAttack.Configure(picked.AttackDamage, picked.AttackRange, picked.AttackCooldown);
+                autoAttack.SetChampion(picked.CharId);
+            }
 
             var controller = _playerController != null ? _playerController : GetComponent<PlayerController>();
             if (controller != null && picked.MoveSpeed > 0f)

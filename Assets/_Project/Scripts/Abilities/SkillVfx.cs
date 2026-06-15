@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Enigma.Vfx;
 
 namespace Enigma.Ability
 {
@@ -11,6 +12,9 @@ namespace Enigma.Ability
     {
         // 色ごとの透過 Unlit マテリアルを使い回す（GC・生成コスト削減）
         private static readonly Dictionary<Color, Material> _matCache = new();
+
+        // 色ごとの加算(One/One) Unlit マテリアル。ネオン発光のマズル/フラッシュ用
+        private static readonly Dictionary<Color, Material> _additiveCache = new();
 
         // リング円の分割数（滑らかさと頂点数の妥協点）
         private const int RingSegments = 48;
@@ -218,8 +222,111 @@ namespace Enigma.Ability
             return trail;
         }
 
+        // ── 攻撃VFX(ネオン) 系: champion 別プロファイルでビーム弾を着色 ──
+
+        /// <summary>VfxColor を発光強度込みの Color へ。加算/HDR 用に RGB を強度倍する。</summary>
+        public static Color ToColor(VfxColor c, float intensity = 1f) =>
+            new Color(c.R * intensity, c.G * intensity, c.B * intensity, 1f);
+
+        /// <summary>
+        /// AaBeam 弾を champion プロファイルで per-instance 着色する。
+        /// 本体マテリアル(プレハブで Vfx_Beam を結線済み)は MPB で HDR の _BaseColor を上書きし、
+        /// TrailRenderer は頂点色を Primary→透明にして発光トレイルにする。動的ライトも付与。
+        /// </summary>
+        public static void TintBeamProjectile(GameObject proj, AttackVfxProfile profile)
+        {
+            if (proj == null) return;
+
+            // 弾本体メッシュ(Vfx_Beam 結線済み)は子 GO "Beam" にあるため子も含めて探す
+            var hdr = ToColor(profile.Primary, profile.EmissionIntensity);
+            var mr = proj.GetComponentInChildren<MeshRenderer>();
+            if (mr != null)
+            {
+                var mpb = new MaterialPropertyBlock();
+                mr.GetPropertyBlock(mpb);
+                mpb.SetColor("_BaseColor", hdr);
+                mpb.SetColor("_Color", hdr);
+                mr.SetPropertyBlock(mpb);
+            }
+
+            // トレイルはルート側。頂点色を Primary→透明にして発光尾にする
+            var solid = ToColor(profile.Primary);
+            var tr = proj.GetComponentInChildren<TrailRenderer>();
+            if (tr != null)
+            {
+                tr.startColor = solid;
+                var tail = solid; tail.a = 0f;
+                tr.endColor = tail;
+            }
+
+            // 進行中の弾を淡く照らして発光感を補強（弾と共に Destroy される）
+            AttachLight(proj, solid, 5f, 3.5f * Mathf.Max(1f, profile.EmissionIntensity * 0.3f));
+        }
+
+        /// <summary>
+        /// 発射口に一瞬の加算フラッシュ。白芯＋ champion 色の二段で、進行方向へわずかに前出しする。
+        /// 加算ブレンドなのでテクスチャ無しの発光ブロブでもネオンらしく見える。
+        /// </summary>
+        public static void SpawnMuzzleFlash(Vector3 pos, Vector3 dir, AttackVfxProfile profile)
+        {
+            var nd = dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.forward;
+            var color = ToColor(profile.Primary, profile.EmissionIntensity);
+
+            SpawnAdditiveFlash(pos, Color.white, 0.18f, 0.5f, 0.10f);
+            SpawnAdditiveFlash(pos, color, 0.30f, 1.1f, 0.14f);
+            SpawnAdditiveFlash(pos + nd * 0.6f, color, 0.20f, 0.7f, 0.12f);
+        }
+
+        /// <summary>加算発光の球を拡大しつつ RGB を黒へ落として自壊させる（加算なのでアルファでなく輝度で消す）。</summary>
+        public static void SpawnAdditiveFlash(Vector3 pos, Color color, float startScale, float endScale, float life)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            go.name = "VfxFlash";
+
+            var col = go.GetComponent<Collider>();
+            if (col != null) Object.Destroy(col);
+
+            go.transform.position   = pos;
+            go.transform.localScale = Vector3.one * startScale;
+
+            var renderer = go.GetComponent<MeshRenderer>();
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows    = false;
+            renderer.sharedMaterial    = GetAdditiveMaterial(color);
+
+            var flash = go.AddComponent<VfxAdditiveFlash>();
+            flash.Begin(color, startScale, endScale, life);
+        }
+
         /// <summary>透過マテリアルキャッシュへの公開アクセサ（予兆リング等が共用するため）。</summary>
         public static Material GetTelegraphMaterial(Color color) => GetTransparentMaterial(color);
+
+        // URP/Unlit を加算(One/One・ZWrite off)に寄せたマテリアルを取得（色ごとにキャッシュ）
+        private static Material GetAdditiveMaterial(Color color)
+        {
+            if (_additiveCache.TryGetValue(color, out var cached) && cached != null)
+                return cached;
+
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            var mat    = new Material(shader);
+
+            mat.SetFloat("_Surface", 1f);            // Transparent
+            mat.SetFloat("_Blend", 2f);              // Additive プリセット
+            mat.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            mat.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.One);
+            mat.SetFloat("_ZWrite", 0f);
+            mat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            mat.DisableKeyword("_ALPHATEST_ON");
+            mat.renderQueue = 3000;
+            mat.SetOverrideTag("RenderType", "Transparent");
+
+            mat.color = color;
+            if (mat.HasProperty("_BaseColor"))
+                mat.SetColor("_BaseColor", color);
+
+            _additiveCache[color] = mat;
+            return mat;
+        }
 
         // URP/Unlit を透過モードに寄せたマテリアルを取得（色ごとにキャッシュ）
         private static Material GetTransparentMaterial(Color color)
@@ -395,6 +502,53 @@ namespace Enigma.Ability
                         _line.endColor   = c;
                     }
                     break;
+            }
+
+            if (t >= 1f)
+                Destroy(gameObject);
+        }
+    }
+
+    /// <summary>
+    /// 加算発光のフラッシュ球。拡大しつつ RGB を黒へ落として自壊する。
+    /// 加算ブレンドはアルファで消えないため、輝度（RGB）を 0 に向けて減衰させる。
+    /// </summary>
+    public sealed class VfxAdditiveFlash : MonoBehaviour
+    {
+        private Color _color;
+        private float _startScale;
+        private float _endScale;
+        private float _life;
+        private float _elapsed;
+        private MeshRenderer _renderer;
+        private MaterialPropertyBlock _mpb;
+
+        public void Begin(Color color, float startScale, float endScale, float life)
+        {
+            _color      = color;
+            _startScale = startScale;
+            _endScale   = endScale;
+            _life       = life > 0f ? life : 0.12f;
+            _elapsed    = 0f;
+            _renderer   = GetComponent<MeshRenderer>();
+            _mpb        = new MaterialPropertyBlock();
+        }
+
+        private void Update()
+        {
+            _elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(_elapsed / _life);
+
+            transform.localScale = Vector3.one * Mathf.Lerp(_startScale, _endScale, t);
+
+            if (_renderer != null && _mpb != null)
+            {
+                float k = 1f - t;
+                var c = new Color(_color.r * k, _color.g * k, _color.b * k, 1f);
+                _renderer.GetPropertyBlock(_mpb);
+                _mpb.SetColor("_BaseColor", c);
+                _mpb.SetColor("_Color", c);
+                _renderer.SetPropertyBlock(_mpb);
             }
 
             if (t >= 1f)

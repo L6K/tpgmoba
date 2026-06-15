@@ -1397,6 +1397,16 @@ public static class BuildAetherRiftMap
     /// 見た目子 "Beam": Cylinder を +Z 向きに倒して細長くしたシアン発光風メッシュ。
     /// ルートに TrailRenderer で尾を引かせる。発射側が LookRotation で +Z を進行方向へ向ける前提。
     /// </summary>
+    // AaBeam だけを再生成する。マップ全体を作り直さずビーム見た目を更新したいとき用（VFX 反復）。
+    [MenuItem("Enigma/VFX/Rebuild AaBeam Prefab")]
+    public static void RebuildAaBeamPrefab()
+    {
+        CreateAaBeamPrefab();
+        AssetDatabase.SaveAssets();
+        AssetDatabase.Refresh();
+        Debug.Log("[BuildAetherRiftMap] AaBeam.prefab を再生成しました");
+    }
+
     private static GameObject CreateAaBeamPrefab()
     {
         var beamPrefabPath = PrefabDir + "/AaBeam.prefab";
@@ -1412,13 +1422,18 @@ public static class BuildAetherRiftMap
         rb.useGravity  = false;
         root.AddComponent<Projectile>();
 
-        // シアン発光風マテリアル（URP/Unlit、_BaseColor をシアン×2 で明るく）
-        var beamColor = new Color(0.4f, 0.9f, 1.0f);
-        var beamMat   = GetOrCreateMat("AaBeamCyan", beamColor * 2f);
-        // GetOrCreateMat は Enigma/Toon を優先するため、ビームは無条件で URP/Unlit へ上書きして発光風にする
-        var unlit = Shader.Find("Universal Render Pipeline/Unlit");
-        if (unlit != null) beamMat.shader = unlit;
-        beamMat.SetColor("_BaseColor", beamColor * 2f);
+        // ネオン加算ビーム: Vfx_Beam(URP/Unlit One/One・beam_core_gradient)を共用。
+        // 発射時に AutoAttack/SkillVfx が MPB で champion 別 HDR 色を per-instance 上書きするため、
+        // ベース色は白(=テクスチャそのまま)に保つ。Vfx_Beam が無ければ従来のシアン発光へフォールバック。
+        var beamMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Project/Materials/VFX/Vfx_Beam.mat");
+        if (beamMat == null)
+        {
+            var beamColor = new Color(0.4f, 0.9f, 1.0f);
+            beamMat = GetOrCreateMat("AaBeamCyan", beamColor * 2f);
+            var unlit = Shader.Find("Universal Render Pipeline/Unlit");
+            if (unlit != null) beamMat.shader = unlit;
+            beamMat.SetColor("_BaseColor", beamColor * 2f);
+        }
 
         // 見た目子 "Beam": Cylinder(Y軸向き高さ2)を回転90°で +Z 向きに倒し、細長くする
         var beam = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -1431,17 +1446,19 @@ public static class BuildAetherRiftMap
         beam.transform.localScale = new Vector3(0.08f, 0.45f, 0.08f);
         SetMat(beam, beamMat);
 
-        // ルートにトレイル（同系シアン、幅 0.12→0、time 0.25）。alpha 減衰で尾を消す
+        // ルートにトレイル（Vfx_Beam 共用・幅 0.18→0、time 0.35）。
+        // 頂点色は白→透明にし、発射時に per-instance で Primary 着色する
         var trail = root.AddComponent<TrailRenderer>();
-        trail.time       = 0.25f;
-        trail.startWidth = 0.12f;
+        trail.time       = 0.35f;
+        trail.startWidth = 0.18f;
         trail.endWidth   = 0f;
         trail.numCapVertices = 2;
-        trail.material   = GetOrCreateTransparentMat("AaBeamTrail", new Color(0.4f, 0.9f, 1.0f, 0.8f));
-        var trailStart = beamColor; trailStart.a = 0.8f;
-        var trailEnd   = beamColor; trailEnd.a   = 0f;
-        trail.startColor = trailStart;
-        trail.endColor   = trailEnd;
+        trail.material   = beamMat;
+        var grad = new Gradient();
+        grad.SetKeys(
+            new[] { new GradientColorKey(Color.white, 0f), new GradientColorKey(Color.white, 1f) },
+            new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(0f, 1f) });
+        trail.colorGradient = grad;
 
         var prefab = PrefabUtility.SaveAsPrefabAsset(root, beamPrefabPath);
         Object.DestroyImmediate(root);
