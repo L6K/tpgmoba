@@ -132,12 +132,34 @@ namespace Enigma.Ability
         /// </summary>
         public static void FireDirectionalVisuals(GameObject proj, Vector3 muzzlePos, Vector3 dir, Color color)
         {
-            AttachGlowCore(proj, dir, color, 0.35f, 0.9f);
-            AddTrail(proj, color, 0.15f, 0.25f);
+            var nd = dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.forward;
 
-            // 二段バースト: 芯の白い閃光 + スロット色の広がり
-            SpawnBurst(muzzlePos, Color.white, 0.2f, 0.7f, 0.18f);
-            SpawnBurst(muzzlePos, color, 0.35f, 1.4f, 0.28f);
+            // 弾本体: 白い芯 + 色付き外殻(大きめ紡錘) の二重発光コア + 動的ライト + 太く長いトレイル
+            AttachGlowCore(proj, dir, Color.white, 0.22f, 1.1f);
+            AttachGlowCore(proj, dir, color,       0.55f, 1.9f);
+            AttachLight(proj, color, 5f, 3.5f);
+            AddTrail(proj, color, 0.45f, 0.4f);
+
+            // マズル: 白閃光 + 特大の色バースト + 衝撃リング + 砲口前方の追い火
+            SpawnBurst(muzzlePos, Color.white, 0.3f, 1.3f, 0.16f);
+            SpawnBurst(muzzlePos, color,       0.55f, 2.6f, 0.32f);
+            SpawnRing(muzzlePos, color, 0.3f, 2.4f, 0.3f);
+            SpawnBurst(muzzlePos + nd * 0.8f, color, 0.4f, 1.5f, 0.22f);
+        }
+
+        /// <summary>対象(弾など)に短命の動的ポイントライトを付与して発光感を出す。</summary>
+        public static void AttachLight(GameObject target, Color color, float range, float intensity)
+        {
+            if (target == null) return;
+            var go = new GameObject("VfxLight");
+            go.transform.SetParent(target.transform, false);
+            go.transform.localPosition = Vector3.zero;
+            var l = go.AddComponent<Light>();
+            l.type      = LightType.Point;
+            l.color     = color;
+            l.range     = range;
+            l.intensity = intensity;
+            l.shadows   = LightShadows.None;
         }
 
         /// <summary>
