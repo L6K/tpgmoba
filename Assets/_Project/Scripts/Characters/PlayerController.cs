@@ -20,6 +20,11 @@ namespace Enigma.Character
 
         private const float Gravity = -20f;
         private const float JumpSpeed = 8f;
+        // ジャンプのスクワッシュ&ストレッチ演出(全モデル共通・クリップ不要)
+        private const float JumpAnimDuration = 0.7f;
+        private float     _jumpAnimTime;
+        private Transform _jumpModel;
+        private Vector3   _jumpModelBaseScale = Vector3.one;
 
         private CharacterController _cc;
         private float _verticalVelocity;
@@ -54,6 +59,41 @@ namespace Enigma.Character
             _dashTimeRemaining = duration;
         }
 
+        // ジャンプ演出開始。見た目モデル(Animator のある子)を対象にスクワッシュ&ストレッチする。
+        private void StartJumpMotion()
+        {
+            var model = _animator != null ? _animator.transform : null;
+            if (model == null)
+            {
+                var a = GetComponentInChildren<Animator>();
+                if (a != null) model = a.transform;
+            }
+            if (model == null) return;
+            // 演出中でなければ基準スケールを記録(多重ジャンプで基準が崩れないように)
+            if (_jumpAnimTime <= 0f || _jumpModel != model)
+            {
+                _jumpModel = model;
+                _jumpModelBaseScale = model.localScale;
+            }
+            _jumpAnimTime = JumpAnimDuration;
+        }
+
+        // 踏み切り潰れ→空中で縦伸び→着地で復元、のスケール演出を進める。
+        private void UpdateJumpMotion()
+        {
+            if (_jumpAnimTime <= 0f || _jumpModel == null) return;
+            _jumpAnimTime -= Time.deltaTime;
+            float p = 1f - Mathf.Clamp01(_jumpAnimTime / JumpAnimDuration);
+
+            float sy, sxz;
+            if (p < 0.18f)            { float k = p / 0.18f;          sy = Mathf.Lerp(1f, 0.82f, k);  sxz = Mathf.Lerp(1f, 1.12f, k); }
+            else if (p < 0.75f)       { float k = (p - 0.18f) / 0.57f; sy = Mathf.Lerp(0.82f, 1.12f, Mathf.Sin(k * Mathf.PI * 0.5f)); sxz = Mathf.Lerp(1.12f, 0.94f, k); }
+            else                      { float k = (p - 0.75f) / 0.25f; sy = Mathf.Lerp(1.12f, 1f, k);  sxz = Mathf.Lerp(0.94f, 1f, k); }
+
+            _jumpModel.localScale = new Vector3(_jumpModelBaseScale.x * sxz, _jumpModelBaseScale.y * sy, _jumpModelBaseScale.z * sxz);
+            if (_jumpAnimTime <= 0f) _jumpModel.localScale = _jumpModelBaseScale; // 復元
+        }
+
         // 中央オブジェクト撃破報酬の MoveSpeed バフ倍率（自チーム）。未生成時は 1。
         private float ObjectiveMoveSpeedMultiplier()
         {
@@ -64,6 +104,8 @@ namespace Enigma.Character
 
         private void Update()
         {
+            UpdateJumpMotion(); // ジャンプ演出は毎フレーム駆動(ダッシュ中も継続)
+
             if (_dashTimeRemaining > 0f)
             {
                 _dashTimeRemaining -= Time.deltaTime;
@@ -109,6 +151,7 @@ namespace Enigma.Character
             if (_cc.isGrounded && keyboard.spaceKey.wasPressedThisFrame && !movementLocked)
             {
                 _verticalVelocity = JumpSpeed;
+                StartJumpMotion();
             }
             else if (_cc.isGrounded && _verticalVelocity < 0f)
             {
