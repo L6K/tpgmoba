@@ -1,6 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Enigma.Combat;
+using Enigma.Core;
+using Enigma.GameModes;
 
 namespace Enigma.Character
 {
@@ -22,6 +24,7 @@ namespace Enigma.Character
         private float _verticalVelocity;
         private PlayerItems _playerItems;
         private StatusEffectController _statusEffects;
+        private TeamTag _teamTag;
         private float _dashTimeRemaining;
         private Vector3 _dashVelocity;
 
@@ -36,6 +39,7 @@ namespace Enigma.Character
             _cc           = GetComponent<CharacterController>();
             _playerItems  = GetComponent<PlayerItems>();
             _statusEffects = StatusEffectController.GetOrAdd(gameObject);
+            _teamTag      = GetComponentInParent<TeamTag>();
         }
 
         // dir は水平方向(正規化不要、内部で正規化)。distance(m) を duration 秒で移動するダッシュ。
@@ -47,6 +51,14 @@ namespace Enigma.Character
             if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
             _dashVelocity = dir.normalized * (distance / duration);
             _dashTimeRemaining = duration;
+        }
+
+        // 中央オブジェクト撃破報酬の MoveSpeed バフ倍率（自チーム）。未生成時は 1。
+        private float ObjectiveMoveSpeedMultiplier()
+        {
+            var buffs = GameServices.ObjectiveBuffs;
+            if (buffs == null || _teamTag == null) return 1f;
+            return 1f + buffs.GetMagnitude(_teamTag.Team, ObjectiveBuffType.MoveSpeed, Time.time);
         }
 
         private void Update()
@@ -97,7 +109,7 @@ namespace Enigma.Character
                 _verticalVelocity = -2f;
             _verticalVelocity += Gravity * Time.deltaTime;
 
-            var motion = moveDir * (_moveSpeed * (_playerItems != null ? _playerItems.MoveSpeedMultiplier : 1f) * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f) * Time.deltaTime);
+            var motion = moveDir * (_moveSpeed * (_playerItems != null ? _playerItems.MoveSpeedMultiplier : 1f) * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f) * ObjectiveMoveSpeedMultiplier() * Time.deltaTime);
             motion.y = _verticalVelocity * Time.deltaTime;
             _cc.Move(motion);
 

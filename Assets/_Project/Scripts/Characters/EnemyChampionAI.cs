@@ -4,6 +4,8 @@ using UnityEngine;
 using Enigma.Ability;
 using Enigma.Audio;
 using Enigma.Combat;
+using Enigma.Core;
+using Enigma.GameModes;
 
 namespace Enigma.Character
 {
@@ -105,6 +107,14 @@ namespace Enigma.Character
 
         // 中立キャンプ狩り対象（_farmsNeutralCamps のときのみ採用）。
         private HealthComponent _neutralTarget;
+
+        // Sense と同頻度で算出するマクロ判断（撤退/中央集合/防衛等）。
+        private BotMacroAction _macro = BotMacroAction.Farm;
+
+        // GroupForObjective で中央到達とみなす半径（この内側なら最寄り敵チャンピオンへ交戦）。
+        private const float ObjectiveEngageRange = 6f;
+        // UnderTowerThreat とみなす最寄り敵タワー距離（おおよそタワー射程＋余裕）。
+        private const float TowerThreatRange = 12f;
 
         // 中立狩りの無進展検知。射線が木に塞がれた等で HP も距離も進展しない場合、
         // 一定時間でそのキャンプを見送って巡回へ復帰する（デッドロック防止）
@@ -230,6 +240,10 @@ namespace Enigma.Character
                 }
             }
 
+            // マクロ判断の上書き（中立狩り中でないとき）。GroupForObjective/Retreat/Defend は
+            // 専用挙動で return し、Push/Farm は従来の LaneBotLogic フローへフォールスルーする。
+            if (ApplyMacroOverride()) return;
+
             if (decision.HasAttackTarget)
             {
                 var target = decision.TargetIsAttackerChampion && _attackerChampion != null
@@ -248,6 +262,50 @@ namespace Enigma.Character
             }
 
             ApplyMovement(decision.Move);
+        }
+
+        // マクロ判断を行動へ落とす。専用挙動を実行したら true を返し、呼び側はその場で return する。
+        // Push/Farm は false を返して従来フロー（LaneBotLogic / タワー攻囲）へフォールスルーする。
+        private bool ApplyMacroOverride()
+        {
+            switch (_macro)
+            {
+                case BotMacroAction.GroupForObjective:
+                {
+                    var director = CentralObjectiveDirector.Instance;
+                    if (director == null || !director.TryGetObjectivePosition(out var objPos))
+                        return false; // 位置不明なら通常フローに任せる
+
+                    float dist = Vector3.Distance(transform.position, objPos);
+                    if (dist > ObjectiveEngageRange)
+                    {
+                        MoveDirectlyToward(objPos);
+                    }
+                    else
+                    {
+                        // 到達圏内: 最寄り敵チャンピオンが居れば交戦、居なければその場待機。
+                        if (_nearestEnemy != null && _nearestEnemyIsChampion && !_nearestEnemy.Model.IsDead)
+                            FaceAndAttack(_nearestEnemy, allowSkills: true);
+                        else
+                            ApplyMovement(LaneMove.Stop);
+                    }
+                    return true;
+                }
+
+                case BotMacroAction.Retreat:
+                    ApplyMovement(LaneMove.Backward);
+                    return true;
+
+                case BotMacroAction.Defend:
+                    // その場維持し、射程内の敵に応戦する。
+                    if (_nearestEnemy != null && !_nearestEnemy.Model.IsDead)
+                        FaceAndAttack(_nearestEnemy, allowSkills: _nearestEnemyIsChampion);
+                    ApplyMovement(LaneMove.Stop);
+                    return true;
+
+                default:
+                    return false; // Push / Farm は従来フロー
+            }
         }
 
         // 0.3 秒ごとに OverlapSphere で敵チームのユニットを収集し、
@@ -364,6 +422,61 @@ namespace Enigma.Character
                 attackerDist,
                 towerDist,
                 _allyMinionNearby);
+
+            UpdateMacro(myTeam, towerDist);
+        }
+
+        // BotMacroContext を組み立て、マクロ判断を更新する（Sense と同頻度）。
+        // チャンピオン数の集計は全走査だが小規模かつ 0.3s 間隔なのでコスト許容。
+        private void UpdateMacro(TeamId myTeam, float nearestTowerDist)
+        {
+            float selfHp = _health.Model.MaxHp > 0f ? _health.Model.CurrentHp / _health.Model.MaxHp : 0f;
+
+            int allies = 0;
+            int enemies = 0;
+            CountChampions(myTeam, ref allies, ref enemies);
+
+            var director = CentralObjectiveDirector.Instance;
+            bool objectiveActiveOrSoon = director != null &&
+                (director.State == ObjectiveState.Active || director.State == ObjectiveState.Warning);
+
+            float distToObjective = float.MaxValue;
+            if (director != null && director.TryGetObjectivePosition(out var objPos))
+                distToObjective = Vector3.Distance(transform.position, objPos);
+
+            // 味方ミニオン有無は知覚スナップショットを流用（射程内に味方ミニオンが居るか）。
+            bool alliedMinionsPresent = _allyMinionNearby;
+
+            // 最寄り敵タワーが概ね射程内なら被タワー脅威とみなす（Sense の towerDist を流用）。
+            bool underTowerThreat = nearestTowerDist <= TowerThreatRange;
+
+            var ctx = new BotMacroContext(
+                selfHp, allies, enemies, objectiveActiveOrSoon,
+                distToObjective, alliedMinionsPresent, underTowerThreat);
+            _macro = BotMacroDecisionModel.Decide(in ctx);
+        }
+
+        // 生存チャンピオン(PlayerController / EnemyChampionAI)を TeamTag でチーム分けして数える。
+        // 自分を含む自チーム=allies、Neutral 以外の異チーム=enemies。
+        private void CountChampions(TeamId myTeam, ref int allies, ref int enemies)
+        {
+            var players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+            for (int i = 0; i < players.Length; i++)
+                TallyChampion(players[i].gameObject, myTeam, ref allies, ref enemies);
+
+            var bots = FindObjectsByType<EnemyChampionAI>(FindObjectsSortMode.None);
+            for (int i = 0; i < bots.Length; i++)
+                TallyChampion(bots[i].gameObject, myTeam, ref allies, ref enemies);
+        }
+
+        private static void TallyChampion(GameObject go, TeamId myTeam, ref int allies, ref int enemies)
+        {
+            var hc = go.GetComponent<HealthComponent>();
+            if (hc == null || hc.Model == null || hc.Model.IsDead) return;
+            var tag = go.GetComponentInParent<TeamTag>();
+            if (tag == null) return;
+            if (tag.Team == myTeam) allies++;
+            else if (tag.Team != TeamId.Neutral) enemies++;
         }
 
         private static LaneThreatKind ClassifyTarget(Collider col)
@@ -470,11 +583,21 @@ namespace Enigma.Character
 
             // CC 反映: ルート/スタン中は水平移動を止め、スロウは速度倍率を掛ける(ApplyMovement と同様)
             if (_statusEffects != null && !_statusEffects.CanMove) dir = Vector3.zero;
-            float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f);
+            float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f)
+                          * ObjectiveMoveSpeedMultiplier();
 
             var motion = dir * speed;
             motion.y = _verticalVelocity;
             _controller.Move(motion * Time.deltaTime);
+        }
+
+        // 中央オブジェクト撃破報酬の MoveSpeed バフ倍率（自チーム）。未生成時は 1。
+        // slow(StatusEffect) とは別系統なので掛け合わせる。
+        private float ObjectiveMoveSpeedMultiplier()
+        {
+            var buffs = GameServices.ObjectiveBuffs;
+            if (buffs == null || _teamTag == null) return 1f;
+            return 1f + buffs.GetMagnitude(_teamTag.Team, ObjectiveBuffType.MoveSpeed, Time.time);
         }
 
         private void ApplyMovement(LaneMove move)
@@ -504,7 +627,8 @@ namespace Enigma.Character
 
             if (_statusEffects != null && !_statusEffects.CanMove)
                 horizontal = Vector3.zero;
-            float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f);
+            float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f)
+                          * ObjectiveMoveSpeedMultiplier();
             var motion = horizontal * speed;
             motion.y = _verticalVelocity;
             _controller.Move(motion * Time.deltaTime);

@@ -149,18 +149,9 @@ namespace Enigma.Objective
 
         private void OnDied()
         {
-            // 倒れる演出
+            // 倒れる演出（撃破通知に専念。撃破報酬バフの付与は CentralObjectiveDirector が担当）
             transform.rotation = Quaternion.Euler(0f, 0f, 90f);
             if (_col != null) _col.enabled = false;
-
-            // LastAttacker のチームにダメージバフを付与（弾の owner はプレイヤー本体）
-            var lastAttacker = _health.LastAttacker;
-            if (lastAttacker == null) return;
-            var tag = lastAttacker.GetComponentInParent<TeamTag>();
-            if (tag == null) return;
-            if (tag.Team == TeamId.Neutral) return;
-
-            GameServices.TeamBuffs?.GrantDamageBuff(tag.Team, 1.15f, 300f, Time.time);
         }
     }
 }

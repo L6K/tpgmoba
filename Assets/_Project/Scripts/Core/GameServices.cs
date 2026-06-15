@@ -1,5 +1,6 @@
 using Enigma.Data;
 using Enigma.Combat;
+using Enigma.GameModes;
 
 namespace Enigma.Core
 {
@@ -15,6 +16,7 @@ namespace Enigma.Core
         public static IMatchmakingService     Matchmaking     { get; private set; }
         public static IMatchContext           Match           { get; private set; }
         public static ITeamBuffService        TeamBuffs       { get; private set; }
+        public static ObjectiveBuffModel      ObjectiveBuffs  { get; private set; }
 
         public static bool IsInitialized => Settings != null && Ownership != null && Gacha != null && ControlSettings != null;
 
@@ -50,6 +52,7 @@ namespace Enigma.Core
             Matchmaking     = matchmaking ?? new MatchmakingService(new SystemRandomSource());
             Match           = match       ?? new MatchContext();
             TeamBuffs       = teamBuffs   ?? new TeamBuffService();
+            ObjectiveBuffs  = new ObjectiveBuffModel();
         }
 
         /// <summary>テスト後のクリーンアップ用。</summary>
@@ -62,6 +65,7 @@ namespace Enigma.Core
             Matchmaking     = null;
             Match           = null;
             TeamBuffs       = null;
+            ObjectiveBuffs  = null;
         }
     }
 }

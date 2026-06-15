@@ -1,6 +1,7 @@
 using UnityEngine;
 using Enigma.Core;
 using Enigma.Character;
+using Enigma.GameModes;
 
 namespace Enigma.Combat
 {
@@ -15,10 +16,10 @@ namespace Enigma.Combat
             if (teamTag == null) return baseDamage;
             if (teamTag.Team == TeamId.Neutral) return baseDamage;
 
-            var buffs = GameServices.TeamBuffs;
-            if (buffs == null) return baseDamage;
-
-            float damage = baseDamage * buffs.GetDamageMultiplier(teamTag.Team, Time.time);
+            // ダメージバフの正本は ObjectiveBuffModel(Damage 種別)。倍率 = 1 + 加算magnitude。
+            float damageBuffMagnitude =
+                GameServices.ObjectiveBuffs?.GetMagnitude(teamTag.Team, ObjectiveBuffType.Damage, Time.time) ?? 0f;
+            float damage = baseDamage * (1f + damageBuffMagnitude);
 
             // プレイヤーのレベルに応じたダメージ倍率を乗算
             var progression = attacker.GetComponent<PlayerProgression>();
