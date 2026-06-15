@@ -468,7 +468,11 @@ namespace Enigma.Character
                 _verticalVelocity = -1f;
             _verticalVelocity += Gravity * Time.deltaTime;
 
-            var motion = dir * _moveSpeed;
+            // CC 反映: ルート/スタン中は水平移動を止め、スロウは速度倍率を掛ける(ApplyMovement と同様)
+            if (_statusEffects != null && !_statusEffects.CanMove) dir = Vector3.zero;
+            float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f);
+
+            var motion = dir * speed;
             motion.y = _verticalVelocity;
             _controller.Move(motion * Time.deltaTime);
         }
@@ -513,6 +517,7 @@ namespace Enigma.Character
         private void RequestDash(Vector3 dir, float distance, float duration = 0.15f)
         {
             if (duration <= 0f || distance <= 0f) return;
+            if (_statusEffects != null && !_statusEffects.CanMove) return; // ルート/スタン中はダッシュ不可
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
             _dashVelocity = dir.normalized * (distance / duration);

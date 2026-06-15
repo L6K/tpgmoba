@@ -272,6 +272,9 @@ namespace Enigma.Ability
             // モーターが存在し Windup 中なら新規発動を受け付けない（クールダウンも消費しない）
             if (_motor != null && _motor.Motion.Phase == AttackPhase.Windup) return;
 
+            // 対象指定(敵)は対象が無効ならCD/Windupを消費せず空振りを防ぐ
+            if (!IsCastValid(def)) return;
+
             if (!_cooldowns[slot].TryConsume(Time.time)) return;
 
             if (_motor != null)
@@ -293,6 +296,17 @@ namespace Enigma.Ability
                 // _motor 未設定時は従来どおり即時発動（後方互換）
                 FireSkill(slot, def, _groundCursorPos, _targeting?.CurrentTarget);
             }
+        }
+
+        // Targeted(敵対象指定)のみ、発動前に対象の存在・射程・敵対を検証する。
+        // Directional/GroundAoe/TargetedAlly(自分フォールバックあり)は常に発動可。
+        private bool IsCastValid(SkillDefinition def)
+        {
+            if (def.Targeting != SkillTargeting.Targeted) return true;
+            var target = _targeting != null ? _targeting.CurrentTarget : null;
+            if (target == null) return false;
+            if (Vector3.Distance(transform.position, target.transform.position) > def.Range) return false;
+            return CanDamageTarget(target.gameObject);
         }
 
         private void FireSkill(int slot, SkillDefinition def, Vector3 groundCursorPos, HealthComponent target)

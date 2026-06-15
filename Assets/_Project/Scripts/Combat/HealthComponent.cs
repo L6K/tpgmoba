@@ -27,9 +27,12 @@ namespace Enigma.Combat
         {
             if (attacker != null)
                 LastAttacker = attacker;
+            // シールド吸収を考慮し、実際に減った HP 量だけを通知する(全吸収時は発火しない)
+            float before = Model.CurrentHp;
             Model.TakeDamage(amount);
-            if (amount > 0f)
-                Damaged?.Invoke(amount);
+            float dealtToHp = before - Model.CurrentHp;
+            if (dealtToHp > 0f)
+                Damaged?.Invoke(dealtToHp);
         }
 
         private void Update()

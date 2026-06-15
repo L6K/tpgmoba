@@ -360,11 +360,14 @@ namespace Enigma.UI
             if (_hpFill != null)
                 _hpFill.style.width = Length.Percent(pct);
 
-            // シールド帯: Shield/MaxHp の割合をバー左詰めで重ねる（HP フィルの上）
+            // シールド帯: 現在HPの右端から「追加耐久」として描く（HP+シールドの合計が読み取りやすい）
             if (_hpShield != null)
             {
-                float shieldPct = maxHp > 0f ? Mathf.Clamp01(model.Shield / maxHp) * 100f : 0f;
-                _hpShield.style.width = Length.Percent(shieldPct);
+                float hpFrac     = maxHp > 0f ? Mathf.Clamp01(model.CurrentHp / maxHp) : 0f;
+                float shieldFrac = maxHp > 0f ? Mathf.Clamp01(model.Shield / maxHp) : 0f;
+                float shieldW    = Mathf.Min(shieldFrac, 1f - hpFrac); // バー幅を超えないようにする
+                _hpShield.style.left  = Length.Percent(hpFrac * 100f);
+                _hpShield.style.width = Length.Percent(shieldW * 100f);
             }
 
             // ダメージトレイル: 減少時は delay 付き transition で遅れて縮む。回復時は即追従。

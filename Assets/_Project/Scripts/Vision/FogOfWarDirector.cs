@@ -79,7 +79,12 @@ namespace Enigma.Vision
             if (_timer > 0f) return;
             _timer = UpdateInterval;
 
-            if (!_teamResolved) ResolvePlayerTeam();
+            // プレイヤーチーム未解決のまま Tick すると味方を敵と誤判定して隠す恐れがある。解決まで待つ。
+            if (!_teamResolved)
+            {
+                ResolvePlayerTeam();
+                if (!_teamResolved) return;
+            }
             Tick();
         }
 

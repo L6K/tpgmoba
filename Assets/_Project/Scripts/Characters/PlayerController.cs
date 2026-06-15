@@ -42,6 +42,7 @@ namespace Enigma.Character
         public void RequestDash(Vector3 dir, float distance, float duration = 0.15f)
         {
             if (duration <= 0f || distance <= 0f) return;
+            if (_statusEffects != null && !_statusEffects.CanMove) return; // ルート/スタン中はダッシュ不可
             dir.y = 0f;
             if (dir.sqrMagnitude < 0.0001f) dir = transform.forward;
             _dashVelocity = dir.normalized * (distance / duration);

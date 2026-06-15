@@ -37,7 +37,7 @@ namespace Enigma.GameModes
 
         private NeutralBossController _boss;
         private HealthComponent       _bossHealth;
-        private Collider              _bossCol;
+        private Collider[]            _bossColliders;
         private Renderer[]            _bossRenderers;
         private Quaternion            _bossUprightRot;
         private Vector3               _bossSpawnPos;
@@ -63,7 +63,7 @@ namespace Enigma.GameModes
 
             var go = _boss.gameObject;
             _bossHealth     = go.GetComponent<HealthComponent>();
-            _bossCol        = go.GetComponent<Collider>();
+            _bossColliders  = go.GetComponentsInChildren<Collider>(true); // 子Colliderも含めて全て管理
             _bossRenderers  = go.GetComponentsInChildren<Renderer>(true);
             _bossUprightRot = go.transform.rotation;
             _bossSpawnPos   = go.transform.position;
@@ -99,7 +99,7 @@ namespace Enigma.GameModes
             if (_bossHealth?.Model != null && _bossHealth.Model.IsDead)
                 _bossHealth.Model.Revive();
 
-            if (_bossCol != null) _bossCol.enabled = true;
+            SetColliders(true);
             SetRenderers(true);
             _boss.enabled = true;
         }
@@ -108,7 +108,7 @@ namespace Enigma.GameModes
         {
             _bossActive = false;
             _boss.enabled = false;
-            if (_bossCol != null) _bossCol.enabled = false;
+            SetColliders(false);
             SetRenderers(false);
         }
 
@@ -117,6 +117,14 @@ namespace Enigma.GameModes
             if (_bossRenderers == null) return;
             for (int i = 0; i < _bossRenderers.Length; i++)
                 if (_bossRenderers[i] != null) _bossRenderers[i].enabled = on;
+        }
+
+        // 子Colliderも含めて全ての当たり判定を切り替える(非表示中に隠れたボスへAoEが当たるのを防ぐ)
+        private void SetColliders(bool on)
+        {
+            if (_bossColliders == null) return;
+            for (int i = 0; i < _bossColliders.Length; i++)
+                if (_bossColliders[i] != null) _bossColliders[i].enabled = on;
         }
 
         // ボス撃破時(HealthModel.Died)。再出現をスケジュールする。

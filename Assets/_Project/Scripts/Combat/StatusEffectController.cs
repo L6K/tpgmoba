@@ -29,6 +29,8 @@ namespace Enigma.Combat
 
         private void OnEnable()
         {
+            // GetOrAdd が HealthComponent 追加前に呼ばれた場合に備え、ここで再取得する
+            if (_health == null) _health = GetComponent<HealthComponent>();
             if (_health != null)
                 _health.Model.Revived += Clear;
         }
