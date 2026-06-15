@@ -1,0 +1,21 @@
+== Units Assets License ==
+
+--- Skeleton.fbx / Slime.fbx / Bat.fbx ---
+Asset: "Animated Monster Pack by Quaternius"
+Source: https://opengameart.org/content/lowpoly-animated-monsters
+Author: Quaternius (https://www.patreon.com/quaternius)
+License: CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+  https://creativecommons.org/publicdomain/zero/1.0/
+  "Free to use for any purpose without attribution."
+
+Files extracted from "Animated Monster Pack by @Quaternius.zip":
+  FBX/Skeleton.fbx  -> Skeleton.fbx  (歩兵型スケルトン、アニメーション付き)
+  FBX/Slime.fbx     -> Slime.fbx     (スライム、アニメーション付き)
+  FBX/Bat.fbx       -> Bat.fbx       (コウモリ、飛行ユニット候補、アニメーション付き)
+
+Not imported (same pack):
+  FBX/Dragon.fbx    (ボス級サイズのため除外)
+
+All assets are CC0 and may be used freely in any project,
+including commercial projects, without attribution required.
+Optional credit: "Animated Monsters by Quaternius"

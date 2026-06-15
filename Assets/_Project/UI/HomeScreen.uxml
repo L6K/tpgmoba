@@ -66,19 +66,66 @@
 
                     </ui:VisualElement>
 
+                    <!-- マッチング状態ラベル（マッチング中・成立時に表示） -->
+                    <ui:Label name="matchmaking-status" class="matchmaking-status" style="display: none;" />
+
                     <!-- プレイ開始ボタン（画面下部固定） -->
                     <ui:Button name="btn-play" text="プレイ開始" class="play-btn" />
 
                 </ui:VisualElement>
 
                 <!-- Tab: 所持品 -->
-                <ui:VisualElement name="page-inventory" class="page">
-                    <ui:Label text="所持品" class="page-placeholder" />
+                <ui:VisualElement name="page-inventory" class="page page--flow">
+
+                    <!-- サブタブ行 -->
+                    <ui:VisualElement name="inventory-header" class="inventory-header">
+                        <ui:Button name="itab-chars" text="キャラクター" class="inventory-tab inventory-tab--active" />
+                        <ui:Button name="itab-skins" text="スキン"       class="inventory-tab" />
+                        <ui:Button name="itab-items" text="アイテム"     class="inventory-tab" />
+                    </ui:VisualElement>
+
+                    <!-- タブ下区切り線 -->
+                    <ui:VisualElement class="inventory-divider" />
+
+                    <!-- キャラクターグリッド -->
+                    <ui:ScrollView name="char-grid" class="char-grid" />
+
+                    <!-- スキン（準備中） -->
+                    <ui:VisualElement name="ipage-skins" class="page-placeholder-area" style="display: none;">
+                        <ui:Label text="準備中" class="page-placeholder" />
+                    </ui:VisualElement>
+
+                    <!-- アイテム（準備中） -->
+                    <ui:VisualElement name="ipage-items" class="page-placeholder-area" style="display: none;">
+                        <ui:Label text="準備中" class="page-placeholder" />
+                    </ui:VisualElement>
+
                 </ui:VisualElement>
 
                 <!-- Tab: ガチャ -->
-                <ui:VisualElement name="page-gacha" class="page">
-                    <ui:Label text="ガチャ" class="page-placeholder" />
+                <ui:VisualElement name="page-gacha" class="page page--flow">
+
+                    <!-- クリスタル残高ヘッダー -->
+                    <ui:VisualElement class="gacha-header">
+                        <ui:Label text="クリスタル" class="gacha-header__label" />
+                        <ui:Label name="crystal-count" text="3,000" class="gacha-header__count" />
+                    </ui:VisualElement>
+
+                    <!-- バナー＋ボタン -->
+                    <ui:VisualElement class="gacha-body">
+
+                        <ui:VisualElement class="gacha-banner">
+                            <ui:Label text="スタンダードバナー" class="gacha-banner__title" />
+                            <ui:Label text="全キャラクターが等確率で排出" class="gacha-banner__subtitle" />
+                        </ui:VisualElement>
+
+                        <ui:VisualElement class="gacha-buttons">
+                            <ui:Button name="btn-gacha-1"  text="単発  150"    class="gacha-btn" />
+                            <ui:Button name="btn-gacha-10" text="10連  1,500"  class="gacha-btn gacha-btn--primary" />
+                        </ui:VisualElement>
+
+                    </ui:VisualElement>
+
                 </ui:VisualElement>
 
             </ui:VisualElement>
@@ -93,91 +140,176 @@
             </ui:VisualElement>
 
         </ui:VisualElement>
-        <!-- ══ 設定オーバーレイ ══════════════════════════ -->
+        <!-- ══ 設定オーバーレイ（Valorant 風全画面） ══════ -->
         <ui:VisualElement name="settings-overlay" class="overlay" style="display: none;">
-            <ui:VisualElement class="settings-panel">
 
-                <!-- ヘッダー -->
-                <ui:VisualElement class="settings-header">
-                    <ui:Label text="設定" class="settings-title" />
-                    <ui:Button name="btn-close-settings" text="✕" class="settings-close-btn" />
-                </ui:VisualElement>
+            <!-- ヘッダー行 -->
+            <ui:VisualElement class="settings-header">
+                <ui:Label text="設定" class="settings-title" />
+                <ui:Button name="btn-close-settings" text="✕ 閉じる" class="settings-close-btn" />
+            </ui:VisualElement>
 
-                <!-- ボディ -->
-                <ui:VisualElement class="settings-body">
+            <!-- 水平タブ行 -->
+            <ui:VisualElement class="settings-tabs">
+                <ui:Button name="stab-sound"    text="サウンド"    class="settings-tab settings-tab--active" />
+                <ui:Button name="stab-graphics" text="グラフィック" class="settings-tab" />
+                <ui:Button name="stab-controls" text="操作"        class="settings-tab" />
+                <ui:Button name="stab-game"     text="ゲーム"      class="settings-tab" />
+            </ui:VisualElement>
 
-                    <!-- 左タブ -->
-                    <ui:VisualElement class="settings-tabs">
-                        <ui:Button name="stab-sound"    text="サウンド"    class="settings-tab settings-tab--active" />
-                        <ui:Button name="stab-graphics" text="グラフィック" class="settings-tab" />
-                        <ui:Button name="stab-controls" text="操作"        class="settings-tab" />
-                        <ui:Button name="stab-game"     text="ゲーム"      class="settings-tab" />
+            <!-- タブ下の区切り線 -->
+            <ui:VisualElement class="settings-tab-divider" />
+
+            <!-- コンテンツ領域（中央寄せ 1 カラム） -->
+            <ui:VisualElement class="settings-content">
+
+                <!-- サウンド -->
+                <ui:VisualElement name="spage-sound" class="settings-page settings-page--active">
+                    <ui:Label text="ボリューム" class="settings-section-title" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="BGM" class="setting-label" />
+                        <ui:Slider name="slider-bgm" low-value="0" high-value="1" value="0.8" class="setting-slider" />
+                        <ui:Label name="label-bgm-val" text="80%" class="setting-value" />
                     </ui:VisualElement>
 
-                    <!-- 右コンテンツ -->
-                    <ui:VisualElement class="settings-content">
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="SE" class="setting-label" />
+                        <ui:Slider name="slider-se" low-value="0" high-value="1" value="1.0" class="setting-slider" />
+                        <ui:Label name="label-se-val" text="100%" class="setting-value" />
+                    </ui:VisualElement>
 
-                        <!-- サウンド -->
-                        <ui:VisualElement name="spage-sound" class="settings-page settings-page--active">
-                            <ui:Label text="サウンド" class="settings-section-title" />
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="BGM" class="setting-label" />
-                                <ui:Slider name="slider-bgm" low-value="0" high-value="1" value="0.8" class="setting-slider" />
-                                <ui:Label name="label-bgm-val" text="80%" class="setting-value" />
-                            </ui:VisualElement>
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="SE" class="setting-label" />
-                                <ui:Slider name="slider-se" low-value="0" high-value="1" value="1.0" class="setting-slider" />
-                                <ui:Label name="label-se-val" text="100%" class="setting-value" />
-                            </ui:VisualElement>
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="ボイス" class="setting-label" />
-                                <ui:Slider name="slider-voice" low-value="0" high-value="1" value="1.0" class="setting-slider" />
-                                <ui:Label name="label-voice-val" text="100%" class="setting-value" />
-                            </ui:VisualElement>
-                        </ui:VisualElement>
-
-                        <!-- グラフィック -->
-                        <ui:VisualElement name="spage-graphics" class="settings-page">
-                            <ui:Label text="グラフィック" class="settings-section-title" />
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="画質" class="setting-label" />
-                                <ui:DropdownField name="dropdown-quality" class="setting-dropdown"
-                                    choices="低,中,高,最高" index="2" />
-                            </ui:VisualElement>
-
-                            <ui:VisualElement class="setting-row">
-                                <ui:Label text="ウィンドウモード" class="setting-label" />
-                                <ui:DropdownField name="dropdown-window" class="setting-dropdown"
-                                    choices="ウィンドウ,フルスクリーン,ボーダーレス" index="1" />
-                            </ui:VisualElement>
-                        </ui:VisualElement>
-
-                        <!-- 操作 -->
-                        <ui:VisualElement name="spage-controls" class="settings-page">
-                            <ui:Label text="操作" class="settings-section-title" />
-                            <ui:Label text="準備中" class="settings-placeholder" />
-                        </ui:VisualElement>
-
-                        <!-- ゲーム -->
-                        <ui:VisualElement name="spage-game" class="settings-page">
-                            <ui:Label text="ゲーム" class="settings-section-title" />
-                            <ui:Label text="準備中" class="settings-placeholder" />
-                        </ui:VisualElement>
-
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="ボイス" class="setting-label" />
+                        <ui:Slider name="slider-voice" low-value="0" high-value="1" value="1.0" class="setting-slider" />
+                        <ui:Label name="label-voice-val" text="100%" class="setting-value" />
                     </ui:VisualElement>
                 </ui:VisualElement>
 
-                <!-- フッター -->
-                <ui:VisualElement class="settings-footer">
-                    <ui:Button name="btn-settings-apply" text="適用" class="settings-apply-btn" />
+                <!-- グラフィック -->
+                <ui:VisualElement name="spage-graphics" class="settings-page">
+                    <ui:Label text="ディスプレイ" class="settings-section-title" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="画質" class="setting-label" />
+                        <ui:DropdownField name="dropdown-quality" class="setting-dropdown"
+                            choices="低,中,高,最高" index="2" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="ウィンドウモード" class="setting-label" />
+                        <ui:DropdownField name="dropdown-window" class="setting-dropdown"
+                            choices="ウィンドウ,フルスクリーン,ボーダーレス" index="1" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- 操作 -->
+                <ui:VisualElement name="spage-controls" class="settings-page">
+                    <ui:Label text="操作" class="settings-section-title" />
+                    <ui:Label text="準備中" class="settings-placeholder" />
+                </ui:VisualElement>
+
+                <!-- ゲーム -->
+                <ui:VisualElement name="spage-game" class="settings-page">
+                    <ui:Label text="キャスト方式" class="settings-section-title" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="スキルのキャスト方式" class="setting-label" />
+                        <ui:DropdownField name="dropdown-castmode" class="setting-dropdown"
+                            choices="クイックキャスト,範囲付きクイックキャスト,クイックキャストなし" index="0" />
+                    </ui:VisualElement>
+
+                    <ui:Label text="キーバインド" class="settings-section-title settings-section-title--spaced" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="スキル1（Q枠）" class="setting-label" />
+                        <ui:Button name="btn-rebind-0" text="Q" class="rebind-btn" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="スキル2（E枠）" class="setting-label" />
+                        <ui:Button name="btn-rebind-1" text="E" class="rebind-btn" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="スキル3（R枠）" class="setting-label" />
+                        <ui:Button name="btn-rebind-2" text="R" class="rebind-btn" />
+                    </ui:VisualElement>
                 </ui:VisualElement>
 
             </ui:VisualElement>
+
+            <!-- フッター行 -->
+            <ui:VisualElement class="settings-footer">
+                <ui:Button name="btn-settings-apply" text="適用" class="settings-apply-btn" />
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+        <!-- ══ ガチャ結果オーバーレイ ══════════════════════════ -->
+        <ui:VisualElement name="gacha-result-overlay" class="overlay" style="display: none;">
+
+            <!-- ヘッダー行 -->
+            <ui:VisualElement class="settings-header">
+                <ui:Label text="獲得結果" class="settings-title" />
+            </ui:VisualElement>
+
+            <!-- 結果グリッド（ScrollView） -->
+            <ui:ScrollView name="gacha-result-grid" class="gacha-result-grid" />
+
+            <!-- フッター行 -->
+            <ui:VisualElement class="settings-footer">
+                <ui:Button name="btn-close-gacha-result" text="閉じる" class="settings-apply-btn" />
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+        <!-- ══ プロフィールオーバーレイ ════════════════════════════ -->
+        <ui:VisualElement name="profile-overlay" class="overlay" style="display: none;">
+
+            <!-- ヘッダー行（設定オーバーレイと同形式） -->
+            <ui:VisualElement class="settings-header">
+                <ui:Label text="プロフィール" class="settings-title" />
+                <ui:Button name="btn-close-profile" text="✕ 閉じる" class="settings-close-btn" />
+            </ui:VisualElement>
+
+            <!-- コンテンツ：中央寄せ 1 カラム -->
+            <ui:VisualElement class="profile-content">
+                <ui:VisualElement class="profile-column">
+
+                    <!-- プレイヤーアイコン（96px 円形） -->
+                    <ui:VisualElement name="profile-overlay-icon" class="profile-overlay__icon" />
+
+                    <!-- プレイヤー名 -->
+                    <ui:Label name="profile-overlay-name" text="プレイヤー名" class="profile-overlay__name" />
+
+                    <!-- レベル -->
+                    <ui:Label name="profile-overlay-level" text="Lv.1" class="profile-overlay__level" />
+
+                    <!-- アカウントセクション -->
+                    <ui:Label text="アカウント" class="settings-section-title" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="所持キャラクター" class="setting-label" />
+                        <ui:Label name="profile-char-count" text="-" class="profile-stat-value" />
+                    </ui:VisualElement>
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="所持クリスタル" class="setting-label" />
+                        <ui:Label name="profile-crystal-count" text="-" class="profile-stat-value" />
+                    </ui:VisualElement>
+
+                    <!-- 戦績セクション -->
+                    <ui:Label text="戦績" class="settings-section-title settings-section-title--spaced" />
+
+                    <ui:VisualElement class="setting-row">
+                        <ui:Label text="試合数 / 勝率" class="setting-label" />
+                        <ui:Label text="準備中" class="profile-stat-value" />
+                    </ui:VisualElement>
+
+                </ui:VisualElement>
+            </ui:VisualElement>
+
         </ui:VisualElement>
 
     </ui:VisualElement>

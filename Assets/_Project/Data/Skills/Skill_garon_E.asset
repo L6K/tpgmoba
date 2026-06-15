@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02ef13925d091ff45bc1e79bb27c7770, type: 3}
+  m_Name: Skill_garon_E
+  m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
+  SkillName: "\u65AD\u7F6A\u306E\u4E00\u9583"
+  Description: "\u81F3\u8FD1\u306E\u65751\u4F53\u306B\u88C1\u304D\u306E\u4E00\u6483\u3002\u4ED5\u7559\u3081\u640D\u306A\u3046\u3068\u9699\u304C\u5927\u304D\u3044"
+  Targeting: 2
+  Damage: 140
+  Range: 4
+  Radius: 0
+  CooldownSeconds: 60
+  ProjectileSpeed: 0
+  WindupSeconds: 0.45
+  RecoverySeconds: 0.6
+  StunDuration: 0
+  RootDuration: 0
+  SlowStrength: 0
+  SlowDuration: 0
+  ShieldAmount: 0
+  ShieldDuration: 0
+  HealAmount: 0
+  DashDistance: 0

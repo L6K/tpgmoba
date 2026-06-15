@@ -1,0 +1,187 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements">
+    <Style src="GameHud.uss" />
+
+    <!-- ルートは全画面・透明・picking-mode none でゲーム操作を遮らない -->
+    <ui:VisualElement name="hud-root" class="hud-root" picking-mode="Ignore">
+
+        <!-- 上部中央: タイマー -->
+        <ui:VisualElement name="hud-timer-container" class="hud-timer-container">
+            <ui:Label name="hud-timer" class="hud-timer" text="00:00" />
+            <!-- 中央オブジェクト(エニグマ・コア)の状態/出現カウントダウン -->
+            <ui:Label name="hud-objective" class="hud-objective" text="" />
+        </ui:VisualElement>
+
+        <!-- チームバフ残り時間（ミニマップ上） -->
+        <ui:Label name="hud-buff" class="hud-buff" text=""
+                  style="position: absolute; left: 16px; bottom: 192px; display: none;" />
+
+        <!-- 左下: ミニマップパネル（円形マップ・176x176） -->
+        <ui:VisualElement name="hud-minimap" class="hud-minimap">
+            <!-- 内側の暗金リング（二重縁取り装飾・ドットは後からコードで上に追加） -->
+            <ui:VisualElement name="minimap-rim" class="minimap-rim" picking-mode="Ignore" />
+        </ui:VisualElement>
+
+        <!-- LoL 風統合下部パネル（下部中央） -->
+        <ui:VisualElement name="hud-bottom" class="hud-bottom">
+
+            <!-- LoL 風上辺ハイライトライン -->
+            <ui:VisualElement class="hud-bottom-highlight" />
+
+            <!-- 左: ポートレート + HP/XP バー縦列 -->
+            <ui:VisualElement class="hud-portrait-section">
+
+                <!-- ポートレート枠（装飾のみ・name なし） -->
+                <ui:VisualElement class="hud-portrait-frame">
+                    <ui:VisualElement class="hud-portrait-bg" picking-mode="Ignore">
+                        <!-- イニシャルはポートレート画像適用に伴い非表示（削除はしない） -->
+                        <ui:Label class="hud-portrait-initial" text="ゼ" style="display: none;" />
+                    </ui:VisualElement>
+                    <!-- レベルバッジ: 既存 hud-level を左下に金色バッジで重ねる -->
+                    <ui:Label name="hud-level" class="hud-level" text="Lv.1" />
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+            <!-- 中左: スキル行(上)・HP/XP バー(下) — LoL 準拠の積み順 -->
+            <ui:VisualElement class="hud-bars-section">
+
+                <!-- スキル3枠 -->
+                <ui:VisualElement name="hud-skills" class="hud-skills">
+
+                    <!-- スロット 0 (Q) -->
+                    <ui:VisualElement name="hud-skill-0" class="hud-skill-slot">
+                        <ui:VisualElement name="hud-skill-icon-0" class="hud-skill-icon" picking-mode="Ignore" />
+                        <ui:Label name="hud-skill-name-0" class="hud-skill-name" text="" />
+                        <ui:VisualElement name="hud-skill-cd-0" class="hud-skill-cd" />
+                        <ui:Label name="hud-skill-cdtext-0" class="hud-skill-cdtext" text="" />
+                        <ui:Label name="hud-skill-key-0" class="hud-skill-key" text="Q" />
+                        <!-- ランクピップ行（Controller が最大数分のノッチを生成） -->
+                        <ui:VisualElement name="hud-skill-pips-0" class="hud-skill-pips" picking-mode="Ignore" />
+                    </ui:VisualElement>
+
+                    <!-- スロット 1 (E) -->
+                    <ui:VisualElement name="hud-skill-1" class="hud-skill-slot">
+                        <ui:VisualElement name="hud-skill-icon-1" class="hud-skill-icon" picking-mode="Ignore" />
+                        <ui:Label name="hud-skill-name-1" class="hud-skill-name" text="" />
+                        <ui:VisualElement name="hud-skill-cd-1" class="hud-skill-cd" />
+                        <ui:Label name="hud-skill-cdtext-1" class="hud-skill-cdtext" text="" />
+                        <ui:Label name="hud-skill-key-1" class="hud-skill-key" text="E" />
+                        <ui:VisualElement name="hud-skill-pips-1" class="hud-skill-pips" picking-mode="Ignore" />
+                    </ui:VisualElement>
+
+                    <!-- スロット 2 (R) -->
+                    <ui:VisualElement name="hud-skill-2" class="hud-skill-slot">
+                        <ui:VisualElement name="hud-skill-icon-2" class="hud-skill-icon" picking-mode="Ignore" />
+                        <ui:Label name="hud-skill-name-2" class="hud-skill-name" text="" />
+                        <ui:VisualElement name="hud-skill-cd-2" class="hud-skill-cd" />
+                        <ui:Label name="hud-skill-cdtext-2" class="hud-skill-cdtext" text="" />
+                        <ui:Label name="hud-skill-key-2" class="hud-skill-key" text="R" />
+                        <ui:VisualElement name="hud-skill-pips-2" class="hud-skill-pips" picking-mode="Ignore" />
+                    </ui:VisualElement>
+
+                    <!-- レベルアップ + ボタン（スロット上に absolute オーバーレイ。
+                         slot の overflow:hidden を避けるため hud-skills 直下に置く） -->
+                    <ui:Button name="hud-skill-levelup-0" class="hud-skill-levelup" text="+" />
+                    <ui:Button name="hud-skill-levelup-1" class="hud-skill-levelup" text="+" />
+                    <ui:Button name="hud-skill-levelup-2" class="hud-skill-levelup" text="+" />
+
+                </ui:VisualElement>
+
+                <!-- HP バー行 -->
+                <ui:VisualElement class="hud-hp-row">
+                    <ui:VisualElement name="hud-hp-bar-bg" class="hud-hp-bar-bg">
+                        <ui:VisualElement name="hud-hp-damage" class="hud-hp-damage" />
+                        <ui:VisualElement name="hud-hp-fill" class="hud-hp-fill" />
+                        <!-- シールド帯: HP フィルの上に左詰めで重ねる（幅は Shield/MaxHp） -->
+                        <ui:VisualElement name="hud-hp-shield" class="hud-hp-shield" />
+                        <!-- HP テキストをバー中央に重ねる -->
+                        <ui:Label name="hud-hp-text" class="hud-hp-text" text="200 / 200" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- XP バー行 -->
+                <ui:VisualElement class="hud-xp-bar-bg">
+                    <ui:VisualElement name="hud-xp-fill" class="hud-xp-fill" />
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+            <!-- 右: アイテム 3x2 グリッド + 所持金 -->
+            <ui:VisualElement class="hud-right-section">
+
+                <!-- アイテム 3x2 グリッド -->
+                <ui:VisualElement name="hud-item-slots" class="hud-item-slots">
+                    <!-- 上段 -->
+                    <ui:VisualElement class="hud-item-row">
+                        <ui:VisualElement name="hud-item-slot-0" class="hud-item-slot">
+                            <ui:Label name="hud-item-initial-0" class="hud-item-initial" text="" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="hud-item-slot-1" class="hud-item-slot">
+                            <ui:Label name="hud-item-initial-1" class="hud-item-initial" text="" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="hud-item-slot-2" class="hud-item-slot">
+                            <ui:Label name="hud-item-initial-2" class="hud-item-initial" text="" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <!-- 下段 -->
+                    <ui:VisualElement class="hud-item-row">
+                        <ui:VisualElement name="hud-item-slot-3" class="hud-item-slot">
+                            <ui:Label name="hud-item-initial-3" class="hud-item-initial" text="" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="hud-item-slot-4" class="hud-item-slot">
+                            <ui:Label name="hud-item-initial-4" class="hud-item-initial" text="" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="hud-item-slot-5" class="hud-item-slot">
+                            <ui:Label name="hud-item-initial-5" class="hud-item-initial" text="" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+
+                <!-- 所持金（コインアイコン + 金額） -->
+                <ui:VisualElement class="hud-gold-row" picking-mode="Ignore">
+                    <ui:VisualElement class="hud-gold-coin" picking-mode="Ignore" />
+                    <ui:Label name="hud-gold" class="hud-gold" text="500 G" />
+                </ui:VisualElement>
+
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+        <!-- スキルツールチップ（ホバー時に Controller が表示・内容更新） -->
+        <ui:VisualElement name="hud-skill-tooltip" class="hud-skill-tooltip" picking-mode="Ignore"
+                          style="display: none;">
+            <ui:Label name="hud-tooltip-name" class="hud-tooltip-name" text="" />
+            <ui:Label name="hud-tooltip-rank" class="hud-tooltip-rank" text="" />
+            <ui:Label name="hud-tooltip-stats" class="hud-tooltip-stats" text="" />
+            <ui:Label name="hud-tooltip-desc" class="hud-tooltip-desc" text="" />
+        </ui:VisualElement>
+
+        <!-- ショップ範囲外ヒント -->
+        <ui:Label name="hud-shop-hint" class="hud-shop-hint" text="ショップは本拠地でのみ利用できます"
+                  style="display: none;" />
+
+        <!-- 被弾時の画面端赤ビネット（全画面・操作を遮らない・通常は透明） -->
+        <ui:VisualElement name="hud-damage-vignette" class="hud-damage-vignette" picking-mode="Ignore" />
+
+        <!-- 右上: キルフィード縦並びコンテナ（Controller が行 Label を再構築） -->
+        <ui:VisualElement name="hud-killfeed" class="hud-killfeed" picking-mode="Ignore" />
+
+        <!-- 中央上: キルアナウンス（プレイヤーのキル/デス時に一時表示） -->
+        <ui:Label name="hud-announce" class="hud-announce" text="" picking-mode="Ignore" />
+
+    </ui:VisualElement>
+
+    <!-- ショップオーバーレイ（全画面・通常は非表示） -->
+    <ui:VisualElement name="shop-overlay" class="shop-overlay" style="display: none;">
+
+        <ui:VisualElement class="shop-header">
+            <ui:Label class="shop-title" text="ショップ" />
+            <ui:Label name="shop-gold" class="shop-gold" text="500 G" />
+            <ui:Button name="shop-close" class="shop-close" text="✕ 閉じる" />
+        </ui:VisualElement>
+
+        <ui:VisualElement name="shop-grid" class="shop-grid" />
+
+    </ui:VisualElement>
+
+</ui:UXML>

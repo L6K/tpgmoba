@@ -66,6 +66,10 @@ mono_crash.*
 *.unitypackage.meta
 *.app
 
+# Unity manual activation/license files
+*.alf
+*.ulf
+
 # Crashlytics generated file
 crashlytics-build.properties
 
@@ -87,3 +91,8 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# CI tools (Roslyn syntax check): track source but ignore build output
+.github/ci-tools/**/bin/
+.github/ci-tools/**/obj/
+!.github/ci-tools/**/*.csproj

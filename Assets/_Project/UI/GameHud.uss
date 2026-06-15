@@ -1,0 +1,882 @@
+/* ── デザイントークン（LoL 風 金縁ダーク） ───────────── */
+:root {
+    --color-bg:          rgb(10, 12, 22);
+    --color-accent:      rgb(46, 107, 242);
+    --color-text:        rgb(255, 255, 255);
+    --color-text-dim:    rgb(170, 180, 205);
+    --color-divider:     rgba(255, 255, 255, 0.08);
+    --color-hud-bg:      rgba(8, 10, 18, 0.92);
+    --color-cd-overlay:  rgba(0, 0, 0, 0.65);
+
+    /* LoL ゴールド */
+    --color-gold:        rgb(200, 170, 110);
+    --color-gold-bright: rgb(235, 200, 90);
+    --color-gold-dim:    rgba(200, 170, 110, 0.45);
+    --color-gold-dark:   rgb(120, 90, 40);
+
+    /* 羊皮紙テキスト */
+    --color-parchment:   rgb(240, 230, 210);
+    --color-parchment-dim: rgb(160, 155, 140);
+
+    /* HP バー */
+    --color-hp:          rgb(60, 180, 75);
+
+    /* XP バー */
+    --color-xp:          rgb(140, 100, 220);
+}
+
+/* ── ルート: 全画面・透明・ゲーム操作を遮らない ─────── */
+.hud-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0);
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* ── タイマー（上部中央） ───────────────────────────── */
+.hud-timer-container {
+    align-self: center;
+    margin-top: 12px;
+    background-color: rgb(14, 18, 32);
+    border-radius: 3px;
+    padding-left: 18px;
+    padding-right: 18px;
+    padding-top: 4px;
+    padding-bottom: 5px;
+    /* 深紺背景 + 金縁下線。下辺のみ明るい金で締める */
+    border-width: 1px;
+    border-color: var(--color-gold-dark);
+    border-bottom-width: 2px;
+    border-bottom-color: var(--color-gold);
+}
+
+.hud-timer {
+    font-size: 18px;
+    color: var(--color-parchment);
+    -unity-font-definition: url("Fonts/Marcellus-Regular.ttf");
+    -unity-text-align: middle-center;
+    letter-spacing: 3px;
+}
+
+/* 中央オブジェクト状態(タイマー直下)。通常はシアン白、予告中は橙で強調 */
+.hud-objective {
+    font-size: 12px;
+    color: rgb(200, 235, 255);
+    -unity-text-align: middle-center;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+
+.hud-objective--warning {
+    color: rgb(255, 180, 70);
+    -unity-font-style: bold;
+}
+
+.hud-objective--active {
+    color: rgb(120, 230, 140);
+    -unity-font-style: bold;
+}
+
+/* ── チームバフ残り時間（ミニマップ上 16px） ─────────── */
+.hud-buff {
+    color: var(--color-gold-bright);
+    font-size: 13px;
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    background-color: rgba(0, 0, 0, 0.55);
+    padding: 2px 8px;
+    border-radius: 3px;
+    border-width: 1px;
+    border-color: var(--color-gold-dark);
+}
+
+/* ── ミニマップパネル（左下固定・円形・176x176） ────── */
+.hud-minimap {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    width: 176px;
+    height: 176px;
+    background-color: rgb(10, 14, 26);
+    /* 背景地形テクスチャは MinimapController からコードで差し込む */
+    background-image: url("project://database/Assets/_Project/UI/Textures/MinimapBg.png");
+    -unity-background-scale-mode: scale-and-crop;
+    /* 円形マスク。四隅（円外=海域）はドットが出ないので正方形ドット座標のままで良い */
+    border-radius: 88px;
+    overflow: hidden;
+    /* 金縁。outline は border-radius に追従せず円形では角が出るため border のみで縁取る。
+       内側の暗金ラインは子要素 .minimap-rim（overflow:hidden 内に収まる）で二重縁を表現 */
+    border-width: 3px;
+    border-color: var(--color-gold);
+}
+
+/* 内側の暗金リング（#785A28）。overflow:hidden で円形にクリップされる子要素 */
+.minimap-rim {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 86px;
+    border-width: 1px;
+    border-color: rgb(120, 90, 40);
+}
+
+.minimap-dot {
+    position: absolute;
+    width: 7px;
+    height: 7px;
+    border-radius: 4px;
+}
+
+.minimap-dot--blue    { background-color: rgb(59, 130, 246); }
+.minimap-dot--red     { background-color: rgb(239, 68, 68); }
+.minimap-dot--neutral { background-color: rgb(179, 107, 240); }
+
+/* 自プレイヤー: 矢印アイコン（背景画像はコードで設定）。色は塗らない */
+.minimap-dot--self {
+    width: 14px;
+    height: 14px;
+    border-radius: 0;
+    background-color: rgba(0, 0, 0, 0);
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+    -unity-background-scale-mode: scale-to-fit;
+}
+
+/* ミニオン: 小ドット 4px */
+.minimap-dot--minion {
+    width: 4px;
+    height: 4px;
+    border-radius: 2px;
+}
+
+/* タワー/タイタン: 菱形（正方形 + 45deg 回転）。色はチームクラスが付与 */
+.minimap-dot--diamond {
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+    rotate: 45deg;
+    border-width: 1px;
+    border-color: rgba(10, 14, 26, 0.9);
+}
+
+.minimap-dot--titan {
+    width: 11px;
+    height: 11px;
+}
+
+/* ── 下部統合パネル（LoL 風・幅 820px・高さ 110px） ─── */
+.hud-bottom {
+    position: relative;
+    flex-direction: row;
+    align-items: center;
+    align-self: center;
+    margin-bottom: 14px;
+    width: 820px;
+    height: 110px;
+    background-color: var(--color-hud-bg);
+    /* 深紺グラデパネル。縦グラデを引き伸ばして全面に敷く */
+    background-image: url("Textures/PanelGradient.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    border-radius: 2px;
+    /* 上辺は明るい金、他辺は暗金で縁取る */
+    border-width: 1px;
+    border-color: var(--color-gold-dark);
+    border-top-color: var(--color-gold);
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
+}
+
+/* 上辺中央の金装飾ストリップ（GoldTrim.png・中央金グラデ） */
+.hud-bottom-highlight {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background-image: url("Textures/GoldTrim.png");
+    -unity-background-scale-mode: stretch-to-fill;
+}
+
+/* ── ポートレートセクション（左端） ─────────────────── */
+.hud-portrait-section {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+/* ポートレート外枠（72x72・円形・金二重リング）
+   外 1px 暗金。内側の明るい金リングは hud-portrait-bg 側の border で表現する */
+.hud-portrait-frame {
+    width: 72px;
+    height: 72px;
+    border-width: 1px;
+    border-color: var(--color-gold-dark);
+    border-radius: 50%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ポートレート背景（PortraitZeph 顔画像 + 内側 2px 金リング） */
+.hud-portrait-bg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgb(28, 36, 60);
+    background-image: url("Textures/PortraitZeph.png");
+    -unity-background-scale-mode: scale-and-crop;
+    border-width: 2px;
+    border-color: var(--color-gold);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ポートレート頭文字（装飾のみ） */
+.hud-portrait-initial {
+    font-size: 28px;
+    -unity-font-style: bold;
+    color: var(--color-gold);
+    -unity-text-align: middle-center;
+    letter-spacing: 0;
+}
+
+/* レベルバッジ: ポートレート左下に金背景×濃紺文字の円形バッジで重ねる */
+.hud-level {
+    position: absolute;
+    bottom: -2px;
+    left: -2px;
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+    color: rgb(20, 24, 40);
+    -unity-font-definition: url("Fonts/Marcellus-Regular.ttf");
+    -unity-text-align: middle-center;
+    background-color: var(--color-gold);
+    border-radius: 50%;
+    border-width: 1px;
+    border-color: var(--color-gold-dark);
+}
+
+/* ── HP・XP・スキルセクション（中央） ───────────────── */
+.hud-bars-section {
+    flex-direction: column;
+    align-items: stretch;
+    flex-grow: 1;
+    justify-content: center;
+    margin-right: 8px;
+}
+
+/* HP バー行 */
+.hud-hp-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 3px;
+}
+
+/* HP バー背景（高さ 16px） */
+.hud-hp-bar-bg {
+    flex-grow: 1;
+    height: 16px;
+    background-color: rgba(255, 255, 255, 0.10);
+    border-radius: 1px;
+    overflow: hidden;
+    position: relative;
+}
+
+/* HP ダメージトレイル: fill の下に置き、transition の遅延差でトレイルが生まれる */
+.hud-hp-damage {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: rgba(255, 240, 215, 0.85);
+    transition: width 0.45s ease 0.25s;
+}
+
+/* HP fill: 緑グラデテクスチャ（width は Controller が % 制御）。
+   テクスチャは横引き伸ばしで、tint で素の緑を補強 */
+.hud-hp-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--color-hp);
+    background-image: url("Textures/HpFillGradient.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    -unity-background-image-tint-color: rgb(255, 255, 255);
+    border-radius: 1px;
+    transition: width 0.12s ease-out;
+}
+
+/* 低 HP 警告色（比率 < 0.3 で付与）。グラデテクスチャを赤系に着色する */
+.hud-hp-fill--low {
+    background-color: rgb(214, 84, 48);
+    -unity-background-image-tint-color: rgb(230, 90, 70);
+}
+
+/* シールド帯: HP フィルの上に左詰めで重ねる半透明シアン白。幅はコントローラが Shield/MaxHp で設定 */
+.hud-hp-shield {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background-color: rgba(200, 235, 255, 0.6);
+    border-radius: 1px;
+    transition: width 0.12s ease-out;
+}
+
+/* HP テキスト: バー中央に羊皮紙色で重ねる */
+.hud-hp-text {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    font-size: 11px;
+    color: var(--color-parchment);
+    -unity-font-definition: url("Fonts/Marcellus-Regular.ttf");
+    -unity-text-align: middle-center;
+}
+
+/* XP バー背景（高さ 4px・控えめ）。column 内のため flex-grow は付けない（縦に伸びる） */
+.hud-xp-bar-bg {
+    flex-grow: 0;
+    flex-shrink: 0;
+    height: 4px;
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 1px;
+    overflow: hidden;
+}
+
+/* XP fill: 紫グラデテクスチャ（width は Controller が % 制御） */
+.hud-xp-fill {
+    height: 100%;
+    width: 100%;
+    background-color: var(--color-xp);
+    background-image: url("Textures/XpFillGradient.png");
+    -unity-background-scale-mode: stretch-to-fill;
+    border-radius: 1px;
+    transition: width 0.25s ease-out;
+}
+
+/* ── スキルスロット列（バーの上・中央寄せ） ──────────── */
+.hud-skills {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: center;
+    margin-bottom: 5px;
+}
+
+/* 各スロット: 56x56・金縁・ほぼ直角 */
+.hud-skill-slot {
+    width: 56px;
+    height: 56px;
+    background-color: rgba(15, 18, 32, 0.90);
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: var(--color-gold);
+    margin-right: 5px;
+    position: relative;
+    overflow: hidden;
+    align-items: center;
+    justify-content: flex-start;
+    flex-direction: column;
+    padding-top: 5px;
+}
+
+/* 未設定スロット */
+.hud-skill-slot--empty {
+    opacity: 0.35;
+    border-color: rgba(200, 170, 110, 0.30);
+}
+
+/* スキルアイコン（スロット全面・装飾のみ）。白アイコンを常時 90% 不透明で敷く。
+   background-image は Controller が Targeting 種別に応じて設定する */
+.hud-skill-icon {
+    position: absolute;
+    left: 6px;
+    top: 6px;
+    right: 6px;
+    bottom: 6px;
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: rgb(240, 230, 210);
+    opacity: 0.90;
+}
+
+/* Targeting 種別ごとのアイコン（Controller がクラスを付与）。
+   方向指定→exclamation、地点AoE→star、対象指定→target */
+.hud-skill-icon--directional {
+    background-image: url("Icons/skill_exclamation.png");
+}
+
+.hud-skill-icon--aoe {
+    background-image: url("Icons/skill_star.png");
+}
+
+.hud-skill-icon--targeted {
+    background-image: url("Icons/skill_target.png");
+}
+
+/* スキル名（スロット下部の小さい和文ラベル） */
+.hud-skill-name {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1px;
+    font-size: 8px;
+    color: var(--color-parchment-dim);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    -unity-text-align: lower-center;
+    white-space: normal;
+    overflow: hidden;
+    max-width: 56px;
+}
+
+/* キー名バッジ（右下・金色） */
+.hud-skill-key {
+    position: absolute;
+    bottom: 2px;
+    right: 3px;
+    font-size: 9px;
+    color: rgb(20, 24, 40);
+    -unity-font-definition: url("Fonts/Marcellus-Regular.ttf");
+    background-color: var(--color-gold);
+    border-radius: 1px;
+    padding-left: 3px;
+    padding-right: 3px;
+    padding-top: 0;
+    padding-bottom: 0;
+    -unity-text-align: middle-center;
+}
+
+/* CD オーバーレイ: 下端アンカーの暗幕。height % を残りCD比率に Controller が設定する */
+.hud-skill-cd {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 0%;
+    background-color: rgba(10, 14, 26, 0.78);
+}
+
+/* CD 残秒テキスト（Marcellus 22px 羊皮紙色・中央） */
+.hud-skill-cdtext {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    font-size: 22px;
+    color: var(--color-parchment);
+    -unity-font-definition: url("Fonts/Marcellus-Regular.ttf");
+    -unity-text-align: middle-center;
+    display: none;
+}
+
+/* ロック中スロット（rank0）: アイコンを暗く落とす（Controller が付与） */
+.hud-skill-slot--locked .hud-skill-icon {
+    opacity: 0.35;
+}
+
+/* ロックアイコン: 種別アイコンに優先して錠前画像を敷く */
+.hud-skill-icon--locked {
+    background-image: url("Icons/skill_locked.png");
+}
+
+/* ── ランクピップ（スロット下端の横並びノッチ） ──────── */
+/* 下端中央に absolute 行で並べる。picking は不要 */
+.hud-skill-pips {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1px;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 空ピップ（6x3）: 暗金枠の中抜き */
+.hud-skill-pip {
+    width: 6px;
+    height: 3px;
+    margin-left: 1px;
+    margin-right: 1px;
+    background-color: rgba(0, 0, 0, 0.55);
+    border-width: 1px;
+    border-color: var(--color-gold-dark);
+}
+
+/* 充填ピップ: 金で塗る */
+.hud-skill-pip--filled {
+    background-color: var(--color-gold-bright);
+    border-color: var(--color-gold);
+}
+
+/* ── レベルアップ + ボタン（スロット上端の内側・金色ストリップ） ── */
+/* left/width は Controller がスロット座標に合わせて設定する。
+   パネル(hud-bottom)境界の外にはみ出した部分はクリック不能になるため
+   負の top でスロットの上に出してはいけない */
+.hud-skill-levelup {
+    position: absolute;
+    top: 0;
+    width: 56px;
+    height: 18px;
+    font-size: 14px;
+    color: rgb(20, 24, 40);
+    -unity-font-definition: url("Fonts/Marcellus-Regular.ttf");
+    -unity-text-align: middle-center;
+    background-color: var(--color-gold-bright);
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: var(--color-gold-dark);
+    padding: 0;
+    display: none;
+}
+
+.hud-skill-levelup:hover {
+    background-color: rgb(255, 230, 150);
+}
+
+/* ── スキルツールチップ（ホバー表示・深紺 + 金縁） ────── */
+.hud-skill-tooltip {
+    position: absolute;
+    bottom: 130px;
+    align-self: center;
+    width: 280px;
+    background-color: rgba(10, 14, 30, 0.96);
+    border-width: 1px;
+    border-color: var(--color-gold);
+    border-radius: 3px;
+    padding: 8px 12px;
+    flex-direction: column;
+}
+
+.hud-tooltip-name {
+    font-size: 15px;
+    color: var(--color-gold-bright);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    -unity-font-style: bold;
+    margin-bottom: 2px;
+}
+
+.hud-tooltip-rank {
+    font-size: 11px;
+    color: var(--color-parchment-dim);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    margin-bottom: 1px;
+}
+
+.hud-tooltip-stats {
+    font-size: 11px;
+    color: var(--color-parchment);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    margin-bottom: 4px;
+}
+
+.hud-tooltip-desc {
+    font-size: 12px;
+    color: var(--color-parchment);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    white-space: normal;
+}
+
+/* ── 右セクション（アイテム 3x2 + 所持金） ──────────── */
+.hud-right-section {
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-left: 4px;
+}
+
+/* アイテム枠コンテナ（3x2 グリッド） */
+.hud-item-slots {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 4px;
+}
+
+/* アイテム行（3枠 x 2行） */
+.hud-item-row {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 2px;
+}
+
+/* 各アイテムスロット: 28x28・内側を僅かに暗くした嵌め込み風 */
+.hud-item-slot {
+    width: 28px;
+    height: 28px;
+    background-color: rgba(0, 0, 0, 0.35);
+    border-radius: 1px;
+    border-width: 1px;
+    border-color: rgb(58, 63, 78);
+    margin-right: 2px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* 取得済みスロットは金縁で強調（Controller が付与） */
+.hud-item-slot--filled {
+    border-color: var(--color-gold);
+}
+
+/* アイテム頭文字 */
+.hud-item-initial {
+    font-size: 12px;
+    color: var(--color-parchment);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    -unity-text-align: middle-center;
+}
+
+/* 所持金行（コインアイコン + 金額を横並び） */
+.hud-gold-row {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 2px;
+}
+
+/* コインアイコン（14x14・装飾） */
+.hud-gold-coin {
+    width: 14px;
+    height: 14px;
+    margin-right: 4px;
+    background-image: url("Icons/ui_coin.png");
+    -unity-background-scale-mode: scale-to-fit;
+    -unity-background-image-tint-color: var(--color-gold);
+}
+
+/* 所持金（金色・Marcellus） */
+.hud-gold {
+    font-size: 14px;
+    color: var(--color-gold);
+    -unity-font-definition: url("Fonts/Marcellus-Regular.ttf");
+    -unity-text-align: middle-right;
+    letter-spacing: 0;
+    transition: color 0.2s, scale 0.2s;
+}
+
+/* 所持金増加パルスエフェクト */
+.hud-gold--pulse {
+    color: rgb(255, 230, 150);
+    scale: 1.12 1.12;
+}
+
+/* ── ショップ範囲外ヒント ────────────────────────────── */
+.hud-shop-hint {
+    position: absolute;
+    bottom: 140px;
+    left: 0;
+    right: 0;
+    -unity-text-align: middle-center;
+    font-size: 14px;
+    color: rgba(255, 200, 80, 1);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    background-color: rgba(10, 12, 22, 0.85);
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: var(--color-gold-dim);
+    padding: 6px 16px;
+    align-self: center;
+}
+
+/* ── ショップオーバーレイ（全画面・操作遮断） ──────── */
+.shop-overlay {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(10, 12, 22, 0.96);
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.shop-header {
+    flex-direction: row;
+    align-items: center;
+    padding-left: 32px;
+    padding-right: 32px;
+    padding-top: 20px;
+    padding-bottom: 16px;
+    border-bottom-width: 1px;
+    border-color: var(--color-gold-dim);
+}
+
+.shop-title {
+    font-size: 22px;
+    color: var(--color-parchment);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    flex-grow: 1;
+}
+
+.shop-gold {
+    font-size: 16px;
+    color: var(--color-gold-bright);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    margin-right: 24px;
+}
+
+.shop-close {
+    font-size: 14px;
+    color: var(--color-text);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: var(--color-gold-dim);
+    padding-left: 14px;
+    padding-right: 14px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+}
+
+.shop-grid {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 20px 24px;
+    flex-grow: 1;
+}
+
+.shop-card {
+    width: 200px;
+    height: 150px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border-radius: 2px;
+    border-width: 1px;
+    border-color: var(--color-gold-dim);
+    margin: 8px;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.shop-card--disabled {
+    opacity: 0.4;
+}
+
+.shop-card-tile {
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+}
+
+.shop-card-initial {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.90);
+}
+
+.shop-card-info {
+    flex-grow: 1;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.shop-card-name {
+    font-size: 13px;
+    color: var(--color-text);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+}
+
+.shop-card-effect {
+    font-size: 10px;
+    color: var(--color-text-dim);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    white-space: normal;
+    overflow: hidden;
+    flex-grow: 1;
+}
+
+.shop-card-price {
+    font-size: 12px;
+    color: var(--color-gold-bright);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    -unity-text-align: lower-right;
+}
+
+/* ── 被弾フィードバック: 画面端赤ビネット ───────────── */
+/* 全画面に重ね、縁が赤く中央が透明になるよう放射グラデ風に縁取る。
+   opacity を Controller が 0.35→0 へ遷移させるので transition を仕込む */
+.hud-damage-vignette {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    opacity: 0;
+    border-left-width: 120px;
+    border-right-width: 120px;
+    border-top-width: 90px;
+    border-bottom-width: 90px;
+    border-left-color: rgba(200, 30, 30, 0.55);
+    border-right-color: rgba(200, 30, 30, 0.55);
+    border-top-color: rgba(200, 30, 30, 0.55);
+    border-bottom-color: rgba(200, 30, 30, 0.55);
+    transition-property: opacity;
+    transition-duration: 0.4s;
+}
+
+/* ── キルフィード: 右上の縦並び ───────────────────── */
+.hud-killfeed {
+    position: absolute;
+    top: 64px;
+    right: 16px;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.hud-killfeed-row {
+    margin-bottom: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    background-color: rgba(8, 10, 18, 0.75);
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+    border-left-color: var(--color-gold-dim);
+    border-right-color: var(--color-gold-dim);
+    border-top-color: var(--color-gold-dim);
+    border-bottom-color: var(--color-gold-dim);
+    font-size: 14px;
+    color: var(--color-text);
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+}
+
+/* ── キルアナウンス: 中央上の大テキスト ───────────── */
+.hud-announce {
+    position: absolute;
+    top: 96px;
+    left: 0;
+    right: 0;
+    opacity: 0;
+    font-size: 48px;
+    -unity-text-align: upper-center;
+    -unity-font-style: bold;
+    -unity-font-definition: url("Fonts/NotoSansJP.ttf");
+    transition-property: opacity;
+    transition-duration: 0.3s;
+}

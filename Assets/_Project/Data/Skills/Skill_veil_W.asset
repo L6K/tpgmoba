@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02ef13925d091ff45bc1e79bb27c7770, type: 3}
+  m_Name: Skill_veil_W
+  m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
+  SkillName: "\u5F71\u7206"
+  Description: "\u6307\u5B9A\u5730\u70B9\u306E\u5F71\u3092\u7206\u88C2\u3055\u305B\u308B\u3002\u7BC4\u56F2\u306F\u72ED\u3044\u304C\u767A\u751F\u304C\u901F\u3044"
+  Targeting: 1
+  Damage: 40
+  Range: 12
+  Radius: 2.6
+  CooldownSeconds: 8
+  ProjectileSpeed: 0
+  WindupSeconds: 0.2
+  RecoverySeconds: 0.3
+  StunDuration: 0
+  RootDuration: 0
+  SlowStrength: 0
+  SlowDuration: 0
+  ShieldAmount: 0
+  ShieldDuration: 0
+  HealAmount: 0
+  DashDistance: 0

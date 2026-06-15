@@ -1,17 +1,17 @@
 /* ── Variables ─────────────────────────────────────── */
 :root {
-    --color-bg:           rgb(15, 15, 31);
-    --color-nav:          rgb(25, 25, 46);
-    --color-panel:        rgb(25, 25, 51);
-    --color-panel-header: rgb(35, 35, 66);
+    --color-bg:           rgb(10, 12, 22);
+    --color-nav:          rgb(16, 19, 32);
+    --color-panel:        rgb(16, 19, 32);
+    --color-panel-header: rgb(22, 26, 42);
     --color-accent:       rgb(46, 107, 242);
     --color-accent-dim:   rgba(46, 107, 242, 0.35);
     --color-text:         rgb(255, 255, 255);
-    --color-text-dim:     rgb(180, 200, 255);
+    --color-text-dim:     rgb(170, 180, 205);
     --color-text-muted:   rgb(120, 130, 160);
     --color-online:       rgb(51, 255, 76);
     --color-offline:      rgb(100, 100, 120);
-    --color-divider:      rgba(255, 255, 255, 0.12);
+    --color-divider:      rgba(255, 255, 255, 0.08);
     --nav-height:         70px;
     --friend-width:       220px;
 }
@@ -40,6 +40,7 @@
     color: var(--color-text);
     width: 160px;
     margin-right: 20px;
+    letter-spacing: 3px;
 }
 
 .nav-tabs {
@@ -59,6 +60,7 @@
     border-bottom-color: var(--color-accent);
     transition: color 0.15s ease;
     cursor: link;
+    letter-spacing: 1px;
 }
 
 .nav-tab:hover {
@@ -175,7 +177,7 @@
 .party-slot {
     width: 200px;
     height: 200px;
-    border-radius: 16px;
+    border-radius: 4px;
     border-width: 2px;
     align-items: center;
     justify-content: center;
@@ -227,7 +229,7 @@
 .game-icon {
     width: 280px;
     height: 280px;
-    background-color: rgb(26, 31, 71);
+    background-color: rgb(16, 20, 36);
     border-width: 2px;
     border-color: var(--color-accent-dim);
     border-radius: 4px;
@@ -399,78 +401,56 @@
     margin-right: 6px;
 }
 
-/* ══ 設定オーバーレイ ══════════════════════════════ */
+/* ══ 設定オーバーレイ（Valorant 風全画面） ════════════ */
 
+/* 浮いたパネルをやめて全画面を直接覆う */
 .overlay {
     position: absolute;
     left: 0; top: 0; right: 0; bottom: 0;
-    background-color: rgba(0, 0, 0, 0.65);
-    align-items: center;
-    justify-content: center;
-}
-
-.settings-panel {
-    width: 760px;
-    height: 520px;
-    background-color: rgb(20, 20, 40);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    /* Valorant 風: 背後のホーム画面を完全に隠すフラットな全画面 */
+    background-color: rgb(10, 12, 22);
     flex-direction: column;
 }
 
-/* ヘッダー */
+/* ヘッダー行 */
 .settings-header {
     flex-direction: row;
     align-items: center;
-    height: 56px;
-    padding-left: 24px;
-    padding-right: 16px;
-    background-color: rgb(25, 25, 50);
-    border-bottom-width: 1px;
-    border-bottom-color: rgba(255, 255, 255, 0.08);
-    border-top-left-radius: 8px;
-    border-top-right-radius: 8px;
+    height: 64px;
+    padding-left: 48px;
+    padding-right: 32px;
+    flex-shrink: 0;
 }
 
 .settings-title {
-    font-size: 20px;
+    font-size: 22px;
     -unity-font-style: bold;
     color: var(--color-text);
     flex-grow: 1;
+    letter-spacing: 2px;
 }
 
 .settings-close-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 18px;
     background-color: rgba(0,0,0,0);
     border-width: 0;
+    border-radius: 0;
     color: var(--color-text-muted);
-    font-size: 18px;
+    font-size: 15px;
     cursor: link;
-    transition: color 0.15s ease, background-color 0.15s ease;
+    padding: 0 12px;
+    height: 40px;
+    transition: color 0.15s ease;
 }
 
 .settings-close-btn:hover {
     color: var(--color-text);
-    background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* ボディ */
-.settings-body {
-    flex-direction: row;
-    flex-grow: 1;
-}
-
-/* 左タブリスト */
+/* 水平タブ行 */
 .settings-tabs {
-    width: 160px;
-    flex-direction: column;
-    background-color: rgb(17, 17, 35);
-    border-right-width: 1px;
-    border-right-color: rgba(255, 255, 255, 0.08);
-    padding-top: 12px;
+    flex-direction: row;
+    padding-left: 40px;
+    flex-shrink: 0;
 }
 
 .settings-tab {
@@ -480,37 +460,49 @@
     color: var(--color-text-muted);
     font-size: 15px;
     height: 44px;
-    padding-left: 20px;
-    -unity-text-align: middle-left;
+    padding: 0 20px;
+    -unity-text-align: middle-center;
     cursor: link;
-    border-left-width: 3px;
-    border-left-color: rgba(0,0,0,0);
+    /* アクティブ状態の下線を準備（厚み 0 → active で 2px に） */
+    border-bottom-width: 0;
+    border-bottom-color: var(--color-accent);
     transition: color 0.1s ease;
 }
 
 .settings-tab:hover {
     color: var(--color-text);
-    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .settings-tab--active {
     color: var(--color-text);
-    background-color: rgba(46, 107, 242, 0.12);
-    border-left-color: var(--color-accent);
+    border-bottom-width: 2px;
+    border-bottom-color: var(--color-accent);
 }
 
-/* 右コンテンツ */
+/* タブ行下の 1px 区切り線 */
+.settings-tab-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+}
+
+/* コンテンツ領域: 中央寄せ 1 カラム */
 .settings-content {
     flex-grow: 1;
-    padding: 24px 28px;
+    align-items: center;
+    padding-top: 32px;
+    padding-bottom: 32px;
+    overflow: hidden;
     position: relative;
 }
 
+/* 表示切替は display で行うため絶対配置は不要。親の align-items: center で中央寄せ */
 .settings-page {
     display: none;
     flex-direction: column;
-    position: absolute;
-    left: 28px; top: 24px; right: 28px; bottom: 24px;
+    width: 70%;
+    max-width: 880px;
+    flex-grow: 1;
 }
 
 .settings-page--active {
@@ -518,23 +510,23 @@
 }
 
 .settings-section-title {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--color-text-muted);
-    margin-bottom: 20px;
-    letter-spacing: 1px;
+    margin-bottom: 16px;
+    letter-spacing: 2px;
 }
 
 /* 設定行 */
 .setting-row {
     flex-direction: row;
     align-items: center;
-    height: 52px;
+    height: 56px;
     border-bottom-width: 1px;
-    border-bottom-color: rgba(255, 255, 255, 0.05);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
 .setting-label {
-    width: 120px;
+    width: 280px;
     font-size: 15px;
     color: var(--color-text);
 }
@@ -545,19 +537,24 @@
     margin-right: 12px;
 }
 
-.setting-slider > .unity-base-slider__tracker {
+/* tracker/dragger は Slider の直下ではなく drag-container 配下にあるため子孫セレクタで指定。
+   両方とも top:50% + 高さの半分の負マージンで垂直中心を揃える（線が丸の中心を貫通する） */
+.setting-slider .unity-base-slider__tracker {
     background-color: rgba(255, 255, 255, 0.15);
     height: 4px;
     border-radius: 2px;
+    top: 50%;
+    margin-top: -2px;
 }
 
-.setting-slider > .unity-base-slider__dragger {
+.setting-slider .unity-base-slider__dragger {
     background-color: var(--color-accent);
     width: 16px;
     height: 16px;
     border-radius: 8px;
     border-width: 0;
-    margin-top: -6px;
+    top: 50%;
+    margin-top: -8px;
 }
 
 .setting-value {
@@ -570,12 +567,24 @@
 .setting-dropdown {
     flex-grow: 1;
     margin-left: 8px;
-    background-color: rgb(30, 30, 55);
+}
+
+/* 見た目を持つのはルートではなく内側の __input 要素のため子孫セレクタで指定 */
+.setting-dropdown .unity-base-popup-field__input {
+    background-color: rgb(22, 26, 42);
     border-width: 1px;
     border-color: rgba(255, 255, 255, 0.15);
     border-radius: 4px;
-    color: var(--color-text);
     font-size: 15px;
+    padding-left: 10px;
+}
+
+.setting-dropdown .unity-base-popup-field__text {
+    color: var(--color-text);
+}
+
+.setting-dropdown .unity-base-popup-field__arrow {
+    -unity-background-image-tint-color: var(--color-text-dim);
 }
 
 .settings-placeholder {
@@ -585,13 +594,14 @@
     flex-grow: 1;
 }
 
-/* フッター */
+/* フッター行 */
 .settings-footer {
-    height: 60px;
+    height: 64px;
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
-    padding-right: 20px;
+    padding-right: 48px;
+    flex-shrink: 0;
     border-top-width: 1px;
     border-top-color: rgba(255, 255, 255, 0.08);
 }
@@ -615,4 +625,416 @@
 
 .settings-apply-btn:active {
     background-color: rgb(30, 80, 200);
+}
+
+/* ══ 所持品ページ ════════════════════════════════════════ */
+
+/* page は position:absolute + align/justify:center なので、
+   page--flow で上から縦に流れるレイアウトに上書きする */
+.page--flow {
+    align-items: flex-start;
+    justify-content: flex-start;
+    flex-direction: column;
+}
+
+/* サブタブ行 */
+.inventory-header {
+    flex-direction: row;
+    flex-shrink: 0;
+    padding-left: 40px;
+    padding-top: 8px;
+}
+
+/* サブタブボタン（設定画面の .settings-tab と同系） */
+.inventory-tab {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-radius: 0;
+    color: var(--color-text-muted);
+    font-size: 15px;
+    height: 44px;
+    padding: 0 20px;
+    -unity-text-align: middle-center;
+    cursor: link;
+    border-bottom-width: 0;
+    border-bottom-color: var(--color-accent);
+    transition: color 0.1s ease;
+}
+
+.inventory-tab:hover {
+    color: var(--color-text);
+}
+
+.inventory-tab--active {
+    color: var(--color-text);
+    border-bottom-width: 2px;
+    border-bottom-color: var(--color-accent);
+}
+
+/* タブ下の 1px 区切り線 */
+.inventory-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+/* キャラクターグリッド（ScrollView ルート） */
+.char-grid {
+    flex-grow: 1;
+    align-self: stretch;
+}
+
+/* ScrollView の content-container は viewport を挟んだ孫要素のため子孫セレクタで指定 */
+.char-grid #unity-content-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    padding: 20px;
+    align-content: flex-start;
+}
+
+/* 準備中プレースホルダー領域 */
+.page-placeholder-area {
+    flex-grow: 1;
+    align-self: stretch;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── キャラクターカード ──────────────────────────────── */
+.char-card {
+    width: 160px;
+    height: 210px;
+    background-color: rgb(16, 19, 32);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.08);
+    border-radius: 4px;
+    margin: 6px;
+    flex-direction: column;
+    overflow: hidden;
+    cursor: link;
+    transition: border-color 0.15s ease, translate 0.15s ease;
+}
+
+.char-card:hover {
+    border-color: var(--color-accent);
+    translate: 0 -3px;
+}
+
+/* アイコン領域（上部 160×140） */
+.char-card__icon {
+    width: 160px;
+    height: 140px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    /* themeColor はコントローラーがインラインで設定。
+       icon がある場合も同様に backgroundImage をコントローラーで設定 */
+    background-size: cover;
+    background-position: center;
+}
+
+/* 頭文字表示（icon が null の場合） */
+.char-card__initial {
+    font-size: 48px;
+    -unity-font-style: bold;
+    color: rgba(255, 255, 255, 0.85);
+    -unity-text-align: middle-center;
+}
+
+/* カード下部テキスト領域 */
+.char-card__name {
+    font-size: 15px;
+    color: var(--color-text);
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 8px;
+    -unity-text-align: upper-left;
+}
+
+.char-card__role {
+    font-size: 12px;
+    color: var(--color-text-muted);
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 2px;
+}
+
+/* 未所持カード：彩度・透明度を落とす */
+.char-card--locked {
+    opacity: 0.45;
+}
+
+/* 「未所持」ラベル（カード右上に重ねて表示） */
+.char-card__locked-label {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 2px;
+    padding: 1px 5px;
+    position: absolute;
+    top: 6px;
+    right: 6px;
+}
+
+/* ══ ガチャページ ════════════════════════════════════════ */
+
+/* クリスタル残高ヘッダー（右寄せ行） */
+.gacha-header {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 12px 32px 12px 32px;
+    flex-shrink: 0;
+    align-self: stretch;
+}
+
+.gacha-header__label {
+    font-size: 13px;
+    color: var(--color-text-muted);
+    margin-right: 8px;
+}
+
+.gacha-header__count {
+    font-size: 20px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+}
+
+/* バナー＋ボタンを縦に中央寄せするコンテナ */
+.gacha-body {
+    flex-grow: 1;
+    align-self: stretch;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* バナーカード */
+.gacha-banner {
+    width: 520px;
+    height: 240px;
+    background-color: rgb(16, 19, 32);
+    border-width: 1px;
+    border-color: var(--color-accent);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    margin-bottom: 32px;
+}
+
+.gacha-banner__title {
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+}
+
+.gacha-banner__subtitle {
+    font-size: 13px;
+    color: var(--color-text-muted);
+}
+
+/* ボタン行 */
+.gacha-buttons {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ガチャボタン共通 */
+.gacha-btn {
+    width: 200px;
+    height: 54px;
+    border-radius: 4px;
+    font-size: 17px;
+    -unity-font-style: bold;
+    cursor: link;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+/* 単発（セカンダリ）: 透過背景 + 白枠 */
+.gacha-btn {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.6);
+    color: var(--color-text);
+    margin-right: 16px;
+}
+
+.gacha-btn:hover {
+    border-color: var(--color-accent);
+    background-color: rgba(46, 107, 242, 0.1);
+}
+
+.gacha-btn:disabled {
+    opacity: 0.4;
+}
+
+/* 10連（プライマリ）: アクセント塗り */
+.gacha-btn--primary {
+    background-color: var(--color-accent);
+    border-width: 0;
+    color: var(--color-text);
+    margin-right: 0;
+}
+
+.gacha-btn--primary:hover {
+    background-color: rgb(70, 130, 255);
+    border-color: rgba(0, 0, 0, 0);
+}
+
+.gacha-btn--primary:active {
+    background-color: rgb(30, 80, 200);
+}
+
+.gacha-btn--primary:disabled {
+    opacity: 0.4;
+}
+
+/* ══ ガチャ結果グリッド ══════════════════════════════════ */
+
+/* ScrollView ルート */
+.gacha-result-grid {
+    flex-grow: 1;
+    align-self: stretch;
+}
+
+/* ScrollView の content-container は viewport を挟んだ孫要素のため子孫セレクタで指定 */
+.gacha-result-grid #unity-content-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 24px;
+    align-content: flex-start;
+}
+
+/* NEW! バッジ（カード左上に絶対配置） */
+.gacha-badge--new {
+    font-size: 10px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    background-color: var(--color-accent);
+    border-radius: 2px;
+    padding: 2px 5px;
+    position: absolute;
+    top: 6px;
+    left: 6px;
+}
+
+/* 重複バッジ */
+.gacha-badge--dupe {
+    font-size: 10px;
+    color: var(--color-text-muted);
+    background-color: rgba(80, 80, 100, 0.85);
+    border-radius: 2px;
+    padding: 2px 5px;
+    position: absolute;
+    top: 6px;
+    left: 6px;
+}
+
+/* ══ プロフィールオーバーレイ ════════════════════════════════ */
+
+/* コンテンツ領域: 中央寄せ、上部余白あり */
+.profile-content {
+    flex-grow: 1;
+    align-items: center;
+    padding-top: 32px;
+    padding-bottom: 32px;
+    overflow: hidden;
+}
+
+/* 1カラムコンテナ: settings-page と同幅・同構造だが常時 flex 表示 */
+.profile-column {
+    flex-direction: column;
+    width: 70%;
+    max-width: 880px;
+    flex-grow: 1;
+}
+
+/* プレイヤーアイコン（96px 円形） */
+.profile-overlay__icon {
+    width: 96px;
+    height: 96px;
+    border-radius: 48px;
+    background-color: rgb(60, 80, 160);
+    align-self: center;
+    border-width: 2px;
+    border-color: var(--color-accent);
+}
+
+/* プレイヤー名 */
+.profile-overlay__name {
+    font-size: 22px;
+    -unity-font-style: bold;
+    color: var(--color-text);
+    letter-spacing: 1px;
+    align-self: center;
+    margin-top: 12px;
+}
+
+/* レベル表示 */
+.profile-overlay__level {
+    font-size: 14px;
+    color: var(--color-text-muted);
+    align-self: center;
+    margin-bottom: 24px;
+}
+
+/* 統計値（setting-row 内で右寄せ） */
+.profile-stat-value {
+    font-size: 15px;
+    color: var(--color-text);
+    -unity-text-align: middle-right;
+    flex-grow: 1;
+}
+
+/* 戦績セクション見出しに上マージンを付与するモディファイア */
+.settings-section-title--spaced {
+    margin-top: 28px;
+}
+
+/* ── マッチングステータスラベル ─────────────────────── */
+.matchmaking-status {
+    align-self: center;
+    margin-bottom: 10px;
+    font-size: 16px;
+    color: var(--color-text);
+    background-color: rgba(0, 0, 0, 0.55);
+    border-radius: 12px;
+    padding: 4px 14px;
+    letter-spacing: 1px;
+    -unity-text-align: middle-center;
+}
+
+/* マッチ成立時: アクセントカラーで強調 */
+.matchmaking-status--found {
+    color: var(--color-accent);
+}
+
+/* ── リバインドボタン ────────────────────────────────── */
+.rebind-btn {
+    width: 160px;
+    height: 36px;
+    background-color: rgb(22, 26, 42);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    color: var(--color-text);
+    font-size: 14px;
+    cursor: link;
+    transition: border-color 0.15s ease;
+}
+
+.rebind-btn:hover {
+    border-color: var(--color-accent);
+}
+
+/* キー入力待ち状態: アクセント枠 + 文字色をアクセントカラーに */
+.rebind-btn--listening {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
 }

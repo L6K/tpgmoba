@@ -1,0 +1,9 @@
+{
+    "name": "Enigma.Tests.EditMode",
+    "rootNamespace": "Enigma.Tests",
+    "references": ["Enigma", "Unity.InputSystem", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+    "includePlatforms": ["Editor"],
+    "precompiledReferences": ["nunit.framework.dll"],
+    "overrideReferences": true,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

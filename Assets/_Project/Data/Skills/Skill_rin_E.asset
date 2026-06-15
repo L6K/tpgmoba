@@ -1,0 +1,32 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02ef13925d091ff45bc1e79bb27c7770, type: 3}
+  m_Name: Skill_rin_E
+  m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
+  SkillName: "\u30EC\u30FC\u30EB\u30AC\u30F3"
+  Description: "\u96FB\u78C1\u52A0\u901F\u7832\u3067\u9060\u8DDD\u96E2\u306E\u65751\u4F53\u3092\u72D9\u6483\u3059\u308B"
+  Targeting: 2
+  Damage: 120
+  Range: 20
+  Radius: 0
+  CooldownSeconds: 50
+  ProjectileSpeed: 0
+  WindupSeconds: 0.5
+  RecoverySeconds: 0.5
+  StunDuration: 0
+  RootDuration: 0
+  SlowStrength: 0
+  SlowDuration: 0
+  ShieldAmount: 0
+  ShieldDuration: 0
+  HealAmount: 0
+  DashDistance: 0

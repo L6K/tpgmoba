@@ -1,0 +1,5 @@
+{
+    "name": "Enigma",
+    "rootNamespace": "Enigma",
+    "references": ["Unity.InputSystem"]
+}

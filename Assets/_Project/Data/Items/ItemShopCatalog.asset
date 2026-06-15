@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd20eaef105c709419734ec2992663d8, type: 3}
+  m_Name: ItemShopCatalog
+  m_EditorClassIdentifier: Enigma::Enigma.Item.ItemShopCatalog
+  Items:
+  - {fileID: 11400000, guid: c2bea619559c9a64a9bfffbcb8265ad5, type: 2}
+  - {fileID: 11400000, guid: 549f8d0653507974a896ca623e6892db, type: 2}
+  - {fileID: 11400000, guid: 6d941f91b16735d45adaf43eb9363adb, type: 2}
+  - {fileID: 11400000, guid: 1b861fbc6f188f04a92b38dec6ff222a, type: 2}
+  - {fileID: 11400000, guid: 6cda3e7ef48b0d44e83b698583a166c3, type: 2}
+  - {fileID: 11400000, guid: cd02d30351f0d97478dd419d44742c4b, type: 2}

@@ -1,0 +1,31 @@
+=====================================================================
+THIRD-PARTY ASSET LICENSE RECORD
+Assets in: Assets/External/Champions/
+=====================================================================
+
+Pack: LowPoly RPG Characters (Nov 2020)
+Author: Quaternius (@Quaternius)
+Source: https://opengameart.org/content/lowpoly-rpg-characters
+Download URL: https://opengameart.org/sites/default/files/rpg_characters_-_nov_2020.zip
+License: CC0 1.0 Universal (Public Domain Dedication)
+  https://creativecommons.org/publicdomain/zero/1.0/
+
+Files derived from this pack:
+  Champ_Mage.fbx          <- Wizard.fbx
+  Champ_Mage_Texture.png  <- Wizard_Texture.png
+  Champ_Knight.fbx        <- Warrior.fbx
+  Champ_Knight_Texture.png <- Warrior_Texture.png
+  Champ_Rogue.fbx         <- Rogue.fbx
+  Champ_Rogue_Texture.png <- Rogue_Texture.png
+  Champ_Ranger.fbx        <- Ranger.fbx
+  Champ_Ranger_Texture.png <- Ranger_Texture.png
+  Champ_Cleric.fbx        <- Cleric.fbx
+  Champ_Cleric_Texture.png <- Cleric_Texture.png
+  Champ_Barbarian.fbx     <- Monk.fbx
+  Champ_Barbarian_Texture.png <- Monk_Texture.png
+
+Rig: Yes (humanoid rig included in each FBX)
+Animations: Yes (embedded in FBX)
+Textures: Yes (individual PNG per character)
+
+=====================================================================

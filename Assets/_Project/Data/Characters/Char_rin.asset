@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf35096b832651a4899a6cfbe92645aa, type: 3}
+  m_Name: Char_rin
+  m_EditorClassIdentifier: Assembly-CSharp::Enigma.Character.CharacterData
+  CharId: rin
+  DisplayName: "\u30EA\u30F3"
+  Role: 3
+  Description: "LoL: \u30B1\u30A4\u30C8\u30EA\u30F3/\u30B8\u30F3\u30AF\u30B9\u7CFB\u306E\u9577\u5C04\u7A0B\u30DE\u30FC\u30AF\u30B9\u30DE\u30F3"
+  ThemeColor: {r: 0.8784314, g: 0.4509804, b: 0.3019608, a: 1}
+  Icon: {fileID: 0}
+  Skills:
+  - {fileID: 11400000, guid: fe77bf922169ab949a3ece416864a3ae, type: 2}
+  - {fileID: 11400000, guid: 69cbfdcca12f7e040931c0140fe0b56d, type: 2}
+  - {fileID: 11400000, guid: 22868d42dd9fcf848914e1b15ee41ab3, type: 2}
+  - {fileID: 0}
+  OwnedByDefault: 0
+  RoleLabelRaw: "\u30DE\u30FC\u30AF\u30B9\u30DE\u30F3"
+  Theme: "\u6539\u9020\u30A2\u30FC\u30E0\u3092\u6301\u3064\u8CDE\u91D1\u7A3C\u304E\u3002\u6483\u3063\u305F\u5F3E\u306F\u5916\u3055\u306A\u3044\u4E3B\u7FA9"
+  BaseHp: 190
+  HpPerLevel: 15
+  MoveSpeed: 5.6
+  AttackDamage: 17
+  AttackRange: 15
+  AttackCooldown: 1.2
+  TintColor: {r: 0.8784314, g: 0.4509804, b: 0.3019608, a: 1}
+  ModelName: Ranger
+  ModelPrefab: {fileID: 919132149155446097, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  IdleClip: {fileID: 9061338213343248790, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  WalkClip: {fileID: -5599002979973759676, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  RunClip: {fileID: 1395189703230314720, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  AttackClip: {fileID: 2050526777322066626, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  AttackClips:
+  - {fileID: 2050526777322066626, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  - {fileID: 6873720694826876358, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  - {fileID: -4592842328519117816, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  IdleVariantClips:
+  - {fileID: 8819464772823671264, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  - {fileID: 6730081373776484235, guid: 7089bb0742817f949891e0aa40798440, type: 3}
+  BodyTexture: {fileID: 2800000, guid: 2c976cf6429ef8249abbe5b8b9cc990f, type: 3}
