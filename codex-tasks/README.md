@@ -15,4 +15,5 @@
 |---|---|---|---|
 | 01 | [01-statuseffect-model.md](01-statuseffect-model.md) | StatusEffect 基盤（スタン/ルート/スロウの plain C# モデル + EditMode テスト）。提案D（CC）の土台 | ✅ 完了・レビュー合格: [report](01-statuseffect-model-report.md) |
 | 02 | [02-shield-absorption.md](02-shield-absorption.md) | シールド吸収レイヤー（HealthModel 拡張・FIFO消費・時間減衰 + テスト追記）。提案D（シールド）の土台 | ✅ 完了・レビュー合格（EditMode全331件緑）: [report](02-shield-absorption-report.md) |
-| 03 | [03-vision-reveal-model.md](03-vision-reveal-model.md) | VisionRevealModel（視界源/対象から可視判定する plain C#・linger付き + テスト）。提案E（Fog of War）の核 | ✅ 完了・レビュー合格（FoWプレイモードで機能確認）: [report](03-vision-reveal-model-report.md) |
+| 03 | [03-vision-reveal-model.md](03-vision-reveal-model.md) | VisionRevealModel（視界源/対象から可視判定する plain C#・linger付き + テスト）。提案E（Fog of War）の核 | ✅ 完了・レビュー合格（EditMode全346件緑・FoWプレイモードで機能確認）: [report](03-vision-reveal-model-report.md) |
+| 04 | [04-objective-spawn-timer.md](04-objective-spawn-timer.md) | ObjectiveSpawnTimerModel（中央オブジェクトの出現/再出現/予告タイミングの plain C# + テスト）。提案P0「中央オブジェクト主役化」の土台 | 未着手 |
