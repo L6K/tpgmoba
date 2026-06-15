@@ -24,6 +24,9 @@ namespace Enigma.UI
         // タイマー
         private Label _timerLabel;
         private Label _objectiveLabel;
+        private Label _hintLabel;
+        private TeamId _playerTeam = TeamId.Blue;
+        private float  _hintTimer;
 
         // HP バー
         private VisualElement _hpFill;
@@ -106,6 +109,7 @@ namespace Enigma.UI
 
             _timerLabel = root.Q<Label>("hud-timer");
             _objectiveLabel = root.Q<Label>("hud-objective");
+            _hintLabel  = root.Q<Label>("hud-hint");
             _hpBarBg    = root.Q<VisualElement>("hud-hp-bar-bg");
             _hpFill     = root.Q<VisualElement>("hud-hp-fill");
             _hpDamage   = root.Q<VisualElement>("hud-hp-damage");
@@ -128,6 +132,8 @@ namespace Enigma.UI
                 _playerProgression = _playerHealth.GetComponent<PlayerProgression>();
                 _playerWallet      = _playerHealth.GetComponent<PlayerWallet>();
                 _playerItems       = _playerHealth.GetComponent<PlayerItems>();
+                var tt = _playerHealth.GetComponentInParent<TeamTag>();
+                if (tt != null) _playerTeam = tt.Team;
             }
 
             // スロット 0..2（Q/E/R）のみ。slot3 は HUD に存在しない
@@ -310,6 +316,7 @@ namespace Enigma.UI
         {
             UpdateTimer();
             UpdateObjective();
+            UpdateHint();
             UpdateHp();
             UpdateSkills();
             UpdateBuff();
@@ -365,6 +372,63 @@ namespace Enigma.UI
                     _objectiveLabel.text = $"エニグマ・コア 出現まで {s / 60}:{s % 60:00}";
                     break;
             }
+        }
+
+        // 次の行動ガイド(MatchHint)を 0.5s ごとに更新する。
+        private void UpdateHint()
+        {
+            if (_hintLabel == null) return;
+            _hintTimer -= Time.deltaTime;
+            if (_hintTimer > 0f) return;
+            _hintTimer = 0.5f;
+
+            if (_playerHealth == null || _playerHealth.Model == null)
+            {
+                _hintLabel.style.display = DisplayStyle.None;
+                return;
+            }
+
+            float maxHp  = _playerHealth.Model.MaxHp;
+            float hpFrac = maxHp > 0f ? Mathf.Clamp01(_playerHealth.Model.CurrentHp / maxHp) : 0f;
+            int   gold   = _playerWallet != null ? _playerWallet.Wallet.Gold : 0;
+
+            var dir       = CentralObjectiveDirector.Instance;
+            bool objActive = dir != null && dir.State == ObjectiveState.Active;
+            bool objWarn   = dir != null && dir.State == ObjectiveState.Warning;
+
+            var ctx  = new MatchHintContext(hpFrac, gold, objActive, objWarn, AlliedMinionsNearPlayer());
+            var hint = MatchHintModel.Select(in ctx);
+
+            _hintLabel.style.display = DisplayStyle.Flex;
+            _hintLabel.text = HintText(hint);
+        }
+
+        private static string HintText(MatchHint h)
+        {
+            switch (h)
+            {
+                case MatchHint.Retreat:          return "HPが低い。一度引こう";
+                case MatchHint.ContestObjective: return "中央コア出現中! 確保しよう";
+                case MatchHint.ObjectiveSoon:    return "まもなく中央コアが出現する";
+                case MatchHint.BackToShop:       return "ゴールドが貯まった。帰還して装備更新";
+                case MatchHint.PushWithMinions:  return "味方ミニオンと一緒にタワーを攻めよう";
+                default:                         return "ファームでレベルとゴールドを稼ごう";
+            }
+        }
+
+        // プレイヤー周辺(14m)に自チームのミニオンが居るか。
+        private bool AlliedMinionsNearPlayer()
+        {
+            if (_playerHealth == null) return false;
+            var hits = Physics.OverlapSphere(_playerHealth.transform.position, 14f);
+            for (int i = 0; i < hits.Length; i++)
+            {
+                var m = hits[i].GetComponentInParent<Enigma.Minion.MinionAI>();
+                if (m == null) continue;
+                var tt = m.GetComponentInParent<TeamTag>();
+                if (tt != null && tt.Team == _playerTeam) return true;
+            }
+            return false;
         }
 
         private void UpdateHp()

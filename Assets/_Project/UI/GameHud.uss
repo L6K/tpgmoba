@@ -82,6 +82,14 @@
     -unity-font-style: bold;
 }
 
+/* 次の行動ガイド(タイマー直下・控えめな羊皮紙色) */
+.hud-hint {
+    font-size: 11px;
+    color: rgba(235, 225, 200, 0.85);
+    -unity-text-align: middle-center;
+    margin-top: 1px;
+}
+
 /* ── チームバフ残り時間（ミニマップ上 16px） ─────────── */
 .hud-buff {
     color: var(--color-gold-bright);

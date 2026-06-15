@@ -178,6 +178,16 @@ namespace Enigma.Ability
 
                 if (keyControl.wasPressedThisFrame)
                 {
+                    // Ctrl + スキルキー(Q/E/R)でスキルレベルアップ(発動でなく)。
+                    bool ctrlHeld = (keyboard.leftCtrlKey != null && keyboard.leftCtrlKey.isPressed)
+                                 || (keyboard.rightCtrlKey != null && keyboard.rightCtrlKey.isPressed);
+                    if (ctrlHeld && slot <= 2)
+                    {
+                        if (_progression.TryLevelUp(slot, ChampionLevel))
+                            GameSfx.PlayUi("rank_up", 0.8f);
+                        continue; // レベルアップ操作なので発動・アームはしない
+                    }
+
                     if (!canAct) continue;
                     // rank 0（未習得）のスキルは発動不可
                     if (!IsSlotUnlocked(slot)) continue;

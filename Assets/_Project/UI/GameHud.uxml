@@ -9,6 +9,8 @@
             <ui:Label name="hud-timer" class="hud-timer" text="00:00" />
             <!-- 中央オブジェクト(エニグマ・コア)の状態/出現カウントダウン -->
             <ui:Label name="hud-objective" class="hud-objective" text="" />
+            <!-- 次の行動ガイド(MatchHint) -->
+            <ui:Label name="hud-hint" class="hud-hint" text="" />
         </ui:VisualElement>
 
         <!-- チームバフ残り時間（ミニマップ上） -->
