@@ -5,6 +5,8 @@ using Enigma.Ability;
 using Enigma.Audio;
 using Enigma.Character;
 using Enigma.Combat;
+using Enigma.Core;
+using Enigma.GameModes;
 using Enigma.Minion;
 
 namespace Enigma.Objective
@@ -181,7 +183,14 @@ namespace Enigma.Objective
 
             float lifetime = ProjectileSpeed > 0f ? Range / ProjectileSpeed : 2f;
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.identity);
-            proj.Init(dir, ProjectileSpeed, Damage, gameObject, lifetime);
+
+            // 敵チームの TowerWeaken でタワーの与ダメを減衰させる
+            TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Neutral;
+            TeamId opp = myTeam == TeamId.Blue ? TeamId.Red : (myTeam == TeamId.Red ? TeamId.Blue : TeamId.Neutral);
+            float weaken = (GameServices.ObjectiveBuffs != null && opp != TeamId.Neutral)
+                ? GameServices.ObjectiveBuffs.GetMagnitude(opp, ObjectiveBuffType.TowerWeaken, Time.time) : 0f;
+            float dmg = Damage * Mathf.Clamp01(1f - weaken);
+            proj.Init(dir, ProjectileSpeed, dmg, gameObject, lifetime);
 
             // ボルト演出: チーム色トレイル + 細長い発光コア + 発射バースト
             var color = ChargeColor();

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using Enigma.Combat;
 using Enigma.Character;
+using Enigma.Core;
+using Enigma.GameModes;
 
 namespace Enigma.Minion
 {
@@ -208,6 +210,8 @@ namespace Enigma.Minion
                 if (_attackCooldown.TryConsume(Time.time))
                 {
                     float finalDamage = DamageUtility.ApplyTeamBuff(_attackDamage, gameObject);
+                    finalDamage *= 1f + (GameServices.ObjectiveBuffs != null
+                        ? GameServices.ObjectiveBuffs.GetMagnitude(_teamTag.Team, ObjectiveBuffType.MinionPower, Time.time) : 0f);
                     _currentTarget.TakeDamage(finalDamage, gameObject);
                 }
             }

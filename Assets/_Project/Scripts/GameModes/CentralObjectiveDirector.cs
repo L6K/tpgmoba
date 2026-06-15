@@ -27,6 +27,11 @@ namespace Enigma.GameModes
         /// <summary>中央オブジェクトが存在する試合か(ボスが見つかった場合のみ true)。</summary>
         public bool HasObjective => _boss != null;
 
+        /// <summary>中央オブジェクトの累計撃破(制圧)回数。HUD がアナウンス検知に使う。</summary>
+        public int CaptureCount { get; private set; }
+        /// <summary>直近の制圧チーム。HUD がアナウンス色とテキストに使う。</summary>
+        public TeamId LastCaptureTeam { get; private set; }
+
         /// <summary>
         /// 中央オブジェクト(ボス)のワールド座標を返す。Bot マクロが集合先を知るために参照する。
         /// ボス未解決のときは false（呼び側は大値距離として扱う）。
@@ -174,6 +179,10 @@ namespace Enigma.GameModes
             _killCountByTeam.TryGetValue(team, out int n);
             n += 1;
             _killCountByTeam[team] = n;
+
+            // 制圧の検知用に直近チームと累計回数を公開する
+            LastCaptureTeam = team;
+            CaptureCount++;
 
             // Damage は常に付与（3回目以降は強化）
             buffs.Grant(team, ObjectiveBuffType.Damage, n >= 3 ? 0.20f : 0.15f, 30f, now);

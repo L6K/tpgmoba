@@ -36,6 +36,9 @@ namespace Enigma.UI
         // チームバフ残り時間ラベル
         private Label _buffLabel;
 
+        // 中央コア制圧アナウンスの検知用。CaptureCount の増分で発火する
+        private int _lastCaptureCount;
+
         // レベル・XP 表示
         private Label         _levelLabel;
         private VisualElement _xpFill;
@@ -227,6 +230,20 @@ namespace Enigma.UI
             _announce.schedule.Execute(() => _announce.style.opacity = 0f).StartingIn(1500);
         }
 
+        // 中央コアが制圧された時にセンターアナウンスを 1.5 秒表示する。
+        // チーム色(青=水色/赤=赤)でテキストを着色する
+        public void AnnounceObjectiveCaptured(TeamId team)
+        {
+            if (_announce == null) return;
+
+            string teamName = team == TeamId.Red ? "赤" : "青";
+            _announce.text = $"{teamName}チームが中央コアを制圧!";
+            _announce.style.color = new StyleColor(team == TeamId.Red ? TeamColorRed : TeamColorBlue);
+
+            _announce.style.opacity = 1f;
+            _announce.schedule.Execute(() => _announce.style.opacity = 0f).StartingIn(1500);
+        }
+
         // ピップ生成・ボタンクリック登録・ホバー登録を一度だけ行う
         private void SetupSkillProgressionUi()
         {
@@ -315,6 +332,14 @@ namespace Enigma.UI
             if (_objectiveLabel == null) return;
 
             var dir = CentralObjectiveDirector.Instance;
+
+            // 制圧の検知: CaptureCount が増えたらアナウンスを出す
+            if (dir != null && dir.CaptureCount > _lastCaptureCount)
+            {
+                _lastCaptureCount = dir.CaptureCount;
+                AnnounceObjectiveCaptured(dir.LastCaptureTeam);
+            }
+
             if (dir == null || !dir.HasObjective)
             {
                 _objectiveLabel.style.display = DisplayStyle.None;
@@ -576,21 +601,48 @@ namespace Enigma.UI
         {
             if (_buffLabel == null) return;
 
-            var buffs = GameServices.TeamBuffs;
-            float remaining = buffs?.GetRemainingSeconds(Enigma.Combat.TeamId.Blue, Time.time) ?? 0f;
-
-            if (remaining > 0f)
-            {
-                int min = (int)(remaining / 60f);
-                int sec = (int)(remaining % 60f);
-                _buffLabel.text = $"エニグマバフ {min}:{sec:D2}";
-                _buffLabel.style.display = DisplayStyle.Flex;
-            }
-            else
+            var buffs = GameServices.ObjectiveBuffs;
+            if (buffs == null)
             {
                 _buffLabel.style.display = DisplayStyle.None;
+                return;
             }
+
+            TeamId team = _playerHealth != null
+                ? (_playerHealth.GetComponentInParent<TeamTag>()?.Team ?? TeamId.Blue)
+                : TeamId.Blue;
+
+            float now    = Time.time;
+            var   active = buffs.GetActiveTypes(team, now);
+            if (active == null || active.Count == 0)
+            {
+                _buffLabel.style.display = DisplayStyle.None;
+                return;
+            }
+
+            float maxRemaining = 0f;
+            var   sb = new System.Text.StringBuilder();
+            foreach (var type in active)
+            {
+                if (sb.Length > 0) sb.Append('・');
+                sb.Append(BuffTypeLabel(type));
+                float r = buffs.GetRemainingSeconds(team, type, now);
+                if (r > maxRemaining) maxRemaining = r;
+            }
+
+            _buffLabel.text = $"強化: {sb} ({Mathf.CeilToInt(maxRemaining)}s)";
+            _buffLabel.style.display = DisplayStyle.Flex;
         }
+
+        private static string BuffTypeLabel(ObjectiveBuffType type) => type switch
+        {
+            ObjectiveBuffType.Damage      => "ダメージ",
+            ObjectiveBuffType.MinionPower => "ミニオン",
+            ObjectiveBuffType.MoveSpeed   => "移動速度",
+            ObjectiveBuffType.Shield      => "シールド",
+            ObjectiveBuffType.TowerWeaken => "タワー弱体",
+            _                             => type.ToString(),
+        };
 
         private void UpdateLevelXp()
         {
