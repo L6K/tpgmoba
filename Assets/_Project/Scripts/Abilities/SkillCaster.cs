@@ -212,7 +212,9 @@ namespace Enigma.Ability
                     var action = _castLogic.HandleKeyUp(slot);
                     if (action == CastAction.Cast)
                     {
-                        TryCast(slot);
+                        // アーム後にスタン等で行動不能になっていたら発動せずアーム解除する
+                        if (canAct) TryCast(slot);
+                        else        _castLogic.HandleCancel();
                         SetIndicatorActive(null);
                     }
                 }

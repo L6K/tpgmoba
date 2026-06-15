@@ -191,7 +191,11 @@ namespace Enigma.GameModes
                 buffs.Grant(team, ObjectiveBuffType.MoveSpeed, 0.12f, 30f, now);
 
             if (n >= 3)
+            {
                 GrantTeamShield(team, 120f, 8f);
+                // HUD のバフ表示用に Shield 種別も記録(実シールドは GrantTeamShield が即時付与)
+                buffs.Grant(team, ObjectiveBuffType.Shield, 120f, 8f, now);
+            }
         }
 
         // チームの生存全 HealthComponent へシールドを一括付与する（付与時1回のみ適用される種別）。

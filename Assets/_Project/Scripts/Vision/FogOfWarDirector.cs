@@ -145,9 +145,12 @@ namespace Enigma.Vision
                         Go        = go,
                         Renderers = go.GetComponentsInChildren<Renderer>(true),
                         Canvases  = go.GetComponentsInChildren<Canvas>(true),
-                        // CharacterController は Collider を継承しないので含まれない=移動は維持しつつ
-                        // ターゲット用 CapsuleCollider 等だけを隠れている間オフにできる(透明な壁の解消)
-                        Colliders = go.GetComponentsInChildren<Collider>(true),
+                        // Unity では CharacterController も Collider を継承するため除外する。
+                        // 移動用 CC は残し、ターゲット用 CapsuleCollider 等だけを隠れている間オフにする
+                        // (これを切ると霧の中で敵が移動できなくなる=透明壁修正で踏んだ罠)。
+                        Colliders = System.Array.FindAll(
+                            go.GetComponentsInChildren<Collider>(true),
+                            c => !(c is CharacterController)),
                     };
                     _foggables[id] = fog;
                 }

@@ -110,6 +110,9 @@ namespace Enigma.UI
             _timerLabel = root.Q<Label>("hud-timer");
             _objectiveLabel = root.Q<Label>("hud-objective");
             _hintLabel  = root.Q<Label>("hud-hint");
+            // 再有効化/再生成時に過去の制圧を新規増分扱いしないよう、現在値で同期する
+            _lastCaptureCount = CentralObjectiveDirector.Instance != null
+                ? CentralObjectiveDirector.Instance.CaptureCount : 0;
             _hpBarBg    = root.Q<VisualElement>("hud-hp-bar-bg");
             _hpFill     = root.Q<VisualElement>("hud-hp-fill");
             _hpDamage   = root.Q<VisualElement>("hud-hp-damage");
