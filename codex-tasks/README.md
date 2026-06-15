@@ -21,5 +21,8 @@
 | 06 | [06-fix-rereview.md](06-fix-rereview.md) | 05 指摘の修正（`fbb858b4`）の再レビュー。各指摘の解消/退行を確認 | ✅ 完了 [report](06-fix-rereview-report.md) |
 | 07 | [07-objective-buff-model.md](07-objective-buff-model.md) | ObjectiveBuffModel（中央オブジェクト報酬バフの多種別・時間管理 plain C# + テスト）。次タスク①「中央オブジェクト完遂」の土台 | ✅ 完了（EditMode `dotnet test` 緑）: [report](07-objective-buff-model-report.md) |
 | 08 | [08-bot-macro-decision-model.md](08-bot-macro-decision-model.md) | BotMacroDecisionModel（集合/撤退/押し/守り/ファーム判断の純関数 + テスト）。次タスク②「Botマクロ判断」の土台 | ✅ 完了（EditMode `dotnet test` 緑）: [report](08-bot-macro-decision-model-report.md) |
+| 09 | [09-integration-review-2.md](09-integration-review-2.md) | 05以降の結合コード（中央オブジェクト完成/バグ修正/MatchHint/Ctrl-QER/ジャンプ/Q VFX 等）の静的レビュー。修正なし・report に所見 | **未着手（レビュー依頼）** |
+
+備考: ①中央オブジェクト=ObjectiveBuffModel(07)+CentralObjectiveDirector で完成、②Botマクロ=BotMacroDecisionModel(08)+EnemyChampionAI で結線、MatchHint も実装済(EditMode全403件緑)。
 
 参考: [assets-image-manifest.md](assets-image-manifest.md) — 画像アセット(効果5/スキル18/ポートレート5)の生成は **5.5** 担当・**後回し**。
