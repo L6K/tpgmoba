@@ -86,6 +86,10 @@ namespace Enigma.Character
         private float _verticalVelocity;
         private float _stuckTimer;
         private Vector3 _stuckAnchor;
+        // 周回検知: 目標ウェイポイントへの最小到達距離と、その対象 index。
+        // 「動いているが目標に近づかない(=タワー等を周回)」状態を検知して WP を進める。
+        private float _stuckBestWpDist = float.MaxValue;
+        private int   _stuckWpIndex    = -1;
 
         private AttackCooldown _attackCooldown;
         private float _senseTimer;
@@ -648,21 +652,40 @@ namespace Enigma.Character
             _dashTimeRemaining = duration;
         }
 
-        // 移動意図があるのにほぼ動けない状態が続いたら、障害物(タワー等)に
-        // 引っかかったとみなして目標ウェイポイントを1つ進める
+        // 移動意図があるのに「目標ウェイポイントへ近づけない」状態が続いたら、障害物(タワー等)を
+        // 周回しているとみなして目標ウェイポイントを1つ進める。
+        // 旧実装は「位置が動いたか」で判定していたため、タワーを周回中(=動いてはいる)は
+        // 永遠にスタック扱いにならず軌道周回し続けた。接近進捗で判定して周回を打破する。
         private void UpdateStuckEscape(bool wantsToMove, bool forward)
         {
             if (!wantsToMove)
             {
                 _stuckTimer = 0f;
-                _stuckAnchor = transform.position;
+                _stuckBestWpDist = float.MaxValue;
+                _stuckWpIndex = -1;
                 return;
             }
 
-            if (Vector3.Distance(transform.position, _stuckAnchor) > StuckMoveEpsilon)
+            int target = forward ? _waypointIndex : _waypointIndex - 1;
+            target = Mathf.Clamp(target, 0, Mathf.Max(0, (_waypoints?.Length ?? 1) - 1));
+
+            // 目標ウェイポイントが変わったら進捗計測をリセット
+            if (target != _stuckWpIndex)
             {
+                _stuckWpIndex = target;
+                _stuckBestWpDist = float.MaxValue;
                 _stuckTimer = 0f;
-                _stuckAnchor = transform.position;
+            }
+
+            float wpDist = (_waypoints != null && _waypoints.Length > 0)
+                ? new Vector3(_waypoints[target].x - transform.position.x, 0f, _waypoints[target].z - transform.position.z).magnitude
+                : 0f;
+
+            // 目標へ一定以上接近できていれば進捗あり＝スタックではない
+            if (wpDist < _stuckBestWpDist - StuckMoveEpsilon)
+            {
+                _stuckBestWpDist = wpDist;
+                _stuckTimer = 0f;
                 return;
             }
 
@@ -670,7 +693,7 @@ namespace Enigma.Character
             if (_stuckTimer < StuckSeconds) return;
 
             _stuckTimer = 0f;
-            _stuckAnchor = transform.position;
+            _stuckBestWpDist = float.MaxValue;
 
             // 盲目的な index++ はスタックが続くと終端まで暴走し、遠方ウェイポイントへの
             // 直線移動(=森を横切る)で永久さまよいになる。最寄りウェイポイント基準で

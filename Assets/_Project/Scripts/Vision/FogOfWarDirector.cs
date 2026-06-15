@@ -45,6 +45,7 @@ namespace Enigma.Vision
             public GameObject   Go;
             public Renderer[]   Renderers;
             public Canvas[]     Canvases;
+            public Collider[]   Colliders; // ターゲット用 CapsuleCollider 等(CharacterController は含まれない)
             public bool         Visible = true;
         }
 
@@ -144,6 +145,9 @@ namespace Enigma.Vision
                         Go        = go,
                         Renderers = go.GetComponentsInChildren<Renderer>(true),
                         Canvases  = go.GetComponentsInChildren<Canvas>(true),
+                        // CharacterController は Collider を継承しないので含まれない=移動は維持しつつ
+                        // ターゲット用 CapsuleCollider 等だけを隠れている間オフにできる(透明な壁の解消)
+                        Colliders = go.GetComponentsInChildren<Collider>(true),
                     };
                     _foggables[id] = fog;
                 }
@@ -171,6 +175,12 @@ namespace Enigma.Vision
             {
                 for (int i = 0; i < fog.Renderers.Length; i++)
                     if (fog.Renderers[i] != null) fog.Renderers[i].enabled = visible;
+            }
+            if (fog.Colliders != null)
+            {
+                // 隠れている間は当たり判定も切る(透明な壁＆不可視ターゲットの解消)。CharacterController は対象外なので移動は継続。
+                for (int i = 0; i < fog.Colliders.Length; i++)
+                    if (fog.Colliders[i] != null) fog.Colliders[i].enabled = visible;
             }
             if (fog.Canvases != null)
             {
