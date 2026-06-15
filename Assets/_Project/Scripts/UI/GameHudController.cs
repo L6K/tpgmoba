@@ -26,6 +26,7 @@ namespace Enigma.UI
         // HP バー
         private VisualElement _hpFill;
         private VisualElement _hpDamage;
+        private VisualElement _hpShield;
         private Label         _hpText;
         private VisualElement _hpBarBg;
         private float         _lastMaxHp = -1f;
@@ -102,6 +103,7 @@ namespace Enigma.UI
             _hpBarBg    = root.Q<VisualElement>("hud-hp-bar-bg");
             _hpFill     = root.Q<VisualElement>("hud-hp-fill");
             _hpDamage   = root.Q<VisualElement>("hud-hp-damage");
+            _hpShield   = root.Q<VisualElement>("hud-hp-shield");
             _hpText     = root.Q<Label>("hud-hp-text");
             _buffLabel  = root.Q<Label>("hud-buff");
             _levelLabel = root.Q<Label>("hud-level");
@@ -320,6 +322,13 @@ namespace Enigma.UI
 
             if (_hpFill != null)
                 _hpFill.style.width = Length.Percent(pct);
+
+            // シールド帯: Shield/MaxHp の割合をバー左詰めで重ねる（HP フィルの上）
+            if (_hpShield != null)
+            {
+                float shieldPct = maxHp > 0f ? Mathf.Clamp01(model.Shield / maxHp) * 100f : 0f;
+                _hpShield.style.width = Length.Percent(shieldPct);
+            }
 
             // ダメージトレイル: 減少時は delay 付き transition で遅れて縮む。回復時は即追従。
             if (_hpDamage != null)

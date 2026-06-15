@@ -309,6 +309,18 @@
     -unity-background-image-tint-color: rgb(230, 90, 70);
 }
 
+/* シールド帯: HP フィルの上に左詰めで重ねる半透明シアン白。幅はコントローラが Shield/MaxHp で設定 */
+.hud-hp-shield {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    background-color: rgba(200, 235, 255, 0.6);
+    border-radius: 1px;
+    transition: width 0.12s ease-out;
+}
+
 /* HP テキスト: バー中央に羊皮紙色で重ねる */
 .hud-hp-text {
     position: absolute;
