@@ -14,7 +14,8 @@ namespace Enigma.Data
         // 開始時シールドの持続秒（MOBA 慣例で開幕のみ。十分長く取って実質開幕保護にする）。
         public const float StartShieldDuration = 60f;
 
-        public static void ApplyIds(IReadOnlyList<string> selectedIds, HealthModel health, SkillCaster caster)
+        public static void ApplyIds(IReadOnlyList<string> selectedIds, HealthModel health,
+            SkillCaster caster, UnityEngine.GameObject player = null)
         {
             if (selectedIds == null || selectedIds.Count == 0) return;
 
@@ -22,10 +23,11 @@ namespace Enigma.Data
             for (int i = 0; i < selectedIds.Count; i++)
                 loadout.TrySelect(selectedIds[i]);
 
-            Apply(loadout.AggregateEffects(), health, caster);
+            Apply(loadout.AggregateEffects(), health, caster, player);
         }
 
-        public static void Apply(IReadOnlyDictionary<RelicEffect, float> effects, HealthModel health, SkillCaster caster)
+        public static void Apply(IReadOnlyDictionary<RelicEffect, float> effects, HealthModel health,
+            SkillCaster caster, UnityEngine.GameObject player = null)
         {
             if (effects == null) return;
 
@@ -40,6 +42,13 @@ namespace Enigma.Data
             if (caster != null
                 && effects.TryGetValue(RelicEffect.CooldownReduction, out float cdr) && cdr > 0f)
                 caster.SetCooldownReduction(cdr);
+
+            // キル時加速は遅延効果なので値だけプレイヤーへ置き、KillFeedDirector が読む。
+            if (player != null)
+            {
+                effects.TryGetValue(RelicEffect.MoveSpeedOnKill, out float msok);
+                PlayerRelicEffects.GetOrAdd(player).SetMoveSpeedOnKill(msok);
+            }
         }
     }
 }

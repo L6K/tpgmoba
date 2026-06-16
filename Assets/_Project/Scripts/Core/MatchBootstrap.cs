@@ -38,7 +38,7 @@ namespace Enigma.Core
             if (ids == null) return;
 
             var health = _health != null ? _health : GetComponent<HealthComponent>();
-            Enigma.Data.RelicApplier.ApplyIds(ids, health?.Model, _skillCaster);
+            Enigma.Data.RelicApplier.ApplyIds(ids, health?.Model, _skillCaster, gameObject);
         }
 
         private void ApplySkills(CharacterData picked)

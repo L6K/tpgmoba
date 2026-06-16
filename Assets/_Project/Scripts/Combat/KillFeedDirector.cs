@@ -87,6 +87,12 @@ namespace Enigma.Combat
             {
                 GameSfx.PlayUi("gold", 0.8f);
 
+                // レリック「キル時加速」: 所持していれば移動加速を付与する。
+                var relics = killer.GetComponentInParent<Enigma.Data.PlayerRelicEffects>();
+                if (relics != null && relics.MoveSpeedOnKill > 0f)
+                    StatusEffectController.GetOrAdd(killer)
+                        .ApplyHaste(relics.MoveSpeedOnKill, Enigma.Data.PlayerRelicEffects.MoveSpeedOnKillDuration);
+
                 // シャットダウン報酬: 連続キル中の敵を倒したらボーナスゴールド。
                 if (kr.IsShutdown)
                 {

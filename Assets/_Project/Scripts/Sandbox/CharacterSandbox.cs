@@ -155,7 +155,7 @@ namespace Enigma.Sandbox
                 _controller.SetMoveSpeed(data.MoveSpeed);
 
             // レリックの集約効果を最後に重ねる（ステータスを基準値へ戻した直後なので二重適用にならない）。
-            RelicApplier.ApplyIds(_selectedRelics, _health != null ? _health.Model : null, _skillCaster);
+            RelicApplier.ApplyIds(_selectedRelics, _health != null ? _health.Model : null, _skillCaster, _player);
         }
 
         // レリック選択を更新し、現在キャラを再適用してステータスを基準から組み直す。

@@ -16,10 +16,12 @@ namespace Enigma.Combat
         public bool IsStunned => Model.IsStunned;
         public bool IsRooted => Model.IsRooted;
         public bool IsSlowed => Model.IsSlowed;
+        public bool IsHasted => Model.IsHasted;
 
         public void ApplyStun(float d) => Model.ApplyStun(d);
         public void ApplyRoot(float d) => Model.ApplyRoot(d);
         public void ApplySlow(float s, float d) => Model.ApplySlow(s, d);
+        public void ApplyHaste(float s, float d) => Model.ApplyHaste(s, d);
         public void Clear() => Model.Clear();
 
         private void Awake()

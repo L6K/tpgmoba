@@ -38,14 +38,15 @@ namespace Enigma.Tests
         }
 
         [Test]
-        public void All_UsesOnlyStartTimeEffects()
+        public void All_ExcludesUnwiredNeutralDamage()
         {
-            // 現スライスは開始時に効く3効果のみ収録（キル/ダメージ系フック不要）。
+            // 現スライスは開始時3効果 + キル時加速のみ収録。NeutralDamage は未配線。
             foreach (var info in RelicCatalog.All)
             {
                 bool ok = info.Effect == RelicEffect.MaxHpBonus
                        || info.Effect == RelicEffect.StartShield
-                       || info.Effect == RelicEffect.CooldownReduction;
+                       || info.Effect == RelicEffect.CooldownReduction
+                       || info.Effect == RelicEffect.MoveSpeedOnKill;
                 Assert.IsTrue(ok, $"unexpected effect in catalog: {info.Effect}");
             }
         }

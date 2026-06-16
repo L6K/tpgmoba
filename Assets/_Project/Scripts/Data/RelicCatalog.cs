@@ -25,9 +25,9 @@ namespace Enigma.Data
     }
 
     /// <summary>
-    /// 選択可能なレリックの静的カタログ。現状は試合開始時に適用できる3効果
-    /// （最大HP / 開始シールド / クールダウン短縮）のみを提供する。
-    /// MoveSpeedOnKill / NeutralDamage はキル・ダメージ系フックが必要なため未収録。
+    /// 選択可能なレリックの静的カタログ。試合開始時に効く3効果（最大HP / 開始シールド /
+    /// クールダウン短縮）＋キル時加速(MoveSpeedOnKill)を提供する。
+    /// NeutralDamage は与ダメ経路への対象チーム注入が必要なため未収録（次スライス）。
     /// </summary>
     public static class RelicCatalog
     {
@@ -39,6 +39,8 @@ namespace Enigma.Data
             new RelicInfo("relic_bulwark_seal",   "城塞の封印",     "開始時シールド +350", RelicEffect.StartShield,       350f),
             new RelicInfo("relic_haste_glass",    "加速の砂時計",   "スキルCD -15%",   RelicEffect.CooldownReduction, 0.15f),
             new RelicInfo("relic_chrono_compass", "時詠みの羅針盤", "スキルCD -25%",   RelicEffect.CooldownReduction, 0.25f),
+            new RelicInfo("relic_swift_quarry",   "俊足の獲物",     "キル時 移動+20% (4s)", RelicEffect.MoveSpeedOnKill, 0.20f),
+            new RelicInfo("relic_bloodrush",      "血の疾走",       "キル時 移動+35% (4s)", RelicEffect.MoveSpeedOnKill, 0.35f),
         };
 
         /// <summary>RelicLoadoutModel に渡す Relic 一覧（メタデータを落とした効果のみ）。</summary>
