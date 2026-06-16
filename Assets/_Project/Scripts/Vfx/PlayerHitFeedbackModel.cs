@@ -29,14 +29,23 @@ namespace Enigma.Vfx
                 flashAlpha = Clamp(flashAlpha * 1.25f, 0f, 0.85f);
 
             float flashSeconds = Clamp(0.12f + 0.5f * severity, 0.12f, 0.5f);
-            float hpFrac = maxHp <= 0f ? 1f : Clamp01(currentHpAfter / maxHp);
-            float vignetteStrength = hpFrac >= 0.30f ? 0f : Clamp01((0.30f - hpFrac) / 0.30f);
 
             return new HitFeedback(
                 flashAlpha,
                 flashSeconds,
-                vignetteStrength,
+                LowHpVignette(currentHpAfter, maxHp),
                 NormalizeAngle(directionDegrees));
+        }
+
+        /// <summary>
+        /// 残HP割合から低HPビネット強度(0..1)を返す純関数。被ダメと独立に、現在HPから都度算出して
+        /// 回復/リスポーンでビネットが正しく消えるようにする（被弾時だけでなく毎フレーム駆動できる）。
+        /// hpFrac>=0.30 で 0、0 で 1、その間は線形。
+        /// </summary>
+        public static float LowHpVignette(float currentHp, float maxHp)
+        {
+            float hpFrac = maxHp <= 0f ? 1f : Clamp01(currentHp / maxHp);
+            return hpFrac >= 0.30f ? 0f : Clamp01((0.30f - hpFrac) / 0.30f);
         }
 
         public static float NormalizeAngle(float degrees)

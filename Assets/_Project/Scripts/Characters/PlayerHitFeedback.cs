@@ -31,11 +31,21 @@ namespace Enigma.Character
         private void OnEnable()
         {
             _health.Damaged += OnDamaged;
+            _health.Model.Changed += OnHealthChanged;
         }
 
         private void OnDisable()
         {
             _health.Damaged -= OnDamaged;
+            if (_health.Model != null) _health.Model.Changed -= OnHealthChanged;
+        }
+
+        // HP 変化(被ダメ/回復/リスポーン)ごとに低HPビネットを現在HPから更新する。
+        // 被弾時しか更新しないと、死亡で最大に設定されたビネットがリスポーン後も残ってしまう。
+        private void OnHealthChanged(float currentHp, float maxHp)
+        {
+            if (_hud != null)
+                _hud.SetLowHpVignette(PlayerHitFeedbackModel.LowHpVignette(currentHp, maxHp));
         }
 
         private void OnDamaged(float amount)

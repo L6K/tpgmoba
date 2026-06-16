@@ -219,6 +219,9 @@ namespace Enigma.UI
             }
         }
 
+        // 被弾フラッシュが効いている終了時刻(Time.time)。この間は低HPビネット更新でopacityを動かさない。
+        private float _flashUntilTime;
+
         // 後方互換: 既定強度のフラッシュ。
         public void FlashDamageVignette() => FlashDamageVignette(0.35f, 0.12f);
 
@@ -228,17 +231,20 @@ namespace Enigma.UI
         {
             if (_damageVignette == null) return;
 
+            float hold = Mathf.Clamp(seconds, 0.05f, 1f);
+            _flashUntilTime = Time.time + hold + 0.4f; // 0.4 = USS フェード分
             float peak = Mathf.Max(alpha, _lowHpVignette);
             _damageVignette.style.opacity = peak;
-            long holdMs = (long)(Mathf.Clamp(seconds, 0.05f, 1f) * 1000f);
-            _damageVignette.schedule.Execute(() => _damageVignette.style.opacity = _lowHpVignette).StartingIn(holdMs);
+            _damageVignette.schedule.Execute(() => _damageVignette.style.opacity = _lowHpVignette)
+                                     .StartingIn((long)(hold * 1000f));
         }
 
-        // 低HP時に残す赤ビネットの強さ(0..1)を設定する。被弾フラッシュ後はこの値へ戻る。
+        // 低HP時に残す赤ビネットの強さ(0..1)を設定する（HP変化ごとに現在HPから更新される）。
+        // フラッシュ中でなければ opacity を即ベースへ追従させる(回復/リスポーンで赤枠が消えるように上下とも追従)。
         public void SetLowHpVignette(float strength)
         {
             _lowHpVignette = Mathf.Clamp01(strength) * 0.45f;
-            if (_damageVignette != null && _damageVignette.style.opacity.value <= _lowHpVignette)
+            if (_damageVignette != null && Time.time >= _flashUntilTime)
                 _damageVignette.style.opacity = _lowHpVignette;
         }
 
