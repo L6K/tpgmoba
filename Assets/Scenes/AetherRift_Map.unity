@@ -76450,6 +76450,7 @@ GameObject:
   - component: {fileID: 1620703540}
   - component: {fileID: 1620703546}
   - component: {fileID: 1620703545}
+  - component: {fileID: 1620703562}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -76842,6 +76843,20 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1620703538}
   m_Mesh: {fileID: 10208, guid: 0000000000000000e000000000000000, type: 0}
+--- !u!114 &1620703562
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1620703538}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f4b9a863c5875e4eb92761f7f2cb525, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Enigma::Enigma.Combat.PlayerDeathRecap
+  _health: {fileID: 1620703544}
+  _hud: {fileID: 836051946}
 --- !u!1001 &1621251331
 PrefabInstance:
   m_ObjectHideFlags: 0

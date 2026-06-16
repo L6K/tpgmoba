@@ -95,6 +95,11 @@ namespace Enigma.UI
         private VisualElement _killFeed;
         private Label         _announce;
 
+        // 死亡時の被ダメージ内訳パネル（UXML 非依存でランタイム生成・遅延初期化）
+        private VisualElement _deathRecap;
+        private Label         _deathRecapTitle;
+        private Label         _deathRecapBody;
+
         // KillFeedDirector が結線するキルフィードモデル。Changed でフィード行を再構築する
         private KillFeedModel _killFeedModel;
 
@@ -285,6 +290,87 @@ namespace Enigma.UI
 
             _announce.style.opacity = 1f;
             _announce.schedule.Execute(() => _announce.style.opacity = 0f).StartingIn(1500);
+        }
+
+        // 死亡時の被ダメージ内訳を画面中央上に数秒間表示する。UXML を変更せずランタイム生成する。
+        public void ShowDeathRecap(System.Collections.Generic.IReadOnlyList<RecapEntry> entries, int holdMs = 5000)
+            => ShowDeathRecap("被ダメージ内訳", entries, holdMs);
+
+        public void ShowDeathRecap(string title,
+            System.Collections.Generic.IReadOnlyList<RecapEntry> entries, int holdMs = 5000)
+        {
+            if (_uiDocument == null) return;
+            var root = _uiDocument.rootVisualElement;
+            if (root == null) return;
+
+            EnsureDeathRecapPanel(root);
+
+            _deathRecapTitle.text = title;
+
+            var sb = new System.Text.StringBuilder();
+            int shown = 0;
+            if (entries != null)
+            {
+                for (int i = 0; i < entries.Count && shown < 5; i++, shown++)
+                {
+                    var e = entries[i];
+                    sb.Append(e.SourceId).Append("　")
+                      .Append(Mathf.RoundToInt(e.TotalDamage)).Append(" (")
+                      .Append(e.HitCount).Append("回)\n");
+                }
+            }
+            if (shown == 0) sb.Append("（記録なし）");
+            _deathRecapBody.text = sb.ToString().TrimEnd();
+
+            _deathRecap.style.display = DisplayStyle.Flex;
+            _deathRecap.style.opacity = 1f;
+            _deathRecap.schedule.Execute(() => _deathRecap.style.opacity = 0f).StartingIn(holdMs);
+        }
+
+        private void EnsureDeathRecapPanel(VisualElement root)
+        {
+            if (_deathRecap != null) return;
+
+            // 画面全幅・上から 24% の行に中央寄せのボックスを置く（translate 計算を避ける）。
+            _deathRecap = new VisualElement();
+            _deathRecap.pickingMode = PickingMode.Ignore;
+            _deathRecap.style.position = Position.Absolute;
+            _deathRecap.style.top = Length.Percent(24f);
+            _deathRecap.style.left = 0;
+            _deathRecap.style.right = 0;
+            _deathRecap.style.alignItems = Align.Center;
+            _deathRecap.style.display = DisplayStyle.None;
+
+            var box = new VisualElement();
+            box.pickingMode = PickingMode.Ignore;
+            box.style.backgroundColor = new StyleColor(new Color(0.06f, 0.07f, 0.10f, 0.92f));
+            box.style.paddingTop = 10;
+            box.style.paddingBottom = 12;
+            box.style.paddingLeft = 18;
+            box.style.paddingRight = 18;
+            box.style.borderTopLeftRadius = 8;
+            box.style.borderTopRightRadius = 8;
+            box.style.borderBottomLeftRadius = 8;
+            box.style.borderBottomRightRadius = 8;
+            box.style.minWidth = 260;
+
+            _deathRecapTitle = new Label();
+            _deathRecapTitle.style.color = new StyleColor(TeamColorRed);
+            _deathRecapTitle.style.fontSize = 18;
+            _deathRecapTitle.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _deathRecapTitle.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _deathRecapTitle.style.marginBottom = 6;
+
+            _deathRecapBody = new Label();
+            _deathRecapBody.style.color = new StyleColor(new Color(0.90f, 0.92f, 0.96f));
+            _deathRecapBody.style.fontSize = 15;
+            _deathRecapBody.style.whiteSpace = WhiteSpace.Normal;
+            _deathRecapBody.style.unityTextAlign = TextAnchor.MiddleCenter;
+
+            box.Add(_deathRecapTitle);
+            box.Add(_deathRecapBody);
+            _deathRecap.Add(box);
+            root.Add(_deathRecap);
         }
 
         // ピップ生成・ボタンクリック登録・ホバー登録を一度だけ行う

@@ -909,6 +909,13 @@ public static partial class BuildAetherRiftMap
         soHitFeedback.FindProperty("_hud").objectReferenceValue    = hudCtrl;
         soHitFeedback.ApplyModifiedPropertiesWithoutUndo();
 
+        // 死亡時の被ダメージ内訳リキャップ
+        var deathRecap   = player.AddComponent<Enigma.Combat.PlayerDeathRecap>();
+        var soDeathRecap = new SerializedObject(deathRecap);
+        soDeathRecap.FindProperty("_health").objectReferenceValue = healthComp;
+        soDeathRecap.FindProperty("_hud").objectReferenceValue    = hudCtrl;
+        soDeathRecap.ApplyModifiedPropertiesWithoutUndo();
+
         // キルフィード司令塔（シーンに1個）。HUD への参照を結線する
         var killFeedGo = new GameObject("KillFeedDirector");
         var killFeedDirector = killFeedGo.AddComponent<Enigma.Combat.KillFeedDirector>();

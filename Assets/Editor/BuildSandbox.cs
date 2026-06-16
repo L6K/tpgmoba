@@ -206,6 +206,13 @@ public static partial class BuildAetherRiftMap
 
         hudGo.AddComponent<Enigma.UI.DamagePopupManager>();
 
+        // 死亡時の被ダメージ内訳リキャップ
+        var deathRecap   = player.AddComponent<PlayerDeathRecap>();
+        var soDeathRecap = new SerializedObject(deathRecap);
+        soDeathRecap.FindProperty("_health").objectReferenceValue = healthComp;
+        soDeathRecap.FindProperty("_hud").objectReferenceValue    = hudCtrl;
+        soDeathRecap.ApplyModifiedPropertiesWithoutUndo();
+
         // ── 7. ターゲットダミー3体（Red・死亡で自動復活） ──────────
         CreateSandboxDummy("Dummy_Center", new Vector3(0f, 1.1f, 10f), matRed, matBarRed());
         CreateSandboxDummy("Dummy_Left",   new Vector3(-6f, 1.1f, 12f), matRed, matBarRed());
