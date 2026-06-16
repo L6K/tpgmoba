@@ -256,6 +256,17 @@ namespace Enigma.UI
             _announce.schedule.Execute(() => _announce.style.opacity = 0f).StartingIn(1500);
         }
 
+        // マルチキル/ストリーク/シャットダウン等の特別アナウンスを任意テキスト・色で表示する。
+        public void AnnounceSpecial(string text, Color color, int holdMs = 1800)
+        {
+            if (_announce == null || string.IsNullOrEmpty(text)) return;
+
+            _announce.text = text;
+            _announce.style.color = new StyleColor(color);
+            _announce.style.opacity = 1f;
+            _announce.schedule.Execute(() => _announce.style.opacity = 0f).StartingIn(holdMs);
+        }
+
         // 中央コアが制圧された時にセンターアナウンスを 1.5 秒表示する。
         // チーム色(青=水色/赤=赤)でテキストを着色する
         public void AnnounceObjectiveCaptured(TeamId team)
