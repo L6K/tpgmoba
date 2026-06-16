@@ -233,12 +233,15 @@ namespace Enigma.Ability
         /// 本体マテリアル(プレハブで Vfx_Beam を結線済み)は MPB で HDR の _BaseColor を上書きし、
         /// TrailRenderer は頂点色を Primary→透明にして発光トレイルにする。動的ライトも付与。
         /// </summary>
-        public static void TintBeamProjectile(GameObject proj, AttackVfxProfile profile)
+        public static void TintBeamProjectile(GameObject proj, AttackVfxProfile profile, float intensityMul = 1f)
         {
             if (proj == null) return;
 
-            // 弾本体メッシュ(Vfx_Beam 結線済み)は子 GO "Beam" にあるため子も含めて探す
-            var hdr = ToColor(profile.Primary, profile.EmissionIntensity);
+            float mul = intensityMul > 0f ? intensityMul : 1f;
+
+            // 弾本体メッシュ(Vfx_Beam 結線済み)は子 GO "Beam" にあるため子も含めて探す。
+            // コンボ倍率 mul を発光(HDR)へ乗算して連続ヒットで明るくする。
+            var hdr = ToColor(profile.Primary, profile.EmissionIntensity * mul);
             var mr = proj.GetComponentInChildren<MeshRenderer>();
             if (mr != null)
             {
@@ -249,7 +252,7 @@ namespace Enigma.Ability
                 mr.SetPropertyBlock(mpb);
             }
 
-            // トレイルはルート側。頂点色を Primary→透明にして発光尾にする
+            // トレイルはルート側。頂点色を Primary→透明にして発光尾にする。幅もコンボで太く。
             var solid = ToColor(profile.Primary);
             var tr = proj.GetComponentInChildren<TrailRenderer>();
             if (tr != null)
@@ -257,10 +260,11 @@ namespace Enigma.Ability
                 tr.startColor = solid;
                 var tail = solid; tail.a = 0f;
                 tr.endColor = tail;
+                tr.widthMultiplier = mul;
             }
 
             // 進行中の弾を淡く照らして発光感を補強（弾と共に Destroy される）
-            AttachLight(proj, solid, 5f, 3.5f * Mathf.Max(1f, profile.EmissionIntensity * 0.3f));
+            AttachLight(proj, solid, 5f * mul, 3.5f * mul * Mathf.Max(1f, profile.EmissionIntensity * 0.3f));
         }
 
         /// <summary>

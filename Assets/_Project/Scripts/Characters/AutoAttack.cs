@@ -126,9 +126,10 @@ namespace Enigma.Character
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, _projectileSpeed, _attackDamage, gameObject);
 
-            // champion 別ネオン着色: 弾本体/トレイルを per-instance で染め、発射口にフラッシュ
+            // champion 別ネオン着色: 弾本体/トレイルを per-instance で染め、発射口にフラッシュ。
+            // 連続ヒットのコンボ倍率で発光/トレイル幅を段階的に派手化する。
             var profile = AttackVfxProfiles.For(_championVfx);
-            SkillVfx.TintBeamProjectile(proj.gameObject, profile);
+            SkillVfx.TintBeamProjectile(proj.gameObject, profile, Enigma.Vfx.AttackJuice.ComboMultiplier);
             SkillVfx.SpawnMuzzleFlash(_muzzle.position, dir, profile);
 
             GameSfx.PlayVariant("aa_fire", 3, _muzzle.position, 0.7f);
