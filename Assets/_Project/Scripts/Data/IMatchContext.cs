@@ -11,5 +11,8 @@ namespace Enigma.Data
         float MatchDurationSeconds { get; set; }
         int Kills  { get; set; }
         int Deaths { get; set; }
+
+        // 試合開始前に選択したレリックの ID 群（未選択は null/空）。
+        System.Collections.Generic.IReadOnlyList<string> SelectedRelicIds { get; set; }
     }
 }

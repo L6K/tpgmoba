@@ -9,5 +9,6 @@ namespace Enigma.Data
         public float MatchDurationSeconds { get; set; }
         public int Kills  { get; set; }
         public int Deaths { get; set; }
+        public System.Collections.Generic.IReadOnlyList<string> SelectedRelicIds { get; set; }
     }
 }

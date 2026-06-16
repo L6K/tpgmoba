@@ -25,6 +25,9 @@ namespace Enigma.Ability
 
         // スロットごとのクールダウン
         private readonly AttackCooldown[] _cooldowns = new AttackCooldown[4];
+
+        // クールダウン短縮率（0〜0.6）。レリック等が SetCooldownReduction で設定する。
+        private float _cdrFraction;
         private CastModeLogic _castLogic;
         private CastMode      _lastSyncedMode = (CastMode)(-1); // 未初期化値
 
@@ -57,11 +60,7 @@ namespace Enigma.Ability
         private void Awake()
         {
             for (int i = 0; i < 4; i++)
-            {
-                var def = _skills[i];
-                float cd = def != null ? def.CooldownSeconds : 1f;
-                _cooldowns[i] = new AttackCooldown(cd);
-            }
+                _cooldowns[i] = new AttackCooldown(EffectiveCd(_skills[i]));
 
             // 最初のモード同期は Update で行う（GameServices が未初期化の可能性）
             _castLogic = new CastModeLogic(CastMode.QuickWithIndicator);
@@ -572,9 +571,26 @@ namespace Enigma.Ability
             for (int i = 0; i < 4; i++)
             {
                 _skills[i] = (skills != null && i < skills.Length) ? skills[i] : null;
-                float cd = _skills[i] != null ? _skills[i].CooldownSeconds : 1f;
-                _cooldowns[i] = new AttackCooldown(cd);
+                _cooldowns[i] = new AttackCooldown(EffectiveCd(_skills[i]));
             }
+        }
+
+        /// <summary>
+        /// クールダウン短縮率を設定し、現在のスキルセットでクールダウンを再構成する（0〜0.6 にクランプ）。
+        /// レリック等の試合開始時補正から呼ばれる。
+        /// </summary>
+        public void SetCooldownReduction(float fraction)
+        {
+            _cdrFraction = Mathf.Clamp(fraction, 0f, 0.6f);
+            for (int i = 0; i < 4; i++)
+                _cooldowns[i] = new AttackCooldown(EffectiveCd(_skills[i]));
+        }
+
+        // CDR を反映した実効クールダウン秒。未設定スロットは 1 秒基準。
+        private float EffectiveCd(SkillDefinition def)
+        {
+            float baseCd = def != null ? def.CooldownSeconds : 1f;
+            return baseCd * (1f - _cdrFraction);
         }
 
         // ── HUD 公開 API ──────────────────────────────────────

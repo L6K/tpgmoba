@@ -28,6 +28,17 @@ namespace Enigma.Core
 
             ApplySkills(picked);
             ApplyStats(picked);
+            ApplyRelics();
+        }
+
+        // 試合前に選択したレリックの集約効果を適用する（最大HP/開始シールド/CDR）。
+        private void ApplyRelics()
+        {
+            var ids = GameServices.Match?.SelectedRelicIds;
+            if (ids == null) return;
+
+            var health = _health != null ? _health : GetComponent<HealthComponent>();
+            Enigma.Data.RelicApplier.ApplyIds(ids, health?.Model, _skillCaster);
         }
 
         private void ApplySkills(CharacterData picked)

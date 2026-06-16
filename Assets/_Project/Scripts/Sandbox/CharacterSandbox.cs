@@ -1,9 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Enigma.Ability;
 using Enigma.Character;
 using Enigma.Combat;
 using Enigma.Core;
+using Enigma.Data;
 
 namespace Enigma.Sandbox
 {
@@ -27,7 +29,12 @@ namespace Enigma.Sandbox
         private PlayerController _controller;
 
         private bool _menuOpen;
+        private bool _relicMenuOpen;
         private int _currentIndex = -1;
+
+        // サンドボックスで選択中のレリック ID（最大 3）。キャラ適用時にまとめて反映する。
+        private const int MaxRelics = 3;
+        private readonly List<string> _selectedRelics = new List<string>();
 
         // OnGUI スタイル（OnGUI 内で遅延生成する）。
         private bool _stylesReady;
@@ -71,17 +78,38 @@ namespace Enigma.Sandbox
             if (kb == null) return;
 
             if (kb.mKey.wasPressedThisFrame)
-                ToggleMenu();
-            else if (_menuOpen && kb.escapeKey.wasPressedThisFrame)
-                SetMenu(false);
+                ToggleCharMenu();
+            else if (kb.rKey.wasPressedThisFrame)
+                ToggleRelicMenu();
+            else if (kb.escapeKey.wasPressedThisFrame)
+                CloseMenus();
         }
 
-        private void ToggleMenu() => SetMenu(!_menuOpen);
-
-        private void SetMenu(bool open)
+        private void ToggleCharMenu()
         {
-            _menuOpen = open;
-            // メニュー中はゲームを一時停止してモーダルにする。
+            _menuOpen = !_menuOpen;
+            if (_menuOpen) _relicMenuOpen = false;
+            SyncPause();
+        }
+
+        private void ToggleRelicMenu()
+        {
+            _relicMenuOpen = !_relicMenuOpen;
+            if (_relicMenuOpen) _menuOpen = false;
+            SyncPause();
+        }
+
+        private void CloseMenus()
+        {
+            _menuOpen = false;
+            _relicMenuOpen = false;
+            SyncPause();
+        }
+
+        // いずれかのメニューが開いている間はゲームを一時停止してモーダルにする。
+        private void SyncPause()
+        {
+            bool open = _menuOpen || _relicMenuOpen;
             Time.timeScale = open ? 0f : 1f;
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
@@ -125,6 +153,25 @@ namespace Enigma.Sandbox
 
             if (_controller != null && data.MoveSpeed > 0f)
                 _controller.SetMoveSpeed(data.MoveSpeed);
+
+            // レリックの集約効果を最後に重ねる（ステータスを基準値へ戻した直後なので二重適用にならない）。
+            RelicApplier.ApplyIds(_selectedRelics, _health != null ? _health.Model : null, _skillCaster);
+        }
+
+        // レリック選択を更新し、現在キャラを再適用してステータスを基準から組み直す。
+        private void ToggleRelic(string id)
+        {
+            if (_selectedRelics.Contains(id))
+                _selectedRelics.Remove(id);
+            else if (_selectedRelics.Count < MaxRelics)
+                _selectedRelics.Add(id);
+
+            // 試合フローと同じ保存先にも反映しておく。
+            if (GameServices.Match != null)
+                GameServices.Match.SelectedRelicIds = new List<string>(_selectedRelics);
+
+            if (_currentIndex >= 0)
+                ApplyCharacter(_currentIndex);
         }
 
         // ── IMGUI（キャラ一覧 + 常時ヒント） ───────────────────────
@@ -139,16 +186,22 @@ namespace Enigma.Sandbox
                               && _database.Characters[_currentIndex] != null)
                 ? _database.Characters[_currentIndex].DisplayName
                 : "-";
-            GUI.Label(new Rect(12f, 10f, 600f, 24f),
-                $"[M] キャラ変更   現在: {current}", _hintStyle);
+            GUI.Label(new Rect(12f, 10f, 700f, 24f),
+                $"[M] キャラ変更   [R] レリック({_selectedRelics.Count}/{MaxRelics})   現在: {current}", _hintStyle);
 
-            if (!_menuOpen) return;
+            if (!_menuOpen && !_relicMenuOpen) return;
 
             // 半透明の暗幕。
             GUI.color = new Color(0f, 0f, 0f, 0.55f);
             GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
             GUI.color = Color.white;
 
+            if (_menuOpen) DrawCharMenu();
+            else DrawRelicMenu();
+        }
+
+        private void DrawCharMenu()
+        {
             int count = _database != null && _database.Characters != null ? _database.Characters.Count : 0;
 
             const float panelW = 420f;
@@ -171,7 +224,6 @@ namespace Enigma.Sandbox
                 var rect = new Rect(px + 16f, y, panelW - 32f, rowH - 8f);
                 bool isCurrent = i == _currentIndex;
 
-                // テーマ色の縦帯。
                 var swatch = new Rect(rect.x, rect.y, 6f, rect.height);
                 GUI.color = data.ThemeColor.a > 0f ? data.ThemeColor : Color.gray;
                 GUI.DrawTexture(swatch, Texture2D.whiteTexture);
@@ -183,13 +235,52 @@ namespace Enigma.Sandbox
                 if (GUI.Button(rect, label, isCurrent ? _itemCurrentStyle : _itemStyle))
                 {
                     ApplyCharacter(i);
-                    SetMenu(false);
+                    CloseMenus();
                 }
                 y += rowH;
             }
 
             GUI.Label(new Rect(px, py + panelH - footH, panelW, 24f),
                 "クリックで切替 / [M] または [Esc] で閉じる", _hintStyle);
+        }
+
+        private void DrawRelicMenu()
+        {
+            var all = RelicCatalog.All;
+
+            const float panelW = 460f;
+            float rowH = 56f;
+            float headH = 64f;
+            float footH = 36f;
+            float panelH = headH + footH + rowH * all.Count + 24f;
+            float px = (Screen.width - panelW) * 0.5f;
+            float py = (Screen.height - panelH) * 0.5f;
+
+            GUI.Box(new Rect(px, py, panelW, panelH), GUIContent.none, _panelStyle);
+            GUI.Label(new Rect(px, py + 14f, panelW, 32f),
+                $"レリック選択（{_selectedRelics.Count}/{MaxRelics}）", _titleStyle);
+
+            float y = py + headH;
+            for (int i = 0; i < all.Count; i++)
+            {
+                var info = all[i];
+                bool selected = _selectedRelics.Contains(info.Id);
+                bool atLimit = !selected && _selectedRelics.Count >= MaxRelics;
+
+                var rect = new Rect(px + 16f, y, panelW - 32f, rowH - 8f);
+                string mark = selected ? "✓ " : (atLimit ? "× " : "＋ ");
+                string label = $"  {mark}{info.DisplayName}\n  <size=11><color=#9fb0c8>{info.Description}</color></size>";
+
+                GUI.enabled = !atLimit;
+                if (GUI.Button(rect, label, selected ? _itemCurrentStyle : _itemStyle))
+                    ToggleRelic(info.Id);
+                GUI.enabled = true;
+
+                y += rowH;
+            }
+
+            GUI.Label(new Rect(px, py + panelH - footH, panelW, 24f),
+                "クリックで付け外し（最大3） / [R] または [Esc] で閉じる", _hintStyle);
         }
 
         private void EnsureStyles()
