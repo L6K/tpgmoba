@@ -32,15 +32,43 @@ namespace Enigma.Character
         {
             if (player == null || data == null) return null;
 
-            // UnityChan / 空 / プレハブ未結線 → 既存モデル維持（フォールバック）
+            // 連続切替（サンドボックス/プレビュー）に備えて再適用可能にする。
+            // Muzzle は旧スワップモデルの手にぶら下がっているため、旧モデル破棄の前に
+            // プレイヤー直下へ退避する（AA/スキルの発射点参照が破棄されると攻撃が壊れる）。
+            var prev = player.transform.Find(ChampionModelName);
+            if (prev != null)
+            {
+                var muzzle = FindDescendant(player.transform, "Muzzle");
+                if (muzzle != null)
+                {
+                    muzzle.SetParent(player.transform, false);
+                    muzzle.localPosition = new Vector3(0f, 0.6f, 0.6f);
+                }
+                Object.Destroy(prev.gameObject);
+            }
+
+            var unityChan = player.transform.Find(UnityChanModelName);
+
+            // UnityChan / 空 / プレハブ未結線 → UnityChan を見た目に戻す（フォールバック）。
+            // 各参照（攻撃モーター・Muzzle・死亡演出）も UnityChan へ再結線して、
+            // 直前にスワップモデルを使っていても破綻しないようにする。
             if (string.IsNullOrEmpty(data.ModelName) ||
                 data.ModelName == "UnityChan" ||
                 data.ModelPrefab == null)
+            {
+                if (unityChan != null)
+                {
+                    unityChan.gameObject.SetActive(true);
+                    var ucSwitcher = unityChan.GetComponentInChildren<LocomotionClipSwitcher>(true);
+                    RewireAttackMotor(player, unityChan, ucSwitcher);
+                    ReparentMuzzleToHand(player, unityChan);
+                    RewireDeathPresenter(player, unityChan);
+                }
                 return null;
+            }
 
             // 既存ユニティちゃんを無効化（破棄せず保持）
-            var existing = player.transform.Find(UnityChanModelName);
-            if (existing != null) existing.gameObject.SetActive(false);
+            if (unityChan != null) unityChan.gameObject.SetActive(false);
 
             // モデル生成
             var model = Object.Instantiate(data.ModelPrefab);
@@ -57,6 +85,14 @@ namespace Enigma.Character
             RewireDeathPresenter(player, model.transform);
 
             return model;
+        }
+
+        // 子孫から名前一致の Transform を返す（直下に限らない）。Muzzle 退避に使う。
+        private static Transform FindDescendant(Transform root, string name)
+        {
+            foreach (var t in root.GetComponentsInChildren<Transform>(true))
+                if (t.name == name) return t;
+            return null;
         }
 
         // スワップ後モデルの右手ボーンへ player の "Muzzle" を付け替える（ビーム発射点を手元へ）。

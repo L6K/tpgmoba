@@ -279,5 +279,48 @@ namespace Enigma.Tests
             sp.TryLevelUp(0, 9); // no points left
             Assert.AreEqual(0, fired);
         }
+
+        // ---- GrantAllRanks (sandbox/test helper) ----
+
+        [Test]
+        public void GrantAllRanks_RaisesEverySlotToAtLeastRank()
+        {
+            var sp = new SkillProgression();
+            sp.GrantAllRanks(1);
+            Assert.AreEqual(1, sp.GetRank(0));
+            Assert.AreEqual(1, sp.GetRank(1));
+            Assert.AreEqual(1, sp.GetRank(2)); // R も Lv ゲート無視で習得
+        }
+
+        [Test]
+        public void GrantAllRanks_DoesNotLowerExistingRanks()
+        {
+            var sp = new SkillProgression();
+            sp.TryLevelUp(0, 1); // Q を rank1 へ
+            sp.GrantAllRanks(1);
+            Assert.AreEqual(1, sp.GetRank(0));
+            Assert.AreEqual(1, sp.GetRank(1));
+            Assert.AreEqual(1, sp.GetRank(2));
+        }
+
+        [Test]
+        public void GrantAllRanks_ClearsUnspentPoints()
+        {
+            var sp = new SkillProgression();
+            sp.OnChampionLevelUp(); // 余剰ポイント
+            Assert.Greater(sp.UnspentPoints, 0);
+            sp.GrantAllRanks(1);
+            Assert.AreEqual(0, sp.UnspentPoints);
+        }
+
+        [Test]
+        public void GrantAllRanks_FiresChangedEvent()
+        {
+            var sp = new SkillProgression();
+            int fired = 0;
+            sp.Changed += () => fired++;
+            sp.GrantAllRanks(1);
+            Assert.AreEqual(1, fired);
+        }
     }
 }

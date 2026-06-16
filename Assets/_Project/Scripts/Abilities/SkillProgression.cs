@@ -71,6 +71,22 @@ namespace Enigma.Abilities
             Changed?.Invoke();
         }
 
+        /// <summary>
+        /// サンドボックス/テスト用: 全スロット(Q/E/R)を少なくとも rank まで習得済みにする。
+        /// 通常のレベルゲート(R は Lv6 等)を無視して即座に発動可能状態へ引き上げる。
+        /// 未消費ポイントは 0 にして以後の通常加算と干渉させない。
+        /// </summary>
+        public void GrantAllRanks(int rank)
+        {
+            int r = Math.Max(0, Math.Min(rank, 5));
+            for (int i = 0; i < _ranks.Length; i++)
+            {
+                if (_ranks[i] < r) _ranks[i] = r;
+            }
+            _unspentPoints = 0;
+            Changed?.Invoke();
+        }
+
         public static float DamageMultiplier(int rank)
         {
             if (rank <= 0)

@@ -17,7 +17,7 @@ using Enigma.Core;
 using Enigma.Item;
 using Enigma.Map;
 
-public static class BuildAetherRiftMap
+public static partial class BuildAetherRiftMap
 {
     private const string ScenePath   = "Assets/Scenes/AetherRift_Map.unity";
     private const string MatDir      = "Assets/_Project/Materials/Map";
@@ -2369,8 +2369,9 @@ public static class BuildAetherRiftMap
         soGold.FindProperty("_amount").intValue = 300;
         soGold.ApplyModifiedPropertiesWithoutUndo();
 
-        // 頭上 HPバー（レベル表示なし）
-        var wrapper = CreateWorldHealthBar(go.transform, 1.05f, 0.65f, matBar, 500f);
+        // 頭上 HPバー（レベル表示なし）。cc.center=(0,0,0) のため capsule top は local y=+1.0。
+        // yOffset=1.3 で world y≈2.4 に出してカプセル天面(2.1)より上に表示する。
+        var wrapper = CreateWorldHealthBar(go.transform, 1.05f, 1.3f, matBar, 500f);
 
         // 銃口 Transform（攻撃弾の発射点）。胸高・前方
         var muzzle = new GameObject("Muzzle");
