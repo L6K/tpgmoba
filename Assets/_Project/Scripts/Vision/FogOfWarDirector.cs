@@ -34,6 +34,40 @@ namespace Enigma.Vision
         /// <summary>ミニマップ等が可視判定を問い合わせるためのアクセサ。</summary>
         public static FogOfWarDirector Instance { get; private set; }
 
+        /// <summary>
+        /// ユニット以外が与える視界源（ワード/スキャン/リフト等）。キー毎に最新の1点を保持し、
+        /// Tick で味方チームのものを視界源へ合流する。設置者が Set/Remove する（位置は静止前提）。
+        /// </summary>
+        public readonly struct ExternalVisionSource
+        {
+            public readonly float X;
+            public readonly float Z;
+            public readonly float Radius;
+            public readonly TeamId Team;
+
+            public ExternalVisionSource(float x, float z, float radius, TeamId team)
+            {
+                X = x; Z = z; Radius = radius; Team = team;
+            }
+        }
+
+        private static readonly Dictionary<object, ExternalVisionSource> _externalSources =
+            new Dictionary<object, ExternalVisionSource>();
+
+        /// <summary>外部視界源を登録/更新する（key は設置物インスタンス等の一意トークン）。</summary>
+        public static void SetExternalSource(object key, float x, float z, float radius, TeamId team)
+        {
+            if (key == null || radius <= 0f) return;
+            _externalSources[key] = new ExternalVisionSource(x, z, radius, team);
+        }
+
+        /// <summary>外部視界源を取り除く（ワード破壊/寿命切れ時）。</summary>
+        public static void RemoveExternalSource(object key)
+        {
+            if (key == null) return;
+            _externalSources.Remove(key);
+        }
+
         private VisionRevealModel _model;
         private TeamId            _playerTeam   = TeamId.Neutral;
         private bool              _teamResolved;
@@ -58,6 +92,8 @@ namespace Enigma.Vision
         {
             _model = new VisionRevealModel(LingerSeconds);
             Instance = this;
+            // static レジストリは前試合の残りを持ちうるので、マップ初期化時に一掃する
+            _externalSources.Clear();
         }
 
         private void OnDestroy()
@@ -153,6 +189,17 @@ namespace Enigma.Vision
                             c => !(c is CharacterController)),
                     };
                     _foggables[id] = fog;
+                }
+            }
+
+            // ワード/スキャン等の外部視界源のうち、味方チームのものを合流する
+            if (_externalSources.Count > 0)
+            {
+                foreach (var kv in _externalSources)
+                {
+                    var src = kv.Value;
+                    if (_teamResolved && src.Team == _playerTeam)
+                        _sources.Add(new VisionSource(src.X, src.Z, src.Radius));
                 }
             }
 
