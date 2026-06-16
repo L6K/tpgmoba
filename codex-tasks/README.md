@@ -36,3 +36,4 @@
 - 18: [次元リフト] `RiftEventModel` 指示書 — 未着手: [18-rift-event-model.md](18-rift-event-model.md)
 - 19: [オーバークロック] `OverclockModel` 指示書 — 未着手: [19-overclock-model.md](19-overclock-model.md)
 - 20: [レリック] `RelicLoadoutModel` 指示書 — 未着手: [20-relic-loadout-model.md](20-relic-loadout-model.md)
+- 21: [環境ギミック] `GimmickPhysicsModel` 指示書(ジャンプパッド弾道/重力井戸/ゲート減速) — 未着手: [21-gimmick-physics-model.md](21-gimmick-physics-model.md)
