@@ -1,6 +1,7 @@
 using UnityEngine;
 using Enigma.Combat;
 using Enigma.UI;
+using Enigma.Vfx;
 
 namespace Enigma.Character
 {
@@ -40,7 +41,14 @@ namespace Enigma.Character
         private void OnDamaged(float amount)
         {
             if (_camera != null) _camera.AddShake(ShakeAmplitude);
-            if (_hud != null) _hud.FlashDamageVignette();
+            if (_hud == null) return;
+
+            // 被ダメ割合に応じてフラッシュ強度/保持時間を、残HPに応じて低HPビネットを駆動する。
+            // Damaged は amount のみ通知（攻撃者方向/クリット情報なし）なので direction=0/crit=false。
+            var fb = PlayerHitFeedbackModel.Evaluate(
+                amount, _health.Model.MaxHp, _health.Model.CurrentHp, false, 0f);
+            _hud.FlashDamageVignette(fb.FlashAlpha, fb.FlashSeconds);
+            _hud.SetLowHpVignette(fb.VignetteStrength);
         }
     }
 }

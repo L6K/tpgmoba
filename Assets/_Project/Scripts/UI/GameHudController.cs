@@ -90,6 +90,8 @@ namespace Enigma.UI
 
         // 戦闘フィードバック用要素（被弾ビネット・キルフィード・センターアナウンス）
         private VisualElement _damageVignette;
+        // 低HP時に残す赤ビネットのベース不透明度。被弾フラッシュはこの値へ戻る。
+        private float _lowHpVignette;
         private VisualElement _killFeed;
         private Label         _announce;
 
@@ -217,14 +219,27 @@ namespace Enigma.UI
             }
         }
 
-        // 被弾時に画面端の赤ビネットを 0.35→0 でフラッシュする（PlayerHitFeedback から呼ぶ）。
-        // USS の transition(0.4s) に乗せるため、即時 0.35 をセットしてから次フレームで 0 へ戻す
-        public void FlashDamageVignette()
+        // 後方互換: 既定強度のフラッシュ。
+        public void FlashDamageVignette() => FlashDamageVignette(0.35f, 0.12f);
+
+        // 被弾時に画面端の赤ビネットを alpha→ベース(低HPビネット)へフラッシュする（PlayerHitFeedback から呼ぶ）。
+        // USS の transition(0.4s) に乗せるため、即時ピークをセットし、seconds 保持してからベースへ戻す。
+        public void FlashDamageVignette(float alpha, float seconds)
         {
             if (_damageVignette == null) return;
 
-            _damageVignette.style.opacity = 0.35f;
-            _damageVignette.schedule.Execute(() => _damageVignette.style.opacity = 0f).StartingIn(16);
+            float peak = Mathf.Max(alpha, _lowHpVignette);
+            _damageVignette.style.opacity = peak;
+            long holdMs = (long)(Mathf.Clamp(seconds, 0.05f, 1f) * 1000f);
+            _damageVignette.schedule.Execute(() => _damageVignette.style.opacity = _lowHpVignette).StartingIn(holdMs);
+        }
+
+        // 低HP時に残す赤ビネットの強さ(0..1)を設定する。被弾フラッシュ後はこの値へ戻る。
+        public void SetLowHpVignette(float strength)
+        {
+            _lowHpVignette = Mathf.Clamp01(strength) * 0.45f;
+            if (_damageVignette != null && _damageVignette.style.opacity.value <= _lowHpVignette)
+                _damageVignette.style.opacity = _lowHpVignette;
         }
 
         // プレイヤーがキルした/された時にセンターアナウンスを 1.5 秒表示する。
