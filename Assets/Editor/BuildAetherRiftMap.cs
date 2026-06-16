@@ -1410,6 +1410,100 @@ public static class BuildAetherRiftMap
         Debug.Log("[BuildAetherRiftMap] AaBeam.prefab を再生成しました");
     }
 
+    // 現在のシーンへ「マップネオン」(基地床の発光リム + 中央コアのハロー)を付与する。
+    // マップ全体を再生成せず的を絞って付与し、再実行時は既存 MapNeon_* を作り直す（VFX 反復・churn 最小）。
+    [MenuItem("Enigma/VFX/Apply Map Neon")]
+    public static void ApplyMapNeon()
+    {
+        var scene = EditorSceneManager.GetActiveScene();
+        if (!scene.path.EndsWith("AetherRift_Map.unity"))
+        {
+            scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+        }
+
+        // 既存の MapNeon_* を掃除（再実行で重複しないように）
+        foreach (var root in scene.GetRootGameObjects())
+        {
+            var stale = new System.Collections.Generic.List<GameObject>();
+            CollectByNamePrefix(root.transform, "MapNeon_", stale);
+            foreach (var go in stale) Object.DestroyImmediate(go);
+        }
+
+        // ネオン親（整理用）
+        var neonParent = new GameObject("MapNeon_Root");
+
+        // 青/赤の床にコントラストが出る明色の半透明リム（GetOrCreateTransparentMat=描画実績ありを使用）。
+        var blueHdr = new Color(0.30f, 1.00f, 1.00f, 0.90f); // 鮮シアン（青床に映える）
+        var redHdr  = new Color(1.00f, 0.55f, 0.10f, 0.90f); // 橙（赤床に映える）
+        // 基地床の外周に発光リム（水平アニュラス・加算・単色）。CreateRingBandMesh は UV 無しのため
+        // テクスチャは使わず単色加算にする（テクスチャを使うと (0,0) サンプルで暗くなる）。
+        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimBlue", new Vector3(-56f, 1.3f, 0f), blueHdr);
+        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimRed",  new Vector3( 56f, 1.3f, 0f), redHdr);
+
+        // 中央コア（NeutralBoss）の発光ハロー
+        var boss = FindInSceneByName(scene, "NeutralBoss");
+        if (boss != null)
+        {
+            // 加算スフィアの発光オーラ（どの角度でも光球に見えるためビルボード不要）
+            var halo = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            halo.name = "MapNeon_CoreHalo";
+            var hc = halo.GetComponent<Collider>(); if (hc != null) Object.DestroyImmediate(hc);
+            halo.transform.SetParent(boss.transform, false);
+            halo.transform.localPosition = Vector3.zero;
+            halo.transform.localScale    = Vector3.one * 7f;
+            var hmr = halo.GetComponent<MeshRenderer>();
+            hmr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            hmr.receiveShadows    = false;
+            hmr.sharedMaterial    = GetOrCreateTransparentMat("CoreHalo", new Color(0.70f, 0.45f, 1.0f, 0.45f));
+        }
+
+        EditorSceneManager.MarkSceneDirty(scene);
+        EditorSceneManager.SaveScene(scene);
+        Debug.Log("[BuildAetherRiftMap] マップネオンを付与しました（基地リム×2 + 中央コアハロー）");
+    }
+
+    // 基地床の外周に薄い発光リム（水平アニュラス・加算・両面不要＝上向き法線）を敷く。
+    private static void CreateBaseNeonRim(Transform parent, string name, Vector3 center, Color hdrColor)
+    {
+        var go = new GameObject(name);
+        go.transform.SetParent(parent, false);
+        go.transform.position = center;
+        var mf = go.AddComponent<MeshFilter>();
+        mf.sharedMesh = CreateRingBandMesh(15.3f, 17.2f, 96);
+        var mr = go.AddComponent<MeshRenderer>();
+        mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        mr.receiveShadows    = false;
+        mr.sharedMaterial    = GetOrCreateTransparentMat("NeonRim_" + name, hdrColor);
+    }
+
+    private static void CollectByNamePrefix(Transform t, string prefix, System.Collections.Generic.List<GameObject> outList)
+    {
+        if (t.name.StartsWith(prefix)) { outList.Add(t.gameObject); return; }
+        foreach (Transform c in t) CollectByNamePrefix(c, prefix, outList);
+    }
+
+    private static GameObject FindInSceneByName(UnityEngine.SceneManagement.Scene scene, string name)
+    {
+        foreach (var root in scene.GetRootGameObjects())
+        {
+            if (root.name == name) return root;
+            var found = FindChildByName(root.transform, name);
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private static GameObject FindChildByName(Transform t, string name)
+    {
+        foreach (Transform c in t)
+        {
+            if (c.name == name) return c.gameObject;
+            var f = FindChildByName(c, name);
+            if (f != null) return f;
+        }
+        return null;
+    }
+
     private static GameObject CreateAaBeamPrefab()
     {
         var beamPrefabPath = PrefabDir + "/AaBeam.prefab";
