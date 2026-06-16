@@ -30,3 +30,6 @@
 
 ## Latest task status
 - 14: Completed `PlayerHitFeedbackModel` plain C# model + EditMode tests. Report: [14-hit-feedback-model-report.md](14-hit-feedback-model-report.md)
+- 15: [死亡recap] `DeathRecapModel` 指示書 — 未着手: [15-death-recap-model.md](15-death-recap-model.md)
+- 16: [ワード] `WardVisionModel` 指示書 — 未着手: [16-ward-vision-model.md](16-ward-vision-model.md)
+- 17: [キル演出] `MultiKillStreakModel` 指示書 — 未着手: [17-multikill-streak-model.md](17-multikill-streak-model.md)
