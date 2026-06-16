@@ -61,7 +61,7 @@ namespace Enigma.Vfx
     {
         public static float FramesAt60(float damage, float maxHp, bool isCrit)
         {
-            float ratio = maxHp <= 0f ? 1f : Clamp01(damage / maxHp);
+            float ratio = maxHp <= 0f ? 0f : Clamp01(damage / maxHp);
             float frames = 2f + 12f * ratio;
             if (isCrit) frames *= 1.5f;
             return Clamp(frames, 0f, 8f);

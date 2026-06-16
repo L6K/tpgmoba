@@ -27,3 +27,6 @@
 備考: ①中央オブジェクト=ObjectiveBuffModel(07)+CentralObjectiveDirector で完成、②Botマクロ=BotMacroDecisionModel(08)+EnemyChampionAI で結線、MatchHint も実装済(EditMode全403件緑)。
 
 参考: [assets-image-manifest.md](assets-image-manifest.md) — 画像アセット(効果5/スキル18/ポートレート5)の生成は **5.5** 担当・**後回し**。
+
+## Latest task status
+- 14: Completed `PlayerHitFeedbackModel` plain C# model + EditMode tests. Report: [14-hit-feedback-model-report.md](14-hit-feedback-model-report.md)
