@@ -830,22 +830,24 @@ public static class BuildAetherRiftMap
         var blueRing    = new Color(0.15f, 0.35f, 0.9f, 0.5f);
 
         // 敵チーム（Red）3体: TOP / BOT / Jungle
+        // スポーンはネクサス(±48)の前方(±44)・各自のレーン側(TOP=+z / BOT=-z)に置く。
+        // 以前は z 符号がレーン方向と逆で、スポーン直後に中央のネクサスを横切ろうとしてスタックしていた。
         var redTop = CreateBotChampion("RedBot_Top", TeamId.Red,
-            new Vector3(52f, 1.1f, -6f), BuildTopLaneWaypoints(),
+            new Vector3(44f, 1.1f, 9f), BuildTopLaneWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redBot = CreateBotChampion("RedBot_Bot", TeamId.Red,
-            new Vector3(52f, 1.1f, 6f), BuildBotLaneWaypoints(),
+            new Vector3(44f, 1.1f, -9f), BuildBotLaneWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redJungle = CreateBotChampion("RedBot_Jungle", TeamId.Red,
-            new Vector3(52f, 1.1f, 0f), BuildJungleWaypoints(),
+            new Vector3(44f, 1.1f, 0f), BuildJungleWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab, farmsNeutralCamps: true);
 
         // 味方チーム（Blue）2体: TOP / BOT。経路は各レーンの逆順（青ベース開口スタート）。
         var blueTop = CreateBotChampion("BlueBot_Top", TeamId.Blue,
-            new Vector3(-52f, 1.1f, -6f), Reverse(BuildTopLaneWaypoints()),
+            new Vector3(-44f, 1.1f, 9f), Reverse(BuildTopLaneWaypoints()),
             matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
         var blueBot = CreateBotChampion("BlueBot_Bot", TeamId.Blue,
-            new Vector3(-52f, 1.1f, 6f), Reverse(BuildBotLaneWaypoints()),
+            new Vector3(-44f, 1.1f, -9f), Reverse(BuildBotLaneWaypoints()),
             matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
 
         // BotChampionBootstrap（シーンに1個）: CharacterDatabase と5体を結線する
