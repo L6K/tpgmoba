@@ -29,11 +29,14 @@
 参考: [assets-image-manifest.md](assets-image-manifest.md) — 画像アセット(効果5/スキル18/ポートレート5)の生成は **5.5** 担当・**後回し**。
 
 ## Latest task status
+- Codex update: 15, 18, 19, 20, and 21 are completed with reports. 16 and 17 were intentionally skipped per user instruction.
+- 15: Completed `DeathRecapModel` plain C# model + EditMode tests. Report: [15-death-recap-model-report.md](15-death-recap-model-report.md)
+- 18: Completed `RiftEventModel` plain C# model + EditMode tests. Report: [18-rift-event-model-report.md](18-rift-event-model-report.md)
+- 19: Completed `OverclockModel` plain C# model + EditMode tests. Report: [19-overclock-model-report.md](19-overclock-model-report.md)
+- 20: Completed `RelicLoadoutModel` plain C# model + EditMode tests. Report: [20-relic-loadout-model-report.md](20-relic-loadout-model-report.md)
+- 21: Completed `GimmickPhysicsModel` plain C# model + EditMode tests. Report: [21-gimmick-physics-model-report.md](21-gimmick-physics-model-report.md)
 - 14: Completed `PlayerHitFeedbackModel` plain C# model + EditMode tests. Report: [14-hit-feedback-model-report.md](14-hit-feedback-model-report.md)
-- 15: [死亡recap] `DeathRecapModel` 指示書 — 未着手: [15-death-recap-model.md](15-death-recap-model.md)
-- 16: [ワード] `WardVisionModel` — ✅ **Claude が実装済(小規模のため。Codexへ投げない)**。WardController/FoW結線も完了 (commit 311055d3)
-- 17: [キル演出] `MultiKillStreakModel` — ✅ **Claude が実装済(小規模のため)**。KillFeedDirector結線(マルチキル/ストリーク/シャットダウン報酬)完了
-- 18: [次元リフト] `RiftEventModel` 指示書 — 未着手: [18-rift-event-model.md](18-rift-event-model.md)
-- 19: [オーバークロック] `OverclockModel` 指示書 — 未着手: [19-overclock-model.md](19-overclock-model.md)
-- 20: [レリック] `RelicLoadoutModel` 指示書 — 未着手: [20-relic-loadout-model.md](20-relic-loadout-model.md)
-- 21: [環境ギミック] `GimmickPhysicsModel` 指示書(ジャンプパッド弾道/重力井戸/ゲート減速) — 未着手: [21-gimmick-physics-model.md](21-gimmick-physics-model.md)
+- 16: [ワード] `WardVisionModel` — ✅ **Claude が実装済**。WardController/FoW結線も完了 (commit 311055d3)
+- 17: [キル演出] `MultiKillStreakModel` — ✅ **Claude が実装済**。KillFeedDirector結線完了 (commit b786c76e)
+
+注: 15/18/19/20/21 は Codex 納品済(上の Completed 行)。**モデル取込は Claude がコミット、Unity 結線は Claude 側の残作業**。
