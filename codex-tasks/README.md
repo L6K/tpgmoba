@@ -31,7 +31,7 @@
 ## Latest task status
 - 14: Completed `PlayerHitFeedbackModel` plain C# model + EditMode tests. Report: [14-hit-feedback-model-report.md](14-hit-feedback-model-report.md)
 - 15: [死亡recap] `DeathRecapModel` 指示書 — 未着手: [15-death-recap-model.md](15-death-recap-model.md)
-- 16: [ワード] `WardVisionModel` 指示書 — 未着手: [16-ward-vision-model.md](16-ward-vision-model.md)
+- 16: [ワード] `WardVisionModel` — ✅ **Claude が実装済(小規模のため。Codexへ投げない)**。WardController/FoW結線も完了 (commit 311055d3)
 - 17: [キル演出] `MultiKillStreakModel` 指示書 — 未着手: [17-multikill-streak-model.md](17-multikill-streak-model.md)
 - 18: [次元リフト] `RiftEventModel` 指示書 — 未着手: [18-rift-event-model.md](18-rift-event-model.md)
 - 19: [オーバークロック] `OverclockModel` 指示書 — 未着手: [19-overclock-model.md](19-overclock-model.md)
