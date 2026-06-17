@@ -265,6 +265,11 @@ namespace Enigma.Ability
 
             // 進行中の弾を淡く照らして発光感を補強（弾と共に Destroy される）
             AttachLight(proj, solid, 5f * mul, 3.5f * mul * Mathf.Max(1f, profile.EmissionIntensity * 0.3f));
+
+            // 着弾時のネオン演出色をキャラ別プロファイルから弾へ渡す（操作プレイヤーのみ発動）。
+            var projectile = proj.GetComponent<Enigma.Character.Projectile>();
+            if (projectile != null)
+                projectile.SetImpactColors(solid, ToColor(profile.Secondary));
         }
 
         /// <summary>

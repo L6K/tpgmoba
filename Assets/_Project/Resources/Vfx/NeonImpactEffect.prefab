@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &7352153014187578014
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3457600895634202267}
+  - component: {fileID: 2429199340848511588}
+  m_Layer: 0
+  m_Name: NeonImpactEffect
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3457600895634202267
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7352153014187578014}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2429199340848511588
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7352153014187578014}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f8ec7ef0c944573a277d4cf5e23014d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Enigma::Enigma.Vfx.NeonImpactEffect
+  ringMaterial: {fileID: 2100000, guid: 68c20d0d47b1d1a4b80f0702ce573241, type: 2}
+  slashMaterial: {fileID: 2100000, guid: 26904f30fb7032c4bbcb17c6a3b4fdd9, type: 2}
+  sparkMaterial: {fileID: 2100000, guid: f26ab47eece98ad42a5f82c12a3741ff, type: 2}
+  coreMaterial: {fileID: 2100000, guid: 83eaff1cc5cb79a42b16451dd1822fec, type: 2}
+  duration: 0.72
+  playOnEnable: 0
+  destroyOnComplete: 1
+  primary: {r: 0.1, g: 0.9, b: 1, a: 1}
+  secondary: {r: 1, g: 0.2, b: 0.85, a: 1}
+  radius: 2
+  height: 1.2
+  sparks: 16

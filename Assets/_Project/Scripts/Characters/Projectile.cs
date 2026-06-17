@@ -15,6 +15,10 @@ namespace Enigma.Character
         private float _lifeTimer;
         private float _stun, _root, _slowStrength, _slowDuration;
 
+        // 着弾時のネオン演出色（キャラ別）。SetImpactColors で結線したときのみ発動する。
+        private bool _impactColorsSet;
+        private Color _impactPrimary, _impactSecondary;
+
         private const float DefaultLifetime = 1.5f;
 
         public void Init(Vector3 direction, float speed, float damage, GameObject owner,
@@ -29,6 +33,14 @@ namespace Enigma.Character
         }
 
         private float _lifetime = DefaultLifetime;
+
+        /// <summary>着弾時にネオン演出を出す色を設定する（キャラ別 AttackVfxProfile から）。</summary>
+        public void SetImpactColors(Color primary, Color secondary)
+        {
+            _impactPrimary   = primary;
+            _impactSecondary = secondary;
+            _impactColorsSet = true;
+        }
 
         public void SetStatusEffects(float stun, float root, float slowStrength, float slowDuration)
         {
@@ -88,6 +100,10 @@ namespace Enigma.Character
             // 色はトレイルがあればその色、無ければ白
             var hitColor = TryGetTrailColor();
             SkillVfx.SpawnBurst(transform.position, hitColor, 0.15f, 0.7f, 0.25f);
+
+            // 操作プレイヤーの一撃のみ、キャラ別カラーでネオン着弾演出を出す（重い演出のため限定）。
+            if (_impactColorsSet && _owner != null && _owner.GetComponent<PlayerController>() != null)
+                Enigma.Vfx.NeonImpactEffect.Spawn(transform.position, _impactPrimary, _impactSecondary);
 
             Destroy(gameObject);
         }
