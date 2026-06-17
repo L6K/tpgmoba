@@ -41,9 +41,16 @@ namespace Enigma.Minimap
         private VisualElement _mapPanel;
         private Transform _player;
 
+        private const float SizeWard      = 9f;   // 味方ワード（シアンの目）
+
         // ドットプール: TeamTag インスタンス → VisualElement
         private readonly Dictionary<TeamTag, VisualElement> _dotPool
             = new Dictionary<TeamTag, VisualElement>();
+
+        // ワードドットプール: ワード Id → VisualElement
+        private readonly Dictionary<int, VisualElement> _wardDots
+            = new Dictionary<int, VisualElement>();
+        private static readonly List<int> _wardStale = new List<int>();
 
         // 各ドットの一辺サイズ（中心合わせ用に保持）
         private readonly Dictionary<TeamTag, float> _dotSizes
@@ -112,6 +119,70 @@ namespace Enigma.Minimap
                     dot.style.rotate = new StyleRotate(new Rotate(new Angle(yaw, AngleUnit.Degree)));
                 }
             }
+
+            DrawWards();
+        }
+
+        // 味方ワードをミニマップへシアンの目アイコンで描く。撤去済みワードのドットは除去。
+        private void DrawWards()
+        {
+            var wc = WardController.Instance;
+            var active = wc != null ? wc.ActiveWards() : null;
+
+            _wardStale.Clear();
+            foreach (var id in _wardDots.Keys) _wardStale.Add(id);
+
+            if (active != null)
+            {
+                for (int i = 0; i < active.Count; i++)
+                {
+                    var w = active[i];
+                    _wardStale.Remove(w.Id);
+
+                    if (!_wardDots.TryGetValue(w.Id, out var dot))
+                    {
+                        dot = CreateWardDot();
+                        _wardDots[w.Id] = dot;
+                        _mapPanel.Add(dot);
+                    }
+
+                    var mapPos = MinimapMath.WorldToMap(new Vector3(w.X, 0f, w.Z), WorldBounds, PanelSize);
+                    dot.style.left = mapPos.x - SizeWard * 0.5f;
+                    dot.style.top  = mapPos.y - SizeWard * 0.5f;
+                }
+            }
+
+            for (int i = 0; i < _wardStale.Count; i++)
+            {
+                if (_wardDots.TryGetValue(_wardStale[i], out var d)) d.RemoveFromHierarchy();
+                _wardDots.Remove(_wardStale[i]);
+            }
+        }
+
+        private static VisualElement CreateWardDot()
+        {
+            var dot = new VisualElement();
+            dot.pickingMode = PickingMode.Ignore;
+            dot.style.position = Position.Absolute;
+            dot.style.width = SizeWard;
+            dot.style.height = SizeWard;
+            dot.style.backgroundColor = new StyleColor(new Color(0.4f, 0.95f, 1f, 0.95f));
+            // 円形 + 暗縁で「目」らしく。
+            float r = SizeWard * 0.5f;
+            dot.style.borderTopLeftRadius = r;
+            dot.style.borderTopRightRadius = r;
+            dot.style.borderBottomLeftRadius = r;
+            dot.style.borderBottomRightRadius = r;
+            var edge = new StyleColor(new Color(0.05f, 0.2f, 0.25f, 1f));
+            dot.style.borderTopWidth = 1.5f;
+            dot.style.borderBottomWidth = 1.5f;
+            dot.style.borderLeftWidth = 1.5f;
+            dot.style.borderRightWidth = 1.5f;
+            dot.style.borderTopColor = edge;
+            dot.style.borderBottomColor = edge;
+            dot.style.borderLeftColor = edge;
+            dot.style.borderRightColor = edge;
+            return dot;
         }
 
         // ---- コルーチン ----

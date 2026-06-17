@@ -18,6 +18,8 @@ namespace Enigma.Vision
         private const Key  WardKey       = Key.G;
         private const float MarkerFootDrop = 1.0f; // カーソル平面(プレイヤー腰高)→足元へ下げる
 
+        public static WardController Instance { get; private set; }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSpawn()
         {
@@ -31,6 +33,12 @@ namespace Enigma.Vision
 
         private Transform _player;
         private TeamId    _playerTeam = TeamId.Neutral;
+
+        private void Awake() => Instance = this;
+        private void OnDestroy() { if (Instance == this) Instance = null; }
+
+        /// <summary>現在アクティブなワード一覧（ミニマップ表示用）。</summary>
+        public IReadOnlyList<Ward> ActiveWards() => _model.ActiveWards();
 
         private void Update()
         {
