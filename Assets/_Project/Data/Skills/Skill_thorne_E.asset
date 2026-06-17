@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: Skill_thorne_E
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u6355\u98DF\u30D7\u30ED\u30C8\u30B3\u30EB"
-  Description: "\u72E9\u731FAI\u3092\u89E3\u653E\u3057\u3001\u5BFE\u8C611\u4F53\u306B\u55B0\u3089\u3044\u3064\u304F"
+  Description: "\u72E9\u731FAI\u3092\u89E3\u653E\u3057\u5BFE\u8C61\u3078\u8DF3\u3073\u304B\u304B\u3063\u3066\u55B0\u3089\u3044\u3064\u304F\u3002\u547D\u4E2D\u3067\u81EA\u5DF1\u56DE\u5FA9(\u30A2\u30EB\u30C6\u30A3\u30E1\u30C3\u30C8)"
   Targeting: 2
-  Damage: 130
-  Range: 6
+  Damage: 135
+  Range: 10
   Radius: 0
   CooldownSeconds: 55
   ProjectileSpeed: 0
-  WindupSeconds: 0.35
+  WindupSeconds: 0.3
   RecoverySeconds: 0.5
   StunDuration: 0
   RootDuration: 0
@@ -28,5 +28,5 @@ MonoBehaviour:
   SlowDuration: 0
   ShieldAmount: 0
   ShieldDuration: 0
-  HealAmount: 80
-  DashDistance: 0
+  HealAmount: 90
+  DashDistance: 7

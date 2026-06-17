@@ -8,6 +8,7 @@ using Enigma.Character;
 using Enigma.Combat;
 using Enigma.Core;
 using Enigma.Data;
+using Enigma.Vfx;
 
 namespace Enigma.Ability
 {
@@ -29,6 +30,10 @@ namespace Enigma.Ability
         // クールダウン短縮率（0〜0.6）。レリック等が SetCooldownReduction で設定する。
         private float _cdrFraction;
 
+        // スキル演出をキャラ固有色にするための champion プロファイル（AutoAttack と同経路で解決）。
+        private ChampionVfx _championVfx = ChampionVfx.Zeph;
+        public void SetChampion(string charId) => _championVfx = AttackVfxProfiles.Parse(charId);
+
         // オーバークロック: 長押し型スキル(Directional/GroundAoe)のアーム中に LeftShift を
         // 併用するとチャージし、HP/シールドを消費して威力を増幅する。
         private readonly OverclockModel _overclock = new OverclockModel();
@@ -43,15 +48,6 @@ namespace Enigma.Ability
 
         // レベルアップ購読元（同一 GO の PlayerProgression を Awake で解決）
         private PlayerProgression _playerProgression;
-
-        // スロット色: Q=シアン, E=マゼンタ, R=ゴールド
-        private static readonly Color[] _slotColors =
-        {
-            Color.cyan,
-            Color.magenta,
-            new Color(1f, 0.84f, 0.2f, 1f),
-            Color.white,
-        };
 
         // カーソル→地面の交差点（毎フレーム更新）
         private Vector3 _groundCursorPos;
@@ -579,9 +575,20 @@ namespace Enigma.Ability
             return SkillProgression.DamageMultiplier(_progression.GetRank(slot));
         }
 
-        private static Color SlotColor(int slot)
+        // スキル演出色をキャラ固有プロファイルから取る（キャラごとに色が変わる）。
+        // Q=主色 / E=副色 / R=混色。スロット間の差はプロファイルの Primary/Secondary 差に由来。
+        private Color SlotColor(int slot)
         {
-            return (slot >= 0 && slot < _slotColors.Length) ? _slotColors[slot] : Color.white;
+            var profile = AttackVfxProfiles.For(_championVfx);
+            var prim = SkillVfx.ToColor(profile.Primary);
+            var sec  = SkillVfx.ToColor(profile.Secondary);
+            return slot switch
+            {
+                0 => prim,
+                1 => sec,
+                2 => Color.Lerp(prim, sec, 0.5f),
+                _ => Color.white,
+            };
         }
 
         // 味方（同チーム）にはスキルダメージを与えない。TeamTag が無い側は中立扱いで攻撃可。

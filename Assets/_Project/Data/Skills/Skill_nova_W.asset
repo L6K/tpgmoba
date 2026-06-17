@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02ef13925d091ff45bc1e79bb27c7770, type: 3}
   m_Name: Skill_nova_W
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
-  SkillName: "\u91CD\u529B\u4E95\u6238"
-  Description: "\u5E83\u7BC4\u56F2\u306E\u91CD\u529B\u5834\u3092\u751F\u6210\u3002\u30C0\u30E1\u30FC\u30B8\u306F\u4F4E\u3044\u304C\u9762\u3067\u5236\u5727\u3059\u308B"
-  Targeting: 1
-  Damage: 26
-  Range: 15
-  Radius: 4.5
-  CooldownSeconds: 11
+  SkillName: "\u661F\u8FB0\u306E\u8B77\u308A"
+  Description: "\u5BFE\u8C61\u306E\u5473\u65B9(\u7121\u3051\u308C\u3070\u81EA\u5206)\u306B\u661F\u306E\u8F1D\u304D\u3092\u7E8F\u308F\u305B\u3001\u30C0\u30E1\u30FC\u30B8\u3092\u5438\u53CE\u3059\u308B\u76FE\u3092\u5F35\u308B"
+  Targeting: 3
+  Damage: 0
+  Range: 14
+  Radius: 0
+  CooldownSeconds: 10
   ProjectileSpeed: 0
-  WindupSeconds: 0.3
-  RecoverySeconds: 0.4
+  WindupSeconds: 0.2
+  RecoverySeconds: 0.35
   StunDuration: 0
   RootDuration: 0
-  SlowStrength: 0.3
-  SlowDuration: 2
-  ShieldAmount: 0
-  ShieldDuration: 0
+  SlowStrength: 0
+  SlowDuration: 0
+  ShieldAmount: 110
+  ShieldDuration: 4
   HealAmount: 0
   DashDistance: 0

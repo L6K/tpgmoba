@@ -48,17 +48,18 @@
         },
         {
           "slot": "R",
-          "name": "オーバードライブ",
-          "targeting": "Targeted",
-          "damage": 110,
-          "range": 13,
-          "radius": 0,
-          "cooldown": 45,
+          "name": "メテオフォール",
+          "targeting": "GroundAoe",
+          "damage": 130,
+          "range": 16,
+          "radius": 4.5,
+          "cooldown": 48,
           "projectileSpeed": 0,
-          "windup": 0.35,
-          "recovery": 0.5,
-          "description": "対象1体の魔法回路を暴走させ、大ダメージを与える",
-          "stunDuration": 0.75
+          "windup": 0.4,
+          "recovery": 0.55,
+          "description": "指定地点へ巨大な魔導隕石を落とし、広範囲を焼き尽くす(アルティメット)",
+          "slowStrength": 0.4,
+          "slowDuration": 1.5
         }
       ]
     },
@@ -109,16 +110,19 @@
         },
         {
           "slot": "R",
-          "name": "断罪の一閃",
+          "name": "断罪の盟約",
           "targeting": "Targeted",
-          "damage": 140,
-          "range": 4,
+          "damage": 150,
+          "range": 5,
           "radius": 0,
           "cooldown": 60,
           "projectileSpeed": 0,
           "windup": 0.45,
           "recovery": 0.6,
-          "description": "至近の敵1体に裁きの一撃。仕留め損なうと隙が大きい"
+          "description": "敵1体を地に縛り裁く。自らは誓いの盾を纏う(アルティメット)",
+          "stunDuration": 1.2,
+          "shieldAmount": 140,
+          "shieldDuration": 4
         }
       ]
     },
@@ -153,16 +157,17 @@
         },
         {
           "slot": "E",
-          "name": "影爆",
-          "targeting": "GroundAoe",
-          "damage": 40,
-          "range": 12,
-          "radius": 2.6,
-          "cooldown": 8,
+          "name": "影渡り",
+          "targeting": "Targeted",
+          "damage": 55,
+          "range": 9,
+          "radius": 0,
+          "cooldown": 7,
           "projectileSpeed": 0,
-          "windup": 0.2,
-          "recovery": 0.3,
-          "description": "指定地点の影を爆裂させる。範囲は狭いが発生が速い"
+          "windup": 0.1,
+          "recovery": 0.25,
+          "description": "影を渡って対象へ瞬時に肉薄し斬りつける。E/R両方で踏み込める高機動",
+          "dashDistance": 6
         },
         {
           "slot": "R",
@@ -227,15 +232,15 @@
         {
           "slot": "R",
           "name": "レールガン",
-          "targeting": "Targeted",
-          "damage": 120,
-          "range": 20,
+          "targeting": "Directional",
+          "damage": 135,
+          "range": 26,
           "radius": 0,
           "cooldown": 50,
-          "projectileSpeed": 0,
+          "projectileSpeed": 60,
           "windup": 0.5,
           "recovery": 0.5,
-          "description": "電磁加速砲で遠距離の敵1体を狙撃する"
+          "description": "電磁加速砲をカーソル方向へ撃ち抜く。当てれば最大級の一撃(アルティメット・スキルショット)"
         }
       ]
     },
@@ -270,18 +275,18 @@
         },
         {
           "slot": "E",
-          "name": "重力井戸",
-          "targeting": "GroundAoe",
-          "damage": 26,
-          "range": 15,
-          "radius": 4.5,
-          "cooldown": 11,
+          "name": "星辰の護り",
+          "targeting": "TargetedAlly",
+          "damage": 0,
+          "range": 14,
+          "radius": 0,
+          "cooldown": 10,
           "projectileSpeed": 0,
-          "windup": 0.3,
-          "recovery": 0.4,
-          "description": "広範囲の重力場を生成。ダメージは低いが面で制圧する",
-          "slowStrength": 0.3,
-          "slowDuration": 2
+          "windup": 0.2,
+          "recovery": 0.35,
+          "description": "対象の味方(無ければ自分)に星の輝きを纏わせ、ダメージを吸収する盾を張る",
+          "shieldAmount": 110,
+          "shieldDuration": 4
         },
         {
           "slot": "R",
@@ -348,15 +353,16 @@
           "slot": "R",
           "name": "捕食プロトコル",
           "targeting": "Targeted",
-          "damage": 130,
-          "range": 6,
+          "damage": 135,
+          "range": 10,
           "radius": 0,
           "cooldown": 55,
           "projectileSpeed": 0,
-          "windup": 0.35,
+          "windup": 0.3,
           "recovery": 0.5,
-          "description": "狩猟AIを解放し、対象1体に喰らいつく",
-          "healAmount": 80
+          "description": "狩猟AIを解放し対象へ跳びかかって喰らいつく。命中で自己回復(アルティメット)",
+          "healAmount": 90,
+          "dashDistance": 7
         }
       ]
     }

@@ -74,6 +74,9 @@ namespace Enigma.Core
                 autoAttack.SetChampion(picked.CharId);
             }
 
+            // スキル演出もキャラ固有色にする
+            _skillCaster?.SetChampion(picked.CharId);
+
             var controller = _playerController != null ? _playerController : GetComponent<PlayerController>();
             if (controller != null && picked.MoveSpeed > 0f)
                 controller.SetMoveSpeed(picked.MoveSpeed);

@@ -13,13 +13,13 @@ MonoBehaviour:
   m_Name: Skill_rin_E
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u30EC\u30FC\u30EB\u30AC\u30F3"
-  Description: "\u96FB\u78C1\u52A0\u901F\u7832\u3067\u9060\u8DDD\u96E2\u306E\u65751\u4F53\u3092\u72D9\u6483\u3059\u308B"
-  Targeting: 2
-  Damage: 120
-  Range: 20
+  Description: "\u96FB\u78C1\u52A0\u901F\u7832\u3092\u30AB\u30FC\u30BD\u30EB\u65B9\u5411\u3078\u6483\u3061\u629C\u304F\u3002\u5F53\u3066\u308C\u3070\u6700\u5927\u7D1A\u306E\u4E00\u6483(\u30A2\u30EB\u30C6\u30A3\u30E1\u30C3\u30C8\u30FB\u30B9\u30AD\u30EB\u30B7\u30E7\u30C3\u30C8)"
+  Targeting: 0
+  Damage: 135
+  Range: 26
   Radius: 0
   CooldownSeconds: 50
-  ProjectileSpeed: 0
+  ProjectileSpeed: 60
   WindupSeconds: 0.5
   RecoverySeconds: 0.5
   StunDuration: 0

@@ -150,6 +150,7 @@ namespace Enigma.Sandbox
                 _autoAttack.Configure(data.AttackDamage, data.AttackRange, data.AttackCooldown);
                 _autoAttack.SetChampion(data.CharId);
             }
+            _skillCaster?.SetChampion(data.CharId);
 
             if (_controller != null && data.MoveSpeed > 0f)
                 _controller.SetMoveSpeed(data.MoveSpeed);
