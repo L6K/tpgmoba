@@ -28,6 +28,12 @@ namespace Enigma.Ability
 
         // クールダウン短縮率（0〜0.6）。レリック等が SetCooldownReduction で設定する。
         private float _cdrFraction;
+
+        // オーバークロック: 長押し型スキル(Directional/GroundAoe)のアーム中に LeftShift を
+        // 併用するとチャージし、HP/シールドを消費して威力を増幅する。
+        private readonly OverclockModel _overclock = new OverclockModel();
+        private readonly bool[]  _overclockEngaged = new bool[4];
+        private readonly float[] _overclockStart   = new float[4];
         private CastModeLogic _castLogic;
         private CastMode      _lastSyncedMode = (CastMode)(-1); // 未初期化値
 
@@ -207,6 +213,11 @@ namespace Enigma.Ability
                     {
                         SetIndicatorActive(def);
                         UpdateArmedIndicator(slot);
+
+                        // アーム開始時に LeftShift を併用していればオーバークロックを開始する。
+                        bool shift = keyboard.leftShiftKey != null && keyboard.leftShiftKey.isPressed;
+                        _overclockEngaged[slot] = shift;
+                        _overclockStart[slot]   = Time.time;
                     }
                 }
                 else if (keyControl.wasReleasedThisFrame)
@@ -215,10 +226,15 @@ namespace Enigma.Ability
                     if (action == CastAction.Cast)
                     {
                         // アーム後にスタン等で行動不能になっていたら発動せずアーム解除する
-                        if (canAct) TryCast(slot);
-                        else        _castLogic.HandleCancel();
+                        if (canAct)
+                        {
+                            float amp = EvaluateOverclock(slot, out float hpCost, out float shieldCost);
+                            TryCast(slot, amp, hpCost, shieldCost);
+                        }
+                        else _castLogic.HandleCancel();
                         SetIndicatorActive(null);
                     }
+                    _overclockEngaged[slot] = false;
                 }
             }
         }
@@ -307,7 +323,24 @@ namespace Enigma.Ability
             _dirIndicatorDoubleSided = true;
         }
 
-        private void TryCast(int slot)
+        // アーム中のオーバークロックを評価し、増幅倍率(>1)と自己コストを返す。未チャージは 1。
+        private float EvaluateOverclock(int slot, out float hpCost, out float shieldCost)
+        {
+            hpCost = 0f;
+            shieldCost = 0f;
+            if (slot < 0 || slot >= 4 || !_overclockEngaged[slot] || _health == null) return 1f;
+
+            var hp = _health.Model;
+            float held = Time.time - _overclockStart[slot];
+            var r = _overclock.Evaluate(held, hp.CurrentHp, hp.MaxHp, hp.Shield);
+            if (!r.CanCast || r.AmpFactor <= 1f) return 1f;
+
+            hpCost = r.HpCost;
+            shieldCost = r.ShieldCost;
+            return r.AmpFactor;
+        }
+
+        private void TryCast(int slot, float amp = 1f, float hpCost = 0f, float shieldCost = 0f)
         {
             var def = (slot >= 0 && slot < 4) ? _skills[slot] : null;
             if (def == null) return;
@@ -320,24 +353,29 @@ namespace Enigma.Ability
 
             if (!_cooldowns[slot].TryConsume(Time.time)) return;
 
+            // オーバークロックの自己コストを支払う（HealthModel がシールド→HP の順に消費する）。
+            if (amp > 1f && (hpCost > 0f || shieldCost > 0f) && _health != null)
+                _health.Model.TakeDamage(hpCost + shieldCost);
+
             if (_motor != null)
             {
                 // Strike 時点のカーソル位置/ターゲットを使うため、クロージャで現在値を参照
                 var capturedGroundPos = _groundCursorPos;
                 HealthComponent capturedTarget = _targeting?.CurrentTarget;
                 var capturedDef       = def;
+                float capturedAmp     = amp;
 
                 int cachedSlot = slot;
                 _motor.RequestAttack(def.WindupSeconds, def.RecoverySeconds, () =>
                 {
                     _motor.SnapToLunge();
-                    FireSkill(cachedSlot, capturedDef, capturedGroundPos, capturedTarget);
+                    FireSkill(cachedSlot, capturedDef, capturedGroundPos, capturedTarget, capturedAmp);
                 });
             }
             else
             {
                 // _motor 未設定時は従来どおり即時発動（後方互換）
-                FireSkill(slot, def, _groundCursorPos, _targeting?.CurrentTarget);
+                FireSkill(slot, def, _groundCursorPos, _targeting?.CurrentTarget, amp);
             }
         }
 
@@ -352,10 +390,10 @@ namespace Enigma.Ability
             return CanDamageTarget(target.gameObject);
         }
 
-        private void FireSkill(int slot, SkillDefinition def, Vector3 groundCursorPos, HealthComponent target)
+        private void FireSkill(int slot, SkillDefinition def, Vector3 groundCursorPos, HealthComponent target, float amp = 1f)
         {
-            // ランクに応じたダメージ倍率（rank0 はここに到達しない想定だが安全に等倍以上）
-            float scale = DamageScale(slot);
+            // ランクに応じたダメージ倍率 × オーバークロック増幅（rank0 はここに到達しない想定）
+            float scale = DamageScale(slot) * amp;
 
             switch (def.Targeting)
             {
