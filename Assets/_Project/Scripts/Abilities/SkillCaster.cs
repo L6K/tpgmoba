@@ -443,6 +443,10 @@ namespace Enigma.Ability
             var color = SlotColor(slot);
             SkillVfx.FireDirectionalVisuals(proj.gameObject, _muzzle.position, dir, color);
             GameSfx.Play("skill_q_fire", _muzzle.position);
+
+            if (slot == 2) // 方向系アルティメット(リン レールガン): 足元から照準方向へ派手演出
+                SkillVfx.PlayUltimate(_championVfx,
+                    new Vector3(transform.position.x, GroundLevelY(), transform.position.z), dir);
         }
 
         private void CastGroundAoe(int slot, SkillDefinition def, Vector3 groundCursorPos, float scale)
@@ -463,6 +467,9 @@ namespace Enigma.Ability
             var color = SlotColor(slot);
             SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : transform.position, color, 0.3f, 1.2f, 0.25f);
             SkillVfx.SpawnBurst(pos, color, 1f, 4f, 0.4f);
+
+            if (slot == 2) // 地点系アルティメット(ゼフ メテオ): 着弾地点に派手演出
+                SkillVfx.PlayUltimate(_championVfx, pos, Vector3.zero);
         }
 
         private void CastTargeted(int slot, SkillDefinition def, HealthComponent target, float scale)
@@ -494,6 +501,10 @@ namespace Enigma.Ability
             SkillVfx.TargetedHitVisuals(from, to, color);
             GameSfx.Play("skill_r_beam", _muzzle != null ? _muzzle.position : from);
             GameSfx.Play("skill_r_hit", target.transform.position, 0.8f);
+
+            if (slot == 2) // 対象系アルティメット(ガロン/ヴェイル/ソーン): 対象足元に派手演出
+                SkillVfx.PlayUltimate(_championVfx,
+                    new Vector3(target.transform.position.x, GroundLevelY(), target.transform.position.z), Vector3.zero);
         }
 
         // shield/heal を自分へ適用
@@ -530,6 +541,10 @@ namespace Enigma.Ability
             SkillVfx.TargetedHitVisuals(from, to, color);
             SkillVfx.SpawnBurst(ally.transform.position, color, 0.5f, 2.5f, 0.4f);
             GameSfx.Play("skill_r_hit", ally.transform.position, 0.8f);
+
+            if (slot == 2) // 味方系アルティメット(ノヴァ スーパーノヴァ): 味方足元に派手演出
+                SkillVfx.PlayUltimate(_championVfx,
+                    new Vector3(ally.transform.position.x, GroundLevelY(), ally.transform.position.z), Vector3.zero);
         }
 
         // カーソル下にいる味方(同チーム, 射程内, 自分以外)を返す。無ければ null。

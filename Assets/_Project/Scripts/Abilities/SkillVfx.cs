@@ -229,6 +229,28 @@ namespace Enigma.Ability
             new Color(c.R * intensity, c.G * intensity, c.B * intensity, 1f);
 
         /// <summary>
+        /// アルティメット(R)発動時の派手な共通演出。champion 色で回転魔法陣 + ネオン着弾 +
+        /// 光柱 + 衝撃リングを重ねる。dir 指定時はビームも引く(方向系 R 用)。groundPos は床基準。
+        /// </summary>
+        public static void PlayUltimate(ChampionVfx champ, Vector3 groundPos, Vector3 dir)
+        {
+            var profile = AttackVfxProfiles.For(champ);
+            Color core = ToColor(profile.Primary);
+            Color edge = ToColor(profile.Secondary);
+
+            RotatingMagicCircleEffect.Spawn(groundPos, core, edge, 3.4f, 1.7f);
+            NeonImpactEffect.Spawn(groundPos + Vector3.up * 0.4f, core, edge);
+            SpawnPillar(groundPos, core, 1.4f, 5.5f, 1.0f);
+            SpawnRing(groundPos, edge, 0.5f, 6.5f, 0.8f);
+
+            if (dir.sqrMagnitude > 0.01f)
+            {
+                var a = groundPos + Vector3.up * 1.2f;
+                SpawnBeam(a, a + dir.normalized * 24f, core, 0.7f, 0.5f);
+            }
+        }
+
+        /// <summary>
         /// AaBeam 弾を champion プロファイルで per-instance 着色する。
         /// 本体マテリアル(プレハブで Vfx_Beam を結線済み)は MPB で HDR の _BaseColor を上書きし、
         /// TrailRenderer は頂点色を Primary→透明にして発光トレイルにする。動的ライトも付与。
