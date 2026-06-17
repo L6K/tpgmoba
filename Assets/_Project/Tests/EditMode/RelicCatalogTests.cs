@@ -38,17 +38,15 @@ namespace Enigma.Tests
         }
 
         [Test]
-        public void All_ExcludesUnwiredNeutralDamage()
+        public void All_CoversEveryRelicEffect()
         {
-            // 現スライスは開始時3効果 + キル時加速のみ収録。NeutralDamage は未配線。
+            // カタログは RelicEffect 全5種を少なくとも1つずつ含む。
+            var seen = new HashSet<RelicEffect>();
             foreach (var info in RelicCatalog.All)
-            {
-                bool ok = info.Effect == RelicEffect.MaxHpBonus
-                       || info.Effect == RelicEffect.StartShield
-                       || info.Effect == RelicEffect.CooldownReduction
-                       || info.Effect == RelicEffect.MoveSpeedOnKill;
-                Assert.IsTrue(ok, $"unexpected effect in catalog: {info.Effect}");
-            }
+                seen.Add(info.Effect);
+
+            foreach (RelicEffect e in System.Enum.GetValues(typeof(RelicEffect)))
+                Assert.IsTrue(seen.Contains(e), $"effect not in catalog: {e}");
         }
 
         [Test]

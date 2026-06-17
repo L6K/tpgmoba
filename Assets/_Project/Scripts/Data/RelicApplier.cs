@@ -43,11 +43,15 @@ namespace Enigma.Data
                 && effects.TryGetValue(RelicEffect.CooldownReduction, out float cdr) && cdr > 0f)
                 caster.SetCooldownReduction(cdr);
 
-            // キル時加速は遅延効果なので値だけプレイヤーへ置き、KillFeedDirector が読む。
+            // 遅延・条件付き効果は値だけプレイヤーへ置き、各フックが読む。
+            // キル時加速→KillFeedDirector、中立与ダメ増→DamageUtility。
             if (player != null)
             {
                 effects.TryGetValue(RelicEffect.MoveSpeedOnKill, out float msok);
-                PlayerRelicEffects.GetOrAdd(player).SetMoveSpeedOnKill(msok);
+                effects.TryGetValue(RelicEffect.NeutralDamage, out float neutral);
+                var pre = PlayerRelicEffects.GetOrAdd(player);
+                pre.SetMoveSpeedOnKill(msok);
+                pre.SetNeutralDamageBonus(neutral);
             }
         }
     }

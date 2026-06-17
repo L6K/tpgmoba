@@ -9,6 +9,23 @@ namespace Enigma.Combat
     // GameServices 参照を各攻撃実装に分散させないために一点に集約する。
     public static class DamageUtility
     {
+        // 対象を加味する版。攻撃者のチームバフ等を適用したうえで、対象が中立なら
+        // 攻撃者の所持レリック「中立与ダメ増」を乗算する（プレイヤーのみ・命中時に呼ぶ）。
+        public static float ApplyTeamBuff(float baseDamage, GameObject attacker, GameObject target)
+        {
+            float dmg = ApplyTeamBuff(baseDamage, attacker);
+            if (attacker == null || target == null) return dmg;
+
+            var targetTag = target.GetComponentInParent<TeamTag>();
+            if (targetTag == null || targetTag.Team != TeamId.Neutral) return dmg;
+
+            var relics = attacker.GetComponentInParent<Enigma.Data.PlayerRelicEffects>();
+            if (relics != null && relics.NeutralDamageBonus > 0f)
+                dmg *= 1f + relics.NeutralDamageBonus;
+
+            return dmg;
+        }
+
         public static float ApplyTeamBuff(float baseDamage, GameObject attacker)
         {
             if (attacker == null) return baseDamage;

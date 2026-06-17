@@ -64,7 +64,7 @@ namespace Enigma.Character
             var damageable = other.GetComponent<IDamageable>();
             if (damageable != null)
             {
-                float finalDamage = DamageUtility.ApplyTeamBuff(_damage, _owner);
+                float finalDamage = DamageUtility.ApplyTeamBuff(_damage, _owner, other.gameObject);
                 if (damageable is HealthComponent hc)
                 {
                     hc.TakeDamage(finalDamage, _owner);

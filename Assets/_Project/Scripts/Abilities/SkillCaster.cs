@@ -462,7 +462,7 @@ namespace Enigma.Ability
             // 味方は対象指定スキルでダメージを受けない
             if (!CanDamageTarget(target.gameObject)) return;
 
-            float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage * scale, gameObject);
+            float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage * scale, gameObject, target.gameObject);
             target.TakeDamage(finalDamage, gameObject);
 
             var sc = StatusEffectController.GetOrAdd(target.gameObject);

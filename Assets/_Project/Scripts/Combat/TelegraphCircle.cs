@@ -179,7 +179,7 @@ namespace Enigma.Combat
                 var damageable = col.GetComponentInParent<IDamageable>();
                 if (damageable != null && damaged.Add(damageable))
                 {
-                    float finalDamage = DamageUtility.ApplyTeamBuff(_damage, _owner);
+                    float finalDamage = DamageUtility.ApplyTeamBuff(_damage, _owner, col.gameObject);
                     if (damageable is HealthComponent hc)
                         hc.TakeDamage(finalDamage, _owner);
                     else

@@ -12,12 +12,20 @@ namespace Enigma.Data
         /// <summary>キル時に得る移動加速の割合（0.25 = +25%）。0 なら効果なし。</summary>
         public float MoveSpeedOnKill { get; private set; }
 
+        /// <summary>中立ユニットへの与ダメ増加割合（0.20 = +20%）。0 なら効果なし。</summary>
+        public float NeutralDamageBonus { get; private set; }
+
         /// <summary>キル時加速の持続秒。</summary>
         public const float MoveSpeedOnKillDuration = 4f;
 
         public void SetMoveSpeedOnKill(float fraction)
         {
             MoveSpeedOnKill = fraction < 0f ? 0f : fraction;
+        }
+
+        public void SetNeutralDamageBonus(float fraction)
+        {
+            NeutralDamageBonus = fraction < 0f ? 0f : fraction;
         }
 
         public static PlayerRelicEffects GetOrAdd(GameObject go)
