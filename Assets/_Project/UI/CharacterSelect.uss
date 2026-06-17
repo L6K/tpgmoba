@@ -256,6 +256,61 @@
     white-space: normal;
 }
 
+/* ── レリック選択エリア ────────────────────────────────────────────────── */
+.cs-relics {
+    align-self: stretch;
+    margin-left: 24px;
+    margin-right: 24px;
+    margin-bottom: 10px;
+    padding: 12px 16px;
+    background-color: var(--color-panel);
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: var(--color-divider);
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.cs-relics-title {
+    font-size: 13px;
+    color: var(--color-text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+}
+
+.cs-relic-list {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.cs-relic-item {
+    min-width: 120px;
+    max-width: 200px;
+    height: 60px;
+    background-color: rgb(22, 26, 42);
+    border-width: 1px;
+    border-color: var(--color-divider);
+    border-radius: 4px;
+    margin: 4px;
+    padding: 6px 10px;
+    color: var(--color-text);
+    font-size: 11px;
+    cursor: link;
+    transition: border-color 0.12s ease;
+    white-space: normal;
+    -unity-text-align: upper-left;
+}
+
+.cs-relic-item:hover {
+    border-color: rgba(46, 107, 242, 0.6);
+}
+
+/* 選択中レリック: アクセントカラー太枠 */
+.cs-relic-item--selected {
+    border-color: var(--color-accent);
+    border-width: 2px;
+}
+
 /* ── ロックインボタン ──────────────────────────────────────────────────── */
 .cs-lock-btn {
     align-self: center;

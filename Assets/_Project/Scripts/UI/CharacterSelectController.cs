@@ -27,6 +27,8 @@ namespace Enigma.UI
         private Label         _previewRole;
         private Label         _previewDesc;
         private ScrollView    _grid;
+        private VisualElement    _relicList;
+        private Label            _relicTitle;
 
         private readonly VisualElement[] _slotCards    = new VisualElement[3];
         private readonly VisualElement[] _slotIcons    = new VisualElement[3];
@@ -39,6 +41,9 @@ namespace Enigma.UI
         private static readonly string[] SlotPlayerNames = { "あなた", "アキラ", "サクラ" };
         private readonly bool[]          _slotLocked     = new bool[3];
         private readonly int[]           _slotPickIndex  = { -1, -1, -1 };
+
+        // レリック選択モデル
+        private RelicLoadoutModel _relicLoadout;
 
         // キャラリスト（DB.Characters の順序でインデックス管理）
         private List<CharacterData> _chars;
@@ -88,6 +93,12 @@ namespace Enigma.UI
                 _slotNames[i].text = SlotPlayerNames[i];
             }
 
+            _relicList  = root.Q<VisualElement>("cs-relic-list");
+            _relicTitle = root.Q<Label>("cs-relics-title");
+
+            _relicLoadout = new RelicLoadoutModel(RelicCatalog.Relics());
+            BuildRelicList();
+
             _lockBtn.clicked += OnLockIn;
 
             BuildCharacterGrid();
@@ -129,6 +140,49 @@ namespace Enigma.UI
                 _timerExpired = true;
                 HandleTimerExpired();
             }
+        }
+
+        // ── レリック一覧構築 ─────────────────────────────────────
+        private void BuildRelicList()
+        {
+            _relicList.Clear();
+            foreach (var info in RelicCatalog.All)
+            {
+                var btn = new Button();
+                btn.text = info.DisplayName + "\n" + info.Description;
+                btn.AddToClassList("cs-relic-item");
+                if (_relicLoadout.IsSelected(info.Id))
+                    btn.AddToClassList("cs-relic-item--selected");
+
+                // キャプチャ用ローカル変数
+                string capturedId = info.Id;
+                btn.clicked += () => ToggleRelic(capturedId);
+
+                _relicList.Add(btn);
+            }
+        }
+
+        private void ToggleRelic(string id)
+        {
+            if (_relicLoadout.IsSelected(id))
+                _relicLoadout.Deselect(id);
+            else if (_relicLoadout.SelectedCount < 3)
+                _relicLoadout.TrySelect(id);
+
+            _relicTitle.text = $"レリック（{_relicLoadout.SelectedCount}/3）";
+            BuildRelicList();
+        }
+
+        private List<string> SelectedRelicIdList()
+        {
+            if (_relicLoadout == null) return new List<string>();
+            var list = new List<string>();
+            foreach (var info in RelicCatalog.All)
+            {
+                if (_relicLoadout.IsSelected(info.Id))
+                    list.Add(info.Id);
+            }
+            return list;
         }
 
         // ── グリッド構築 ────────────────────────────────────
@@ -281,7 +335,10 @@ namespace Enigma.UI
 
                 // GameServices にピック結果を反映
                 if (charIndex >= 0 && charIndex < _chars.Count)
+                {
                     GameServices.Match.PickedCharacter = _chars[charIndex];
+                    GameServices.Match.SelectedRelicIds = SelectedRelicIdList();
+                }
             }
 
             CheckAllLocked();

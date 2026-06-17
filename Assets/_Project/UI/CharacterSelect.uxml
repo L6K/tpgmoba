@@ -59,6 +59,12 @@
             <ui:ScrollView name="cs-grid" class="cs-grid" />
         </ui:VisualElement>
 
+        <!-- レリック選択 -->
+        <ui:VisualElement name="cs-relics" class="cs-relics">
+            <ui:Label name="cs-relics-title" text="レリック（0/3）" class="cs-relics-title" />
+            <ui:VisualElement name="cs-relic-list" class="cs-relic-list" />
+        </ui:VisualElement>
+
         <!-- 下部: ロックインボタン -->
         <ui:Button name="cs-lock" text="ロックイン" class="cs-lock-btn" />
     </ui:VisualElement>
