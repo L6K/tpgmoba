@@ -79,7 +79,7 @@ namespace Enigma.Sandbox
 
             if (kb.mKey.wasPressedThisFrame)
                 ToggleCharMenu();
-            else if (kb.rKey.wasPressedThisFrame)
+            else if (kb.lKey.wasPressedThisFrame)
                 ToggleRelicMenu();
             else if (kb.escapeKey.wasPressedThisFrame)
                 CloseMenus();
@@ -187,7 +187,7 @@ namespace Enigma.Sandbox
                 ? _database.Characters[_currentIndex].DisplayName
                 : "-";
             GUI.Label(new Rect(12f, 10f, 700f, 24f),
-                $"[M] キャラ変更   [R] レリック({_selectedRelics.Count}/{MaxRelics})   現在: {current}", _hintStyle);
+                $"[M] キャラ変更   [L] レリック({_selectedRelics.Count}/{MaxRelics})   現在: {current}   ※Q/E/Rはスキル", _hintStyle);
 
             if (!_menuOpen && !_relicMenuOpen) return;
 
@@ -280,7 +280,7 @@ namespace Enigma.Sandbox
             }
 
             GUI.Label(new Rect(px, py + panelH - footH, panelW, 24f),
-                "クリックで付け外し（最大3） / [R] または [Esc] で閉じる", _hintStyle);
+                "クリックで付け外し（最大3） / [L] または [Esc] で閉じる", _hintStyle);
         }
 
         private void EnsureStyles()
