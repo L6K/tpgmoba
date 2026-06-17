@@ -100,6 +100,11 @@ namespace Enigma.UI
         private Label         _deathRecapTitle;
         private Label         _deathRecapBody;
 
+        // オーバークロックのチャージバー（UXML 非依存でランタイム生成・遅延初期化）
+        private VisualElement _overclockBar;
+        private VisualElement _overclockFill;
+        private Label         _overclockLabel;
+
         // KillFeedDirector が結線するキルフィードモデル。Changed でフィード行を再構築する
         private KillFeedModel _killFeedModel;
 
@@ -445,6 +450,71 @@ namespace Enigma.UI
             UpdateBuff();
             UpdateLevelXp();
             UpdateGoldAndItems();
+            UpdateOverclock();
+        }
+
+        // オーバークロックのチャージ率を画面中央下のバーで表示する。未チャージ時は隠す。
+        private void UpdateOverclock()
+        {
+            if (_skillCaster == null || _uiDocument == null) return;
+            var root = _uiDocument.rootVisualElement;
+            if (root == null) return;
+
+            float charge = _skillCaster.CurrentOverclockCharge01();
+            if (charge <= 0f)
+            {
+                if (_overclockBar != null) _overclockBar.style.display = DisplayStyle.None;
+                return;
+            }
+
+            EnsureOverclockBar(root);
+            _overclockBar.style.display = DisplayStyle.Flex;
+            _overclockFill.style.width = Length.Percent(Mathf.Clamp01(charge) * 100f);
+            var c = Color.Lerp(new Color(1f, 0.85f, 0.2f), new Color(1f, 0.25f, 0.2f), charge);
+            _overclockFill.style.backgroundColor = new StyleColor(c);
+            _overclockLabel.text = $"オーバークロック ⚡ {Mathf.RoundToInt(charge * 100f)}%";
+        }
+
+        private void EnsureOverclockBar(VisualElement root)
+        {
+            if (_overclockBar != null) return;
+
+            _overclockBar = new VisualElement();
+            _overclockBar.pickingMode = PickingMode.Ignore;
+            _overclockBar.style.position = Position.Absolute;
+            _overclockBar.style.bottom = Length.Percent(18f);
+            _overclockBar.style.left = 0;
+            _overclockBar.style.right = 0;
+            _overclockBar.style.alignItems = Align.Center;
+            _overclockBar.style.display = DisplayStyle.None;
+
+            _overclockLabel = new Label();
+            _overclockLabel.style.color = new StyleColor(new Color(1f, 0.9f, 0.5f));
+            _overclockLabel.style.fontSize = 13;
+            _overclockLabel.style.unityFontStyleAndWeight = FontStyle.Bold;
+            _overclockLabel.style.marginBottom = 3;
+
+            var track = new VisualElement();
+            track.pickingMode = PickingMode.Ignore;
+            track.style.width = 220;
+            track.style.height = 12;
+            track.style.backgroundColor = new StyleColor(new Color(0.08f, 0.09f, 0.12f, 0.9f));
+            track.style.borderTopLeftRadius = 6;
+            track.style.borderTopRightRadius = 6;
+            track.style.borderBottomLeftRadius = 6;
+            track.style.borderBottomRightRadius = 6;
+            track.style.overflow = Overflow.Hidden;
+
+            _overclockFill = new VisualElement();
+            _overclockFill.pickingMode = PickingMode.Ignore;
+            _overclockFill.style.height = Length.Percent(100f);
+            _overclockFill.style.width = Length.Percent(0f);
+            _overclockFill.style.backgroundColor = new StyleColor(new Color(1f, 0.85f, 0.2f));
+
+            track.Add(_overclockFill);
+            _overclockBar.Add(_overclockLabel);
+            _overclockBar.Add(track);
+            root.Add(_overclockBar);
         }
 
         private void UpdateTimer()

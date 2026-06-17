@@ -323,6 +323,23 @@ namespace Enigma.Ability
             _dirIndicatorDoubleSided = true;
         }
 
+        /// <summary>
+        /// 現在アーム中スロットのオーバークロック・チャージ率(0〜1)。Shift 併用でアーム中のみ >0。
+        /// HUD のチャージ表示が毎フレーム参照する。
+        /// </summary>
+        public float CurrentOverclockCharge01()
+        {
+            if (_health == null) return 0f;
+            for (int i = 0; i < 4; i++)
+            {
+                if (!_overclockEngaged[i]) continue;
+                var hp = _health.Model;
+                float held = Time.time - _overclockStart[i];
+                return _overclock.Evaluate(held, hp.CurrentHp, hp.MaxHp, hp.Shield).Charge01;
+            }
+            return 0f;
+        }
+
         // アーム中のオーバークロックを評価し、増幅倍率(>1)と自己コストを返す。未チャージは 1。
         private float EvaluateOverclock(int slot, out float hpCost, out float shieldCost)
         {
