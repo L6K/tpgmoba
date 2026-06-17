@@ -861,9 +861,11 @@ namespace Enigma.Character
                 case SkillTargeting.GroundAoe:    CastBotGroundAoe(slot, def, target);    break;
                 case SkillTargeting.Targeted:     CastBotTargeted(slot, def, target);     break;
                 case SkillTargeting.TargetedAlly: CastBotTargetedAlly(def);              break;
+                case SkillTargeting.SelfAoe:      CastBotSelfAoe(def);                   break;
+                case SkillTargeting.TeamAlly:     CastBotTeamAlly(def);                  break;
             }
 
-            if (def.Targeting != SkillTargeting.TargetedAlly)
+            if (def.Targeting != SkillTargeting.TargetedAlly && def.Targeting != SkillTargeting.TeamAlly)
                 ApplyBotSelfBuffs(def);
 
             // スキル発射でも攻撃モーションを再生する
@@ -967,6 +969,57 @@ namespace Enigma.Character
             if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
             var color = new Color(0.36f, 0.84f, 0.42f, 1f);
             SkillVfx.SpawnBurst(transform.position, color, 0.5f, 2.5f, 0.4f);
+        }
+
+        // 自身中心AoE（プレイヤー CastSelfAoe のミラー）。範囲内の敵へダメージ+CC。
+        private void CastBotSelfAoe(SkillDefinition def)
+        {
+            Vector3 center = transform.position;
+            float radius = def.Radius > 0f ? def.Radius : 5f;
+            TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Neutral;
+
+            var damaged = new HashSet<HealthComponent>();
+            foreach (var col in Physics.OverlapSphere(center, radius))
+            {
+                if (col.gameObject == gameObject) continue;
+                var hc = col.GetComponent<HealthComponent>();
+                if (hc == null || hc.Model.IsDead || !damaged.Add(hc)) continue;
+                var otherTag = col.GetComponentInParent<TeamTag>();
+                TeamId ot = otherTag != null ? otherTag.Team : TeamId.Neutral;
+                if (!TeamRules.CanDamage(myTeam, ot)) continue;
+
+                hc.TakeDamage(DamageUtility.ApplyTeamBuff(def.Damage, gameObject), gameObject);
+                var sc = StatusEffectController.GetOrAdd(hc.gameObject);
+                if (sc != null)
+                {
+                    if (def.StunDuration > 0f) sc.ApplyStun(def.StunDuration);
+                    if (def.RootDuration > 0f) sc.ApplyRoot(def.RootDuration);
+                    if (def.SlowStrength > 0f && def.SlowDuration > 0f) sc.ApplySlow(def.SlowStrength, def.SlowDuration);
+                }
+            }
+
+            var color = SkillSlotColor(2);
+            SkillVfx.SpawnBurst(center + Vector3.up * 0.6f, color, 1f, radius, 0.4f);
+        }
+
+        // 自チーム全チャンピオンへ回復+シールド（プレイヤー CastTeamAlly のミラー）。
+        private void CastBotTeamAlly(SkillDefinition def)
+        {
+            TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Neutral;
+            foreach (var pc in FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
+                BotBuffAlly(pc.gameObject, myTeam, def);
+            foreach (var ai in FindObjectsByType<EnemyChampionAI>(FindObjectsSortMode.None))
+                BotBuffAlly(ai.gameObject, myTeam, def);
+        }
+
+        private static void BotBuffAlly(GameObject go, TeamId myTeam, SkillDefinition def)
+        {
+            var tag = go.GetComponentInParent<TeamTag>();
+            if (tag == null || tag.Team != myTeam) return;
+            var hc = go.GetComponent<HealthComponent>();
+            if (hc == null || hc.Model.IsDead) return;
+            if (def.HealAmount > 0f) hc.Model.Heal(def.HealAmount);
+            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
         }
 
         // ボット自身へ shield/heal を適用（プレイヤー SkillCaster.ApplySelfBuffs のミラー）

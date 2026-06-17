@@ -13,11 +13,11 @@ MonoBehaviour:
   m_Name: Skill_garon_E
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u65AD\u7F6A\u306E\u76DF\u7D04"
-  Description: "\u65751\u4F53\u3092\u5730\u306B\u7E1B\u308A\u88C1\u304F\u3002\u81EA\u3089\u306F\u8A93\u3044\u306E\u76FE\u3092\u7E8F\u3046(\u30A2\u30EB\u30C6\u30A3\u30E1\u30C3\u30C8)"
-  Targeting: 2
-  Damage: 150
+  Description: "\u81EA\u8EAB\u3092\u4E2D\u5FC3\u306B\u5927\u5730\u3092\u5272\u308A\u3001\u5468\u56F2\u306E\u6575\u5168\u3066\u3092\u30B9\u30BF\u30F3\u3055\u305B\u308B\u3002\u81EA\u3089\u306F\u8A93\u3044\u306E\u76FE\u3092\u7E8F\u3046(\u30A2\u30EB\u30C6\u30A3\u30E1\u30C3\u30C8\u30FB\u81EA\u8EAB\u4E2D\u5FC3AoE)"
+  Targeting: 4
+  Damage: 120
   Range: 5
-  Radius: 0
+  Radius: 5.5
   CooldownSeconds: 60
   ProjectileSpeed: 0
   WindupSeconds: 0.45

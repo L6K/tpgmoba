@@ -317,6 +317,8 @@ namespace Enigma.EditorTools
                 case "GroundAoe":   return SkillTargeting.GroundAoe;
                 case "Targeted":     return SkillTargeting.Targeted;
                 case "TargetedAlly": return SkillTargeting.TargetedAlly;
+                case "SelfAoe":      return SkillTargeting.SelfAoe;
+                case "TeamAlly":     return SkillTargeting.TeamAlly;
                 default:             return SkillTargeting.Directional;
             }
         }

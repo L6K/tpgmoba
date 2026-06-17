@@ -61,7 +61,7 @@ namespace Enigma.Data
         }
 
         private static readonly string[] _validSlots = { "Q", "E", "R" };
-        private static readonly string[] _validTargetings = { "Directional", "GroundAoe", "Targeted", "TargetedAlly" };
+        private static readonly string[] _validTargetings = { "Directional", "GroundAoe", "Targeted", "TargetedAlly", "SelfAoe", "TeamAlly" };
 
         /// <summary>
         /// JSON 文字列を検証済みの ParsedCharacter[] へ変換する。
@@ -121,7 +121,7 @@ namespace Enigma.Data
 
                     if (Array.IndexOf(_validTargetings, sk.targeting) < 0)
                         throw new FormatException(
-                            $"{skWhere}: targeting '{sk.targeting}' は不正です（許可: Directional/GroundAoe/Targeted/TargetedAlly）。");
+                            $"{skWhere}: targeting '{sk.targeting}' は不正です（許可: Directional/GroundAoe/Targeted/TargetedAlly/SelfAoe/TeamAlly）。");
                 }
             }
 

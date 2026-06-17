@@ -2,7 +2,8 @@ using UnityEngine;
 
 namespace Enigma.Ability
 {
-    public enum SkillTargeting { Directional, GroundAoe, Targeted, TargetedAlly }
+    // SelfAoe=自身中心の範囲攻撃(即時) / TeamAlly=自チーム全体への支援(即時)
+    public enum SkillTargeting { Directional, GroundAoe, Targeted, TargetedAlly, SelfAoe, TeamAlly }
 
     [CreateAssetMenu(fileName = "Skill_", menuName = "Enigma/Skill Definition")]
     public sealed class SkillDefinition : ScriptableObject

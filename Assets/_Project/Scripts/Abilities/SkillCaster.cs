@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
@@ -199,7 +200,10 @@ namespace Enigma.Ability
                     // CD 中はアーム開始しない
                     if (!_cooldowns[slot].IsReady(Time.time)) continue;
 
-                    bool isInstant = def.Targeting == SkillTargeting.Targeted || def.Targeting == SkillTargeting.TargetedAlly;
+                    bool isInstant = def.Targeting == SkillTargeting.Targeted
+                                  || def.Targeting == SkillTargeting.TargetedAlly
+                                  || def.Targeting == SkillTargeting.SelfAoe
+                                  || def.Targeting == SkillTargeting.TeamAlly;
                     var action = _castLogic.HandleKeyDown(slot, isInstant);
                     if (action == CastAction.Cast)
                     {
@@ -414,10 +418,13 @@ namespace Enigma.Ability
                 case SkillTargeting.GroundAoe:    CastGroundAoe(slot, def, groundCursorPos, scale); break;
                 case SkillTargeting.Targeted:     CastTargeted(slot, def, target, scale); break;
                 case SkillTargeting.TargetedAlly: CastTargetedAlly(slot, def, scale); break;
+                case SkillTargeting.SelfAoe:      CastSelfAoe(slot, def, scale); break;
+                case SkillTargeting.TeamAlly:     CastTeamAlly(slot, def, scale); break;
             }
 
-            if (def.Targeting != SkillTargeting.TargetedAlly)
-                ApplySelfBuffs(def);            // shield/heal を自分へ(TargetedAlly は味方へ別途)
+            // TargetedAlly/TeamAlly は味方へ別途付与するので自分へは二重付与しない。
+            if (def.Targeting != SkillTargeting.TargetedAlly && def.Targeting != SkillTargeting.TeamAlly)
+                ApplySelfBuffs(def);            // shield/heal を自分へ(SelfAoe の自己シールド等もここ)
             TryDash(def, groundCursorPos, target);
         }
 
@@ -545,6 +552,69 @@ namespace Enigma.Ability
             if (slot == 2) // 味方系アルティメット(ノヴァ スーパーノヴァ): 味方足元に派手演出
                 SkillVfx.PlayUltimate(_championVfx,
                     new Vector3(ally.transform.position.x, GroundLevelY(), ally.transform.position.z), Vector3.zero);
+        }
+
+        // 自身中心の範囲攻撃(SelfAoe)。範囲内の敵にダメージ + CC。自己バフは FireSkill の ApplySelfBuffs。
+        private void CastSelfAoe(int slot, SkillDefinition def, float scale)
+        {
+            Vector3 center = transform.position;
+            float radius = def.Radius > 0f ? def.Radius : 5f;
+
+            var damaged = new HashSet<HealthComponent>();
+            foreach (var col in Physics.OverlapSphere(center, radius))
+            {
+                if (col.gameObject == gameObject) continue;
+                var hc = col.GetComponentInParent<HealthComponent>();
+                if (hc == null || hc.Model.IsDead || !damaged.Add(hc)) continue;
+                if (!CanDamageTarget(hc.gameObject)) continue;
+
+                float dmg = DamageUtility.ApplyTeamBuff(def.Damage * scale, gameObject, hc.gameObject);
+                hc.TakeDamage(dmg, gameObject);
+                var sc = StatusEffectController.GetOrAdd(hc.gameObject);
+                if (sc != null)
+                {
+                    if (def.StunDuration > 0f) sc.ApplyStun(def.StunDuration);
+                    if (def.RootDuration > 0f) sc.ApplyRoot(def.RootDuration);
+                    if (def.SlowStrength > 0f && def.SlowDuration > 0f) sc.ApplySlow(def.SlowStrength, def.SlowDuration);
+                }
+            }
+
+            var color = SlotColor(slot);
+            var groundPos = new Vector3(center.x, GroundLevelY(), center.z);
+            SkillVfx.SpawnRing(groundPos, color, 0.5f, radius * 1.2f, 0.5f);
+            SkillVfx.SpawnBurst(center + Vector3.up * 0.6f, color, 1f, radius, 0.4f);
+            GameSfx.Play("skill_r_hit", center, 0.9f);
+            if (slot == 2) SkillVfx.PlayUltimate(_championVfx, groundPos, Vector3.zero);
+        }
+
+        // 自チーム全チャンピオンへ回復+シールド(TeamAlly)。自分も含む。
+        private void CastTeamAlly(int slot, SkillDefinition def, float scale)
+        {
+            var myTag = GetComponentInParent<TeamTag>();
+            TeamId myTeam = myTag != null ? myTag.Team : TeamId.Neutral;
+            var color = new Color(0.36f, 0.84f, 0.42f, 1f);
+
+            foreach (var pc in FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
+                BuffAlly(pc.gameObject, myTeam, def, color);
+            foreach (var ai in FindObjectsByType<EnemyChampionAI>(FindObjectsSortMode.None))
+                BuffAlly(ai.gameObject, myTeam, def, color);
+
+            GameSfx.Play("skill_r_hit", transform.position, 0.9f);
+            if (slot == 2)
+                SkillVfx.PlayUltimate(_championVfx,
+                    new Vector3(transform.position.x, GroundLevelY(), transform.position.z), Vector3.zero);
+        }
+
+        private static void BuffAlly(GameObject go, TeamId myTeam, SkillDefinition def, Color color)
+        {
+            var tag = go.GetComponentInParent<TeamTag>();
+            if (tag == null || tag.Team != myTeam) return;
+            var hc = go.GetComponent<HealthComponent>();
+            if (hc == null || hc.Model.IsDead) return;
+
+            if (def.HealAmount > 0f) hc.Model.Heal(def.HealAmount);
+            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+            SkillVfx.SpawnBurst(hc.transform.position + Vector3.up * 1f, color, 0.5f, 2.2f, 0.4f);
         }
 
         // カーソル下にいる味方(同チーム, 射程内, 自分以外)を返す。無ければ null。
