@@ -17,7 +17,7 @@ MonoBehaviour:
   Targeting: 1
   Damage: 130
   Range: 16
-  Radius: 4.5
+  Radius: 4
   CooldownSeconds: 48
   ProjectileSpeed: 0
   WindupSeconds: 0.4

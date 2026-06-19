@@ -22,7 +22,7 @@ MonoBehaviour:
   ProjectileSpeed: 0
   WindupSeconds: 0.3
   RecoverySeconds: 0.4
-  StunDuration: 1
+  StunDuration: 0.8
   RootDuration: 0
   SlowStrength: 0
   SlowDuration: 0

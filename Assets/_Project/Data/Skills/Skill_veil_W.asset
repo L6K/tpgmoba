@@ -15,10 +15,10 @@ MonoBehaviour:
   SkillName: "\u5F71\u6E21\u308A"
   Description: "\u5F71\u3092\u6E21\u3063\u3066\u5BFE\u8C61\u3078\u77AC\u6642\u306B\u8089\u8584\u3057\u65AC\u308A\u3064\u3051\u308B\u3002E/R\u4E21\u65B9\u3067\u8E0F\u307F\u8FBC\u3081\u308B\u9AD8\u6A5F\u52D5"
   Targeting: 2
-  Damage: 55
+  Damage: 45
   Range: 9
   Radius: 0
-  CooldownSeconds: 7
+  CooldownSeconds: 8
   ProjectileSpeed: 0
   WindupSeconds: 0.1
   RecoverySeconds: 0.25

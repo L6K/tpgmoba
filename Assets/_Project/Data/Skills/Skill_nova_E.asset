@@ -26,7 +26,7 @@ MonoBehaviour:
   RootDuration: 0
   SlowStrength: 0
   SlowDuration: 0
-  ShieldAmount: 110
+  ShieldAmount: 80
   ShieldDuration: 4
-  HealAmount: 160
+  HealAmount: 120
   DashDistance: 0

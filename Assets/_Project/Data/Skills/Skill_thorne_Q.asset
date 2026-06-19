@@ -23,7 +23,7 @@ MonoBehaviour:
   WindupSeconds: 0.25
   RecoverySeconds: 0.4
   StunDuration: 0
-  RootDuration: 1
+  RootDuration: 0.8
   SlowStrength: 0
   SlowDuration: 0
   ShieldAmount: 0

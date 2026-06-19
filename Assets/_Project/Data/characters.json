@@ -52,7 +52,7 @@
           "targeting": "GroundAoe",
           "damage": 130,
           "range": 16,
-          "radius": 4.5,
+          "radius": 4.0,
           "cooldown": 48,
           "projectileSpeed": 0,
           "windup": 0.4,
@@ -91,7 +91,7 @@
           "windup": 0.3,
           "recovery": 0.45,
           "description": "正面へ大剣を振り抜く。射程は短いが威力が高い",
-          "shieldAmount": 60,
+          "shieldAmount": 50,
           "shieldDuration": 3
         },
         {
@@ -106,7 +106,7 @@
           "windup": 0.3,
           "recovery": 0.4,
           "description": "足元の大地を砕き、周囲の敵にダメージ",
-          "stunDuration": 1.0
+          "stunDuration": 0.8
         },
         {
           "slot": "R",
@@ -121,7 +121,7 @@
           "recovery": 0.6,
           "description": "自身を中心に大地を割り、周囲の敵全てをスタンさせる。自らは誓いの盾を纏う(アルティメット・自身中心AoE)",
           "stunDuration": 1.2,
-          "shieldAmount": 140,
+          "shieldAmount": 115,
           "shieldDuration": 4
         }
       ]
@@ -159,10 +159,10 @@
           "slot": "E",
           "name": "影渡り",
           "targeting": "Targeted",
-          "damage": 55,
+          "damage": 45,
           "range": 9,
           "radius": 0,
-          "cooldown": 7,
+          "cooldown": 8,
           "projectileSpeed": 0,
           "windup": 0.1,
           "recovery": 0.25,
@@ -173,7 +173,7 @@
           "slot": "R",
           "name": "暗殺刻印",
           "targeting": "Targeted",
-          "damage": 160,
+          "damage": 140,
           "range": 10,
           "radius": 0,
           "cooldown": 70,
@@ -285,7 +285,7 @@
           "windup": 0.2,
           "recovery": 0.35,
           "description": "対象の味方(無ければ自分)に星の輝きを纏わせ、ダメージを吸収する盾を張る",
-          "shieldAmount": 110,
+          "shieldAmount": 85,
           "shieldDuration": 4
         },
         {
@@ -300,8 +300,8 @@
           "windup": 0.4,
           "recovery": 0.5,
           "description": "天頂で星を爆発させ、自チーム全員を回復しシールドを張る(アルティメット・味方全体)",
-          "healAmount": 160,
-          "shieldAmount": 110,
+          "healAmount": 120,
+          "shieldAmount": 80,
           "shieldDuration": 4
         }
       ]
@@ -334,7 +334,7 @@
           "windup": 0.25,
           "recovery": 0.4,
           "description": "機械鎖を射出して敵を捉える",
-          "rootDuration": 1.0
+          "rootDuration": 0.8
         },
         {
           "slot": "E",
