@@ -415,10 +415,10 @@ public static partial class BuildAetherRiftMap
             SetMat(baseRed, matRed);
         }
 
-        // タイタン=ネクサス: LoL のネクサス同様、泉(基地奥)の手前=開口側に大きく配置して
-        // 「これが壊れたら負ける」目標物だと一目で分かるようにする。
-        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-48f, 7f, 0f), matBlue);
-        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 48f, 7f, 0f), matRed);
+        // タイタン=ネクサス: 基地のほぼ中央(±56)に置き、後方の泉パッドと前方の防衛広場の
+        // 間の独立した破壊目標にする。リングを縮めて前方に広い 3v3 広場を確保する(report25)。
+        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-56f, 7f, 0f), matBlue);
+        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 56f, 7f, 0f), matRed);
 
         // タワー8基: Kenney tower-square.fbx (フォールバック: Cylinder)
         // TOP: θ=160°,140° (Blue)、θ=40°,20° (Red)
@@ -606,9 +606,9 @@ public static partial class BuildAetherRiftMap
         WireCharacterSkills("Char_nova",  new[] { novaQ, novaW, novaE, (SkillDefinition)null });
 
         // 9. プレイヤー
-        // 泉/スポーンは基地最奥（ネクサス -48 の後方）に配置。LoL のフォーメーション:
-        // 奥=泉 → 手前=ネクサス → レーンへ、の並びにして窮屈さを解消する。
-        var playerSpawnPos = new Vector3(-64f, 1.1f, 0f);
+        // 泉/スポーンは基地最奥のコンパクトな安全パッド(-68)に配置。LoL のフォーメーション:
+        // 奥=泉/ショップ/復帰 → 中央=ネクサス(-56) → 前方=防衛広場 → レーン、の並び(report25)。
+        var playerSpawnPos = new Vector3(-68f, 1.1f, 0f);
         var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         player.name = "Player";
         player.tag  = "Player";
@@ -743,10 +743,11 @@ public static partial class BuildAetherRiftMap
         player.AddComponent<PlayerWallet>();
         player.AddComponent<PlayerItems>();
 
-        // 泉回復(青ベースの泉付近で毎秒回復)
+        // 泉回復(後方安全パッドの泉=半径5のコンパクト圏で毎秒回復)
         var playerFountain   = player.AddComponent<Enigma.Combat.FountainRegen>();
         var soPlayerFountain = new SerializedObject(playerFountain);
-        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-64f, 1.1f, 0f);
+        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-68f, 1.1f, 0f);
+        soPlayerFountain.FindProperty("_radius").floatValue           = 5f;
         soPlayerFountain.ApplyModifiedPropertiesWithoutUndo();
 
         // MatchBootstrap: ピック済みキャラのスキル・ステータスを Start 時に注入する
@@ -833,26 +834,26 @@ public static partial class BuildAetherRiftMap
         var blueRing    = new Color(0.15f, 0.35f, 0.9f, 0.5f);
 
         // 敵チーム（Red）3体: TOP / BOT / Jungle
-        // スポーンを基地奥(±63、ネクサス±48の後方の広場=プレイヤー泉と同じ最奥)へ移し、
-        // LoL のように泉奥から出撃させる。中央のネクサス/タイタン(±48, z=0, footprint半径~3)を
-        // 横切ってスタックしないよう、各 Bot は自分のレーン側へ z オフセットを保つ(TOP=+z / BOT=-z /
-        // JG=+4)。CreateBotChampion が spawnPos を route[0] に前置するため後退時は泉圏で止まる。
+        // スポーンを後方の安全パッド(±66〜±69)に密集配置し、泉(半径5, 中心±68)内に全員が収まる
+        // ようにする(report25: 復帰は小さな泉の中)。前方へ出るときネクサス/タイタン(±56, z=0,
+        // capsule半径~2.25)を横切ってスタックしないよう各 Bot はレーン側へ z オフセットを保つ。
+        // CreateBotChampion が spawnPos を route[0] に前置するため後退時は泉圏で止まる。
         var redTop = CreateBotChampion("RedBot_Top", TeamId.Red,
-            new Vector3(63f, 1.1f, 9f), BuildTopLaneWaypoints(),
+            new Vector3(66f, 1.1f, 3.5f), BuildTopLaneWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redBot = CreateBotChampion("RedBot_Bot", TeamId.Red,
-            new Vector3(63f, 1.1f, -9f), BuildBotLaneWaypoints(),
+            new Vector3(66f, 1.1f, -3.5f), BuildBotLaneWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redJungle = CreateBotChampion("RedBot_Jungle", TeamId.Red,
-            new Vector3(63f, 1.1f, 4f), BuildJungleWaypoints(),
+            new Vector3(69f, 1.1f, 2f), BuildJungleWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab, farmsNeutralCamps: true);
 
         // 味方チーム（Blue）2体: TOP / BOT。経路は各レーンの逆順（青ベース開口スタート）。
         var blueTop = CreateBotChampion("BlueBot_Top", TeamId.Blue,
-            new Vector3(-63f, 1.1f, 9f), Reverse(BuildTopLaneWaypoints()),
+            new Vector3(-66f, 1.1f, 3.5f), Reverse(BuildTopLaneWaypoints()),
             matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
         var blueBot = CreateBotChampion("BlueBot_Bot", TeamId.Blue,
-            new Vector3(-63f, 1.1f, -9f), Reverse(BuildBotLaneWaypoints()),
+            new Vector3(-66f, 1.1f, -3.5f), Reverse(BuildBotLaneWaypoints()),
             matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
 
         // BotChampionBootstrap（シーンに1個）: CharacterDatabase と5体を結線する
@@ -933,8 +934,9 @@ public static partial class BuildAetherRiftMap
         var soShopCtrl = new SerializedObject(shopCtrl);
         soShopCtrl.FindProperty("_uiDocument").objectReferenceValue = hudDoc;
         soShopCtrl.FindProperty("_player").objectReferenceValue     = player.transform;
-        // _shopCenter は青本拠地中心 (-56, 0, 0)。デフォルト値と同じだが明示して堅牢化
-        soShopCtrl.FindProperty("_shopCenter").vector3Value         = new Vector3(-56f, 0f, 0f);
+        // _shopCenter は後方安全パッド(-68, 0, 0)。泉と同じパッドに置き、ShopRadius(6)で
+        // 後方のみを購入圏にする(report25: ショップをタイタン前広場に広げない)。
+        soShopCtrl.FindProperty("_shopCenter").vector3Value         = new Vector3(-68f, 0f, 0f);
         soShopCtrl.ApplyModifiedPropertiesWithoutUndo();
 
         // MinimapController: ミニマップドットを毎フレーム更新する
@@ -1482,8 +1484,8 @@ public static partial class BuildAetherRiftMap
     {
         var parent = new GameObject("FountainRings");
         SetStatic(parent);
-        CreateFountainRing(parent.transform, "FountainRing_Blue", new Vector3(-64f, 1.06f, 0f), new Color(0.35f, 0.75f, 1.00f, 0.32f));
-        CreateFountainRing(parent.transform, "FountainRing_Red",  new Vector3( 64f, 1.06f, 0f), new Color(1.00f, 0.55f, 0.30f, 0.32f));
+        CreateFountainRing(parent.transform, "FountainRing_Blue", new Vector3(-68f, 1.06f, 0f), new Color(0.35f, 0.75f, 1.00f, 0.32f));
+        CreateFountainRing(parent.transform, "FountainRing_Red",  new Vector3( 68f, 1.06f, 0f), new Color(1.00f, 0.55f, 0.30f, 0.32f));
     }
 
     // 泉回復半径(10)の内縁に薄い半透明リングを敷く（床面のすぐ上）。
@@ -1493,7 +1495,7 @@ public static partial class BuildAetherRiftMap
         go.transform.SetParent(parent, false);
         go.transform.position = center;
         var mf = go.AddComponent<MeshFilter>();
-        mf.sharedMesh = CreateRingBandMesh(9.2f, 10f, 72);
+        mf.sharedMesh = CreateRingBandMesh(4.2f, 5f, 64);
         var mr = go.AddComponent<MeshRenderer>();
         mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         mr.receiveShadows    = false;
@@ -2222,7 +2224,8 @@ public static partial class BuildAetherRiftMap
         var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         ring.name = $"{name}_Ring";
         ring.transform.position   = new Vector3(pos.x, 0.1f, pos.z);
-        ring.transform.localScale = new Vector3(11f, 0.05f, 11f);
+        // 直径8(半径4)。前方の防衛広場を広く取るためリングを縮小(report25)。
+        ring.transform.localScale = new Vector3(8f, 0.05f, 8f);
         UseFlatMeshCollider(ring, keepCollider: false);
         SetStatic(ring);
         SetMat(ring, mat);
@@ -2389,11 +2392,12 @@ public static partial class BuildAetherRiftMap
         soTt.FindProperty("_team").enumValueIndex = (int)team;
         soTt.ApplyModifiedPropertiesWithoutUndo();
 
-        // 泉回復: チーム共通の基地最奥(±64, 0)を泉中心にし、視覚リング(PlaceFountainRings)と
-        // 一致させる。各 Bot のスポーンは z オフセットで散らすが、泉中心は1点に集約する。
+        // 泉回復: チーム共通の後方安全パッド中心(±68, 0)・半径5のコンパクト圏。視覚リング
+        // (PlaceFountainRings)と一致させる。各 Bot のスポーンは z オフセットで散らすが泉中心は1点。
         var botFountain   = go.AddComponent<Enigma.Combat.FountainRegen>();
         var soBotFountain = new SerializedObject(botFountain);
-        soBotFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(Mathf.Sign(spawnPos.x) * 64f, 1.1f, 0f);
+        soBotFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(Mathf.Sign(spawnPos.x) * 68f, 1.1f, 0f);
+        soBotFountain.FindProperty("_radius").floatValue           = 5f;
         soBotFountain.ApplyModifiedPropertiesWithoutUndo();
 
         var xp = go.AddComponent<XpReward>();
@@ -2999,18 +3003,18 @@ public static partial class BuildAetherRiftMap
         const float stepDeg = 3.75f;
 
         // 開口(start,end)を除いた壁弧。[0,360) を一周し、各開口の隙間を空ける。
-        // 青ベース正面(180°)・赤ベース正面(0°)に約20°の開口を空け、基地前の出入りを扇形に広げる
-        // (LoL 風に基地前で広く戦えるように)。残りはジャングルとレーンを分離する従来の壁弧。
+        // 青ベース正面(180°)・赤ベース正面(0°)に約34°(≈23m)の開口を空け、タイタン前の防衛広場を
+        // 外周レーンへ扇形に開く(report25: 広い 3v3 広場)。残りはジャングルとレーンを分離する壁弧。
         (float start, float end)[] wallArcs =
         {
             ( 53f,  77f),   // 45°パス口 と 90°川口 の間
             (103f, 127f),   // 90°川口 と 135°パス口 の間
-            (143f, 170f),   // 135°パス口 と 青ベース正面開口(180°)の間
-            (190f, 217f),   // 青ベース正面開口(180°) と 225°パス口 の間
+            (143f, 163f),   // 135°パス口 と 青ベース正面開口(180°)の間
+            (197f, 217f),   // 青ベース正面開口(180°) と 225°パス口 の間
             (233f, 257f),   // 225°パス口 と 270°川口 の間
             (283f, 307f),   // 270°川口 と 315°パス口 の間
-            (323f, 350f),   // 315°パス口 と 赤ベース正面開口(0°)の間
-            (370f, 397f),   // 赤ベース正面開口(0°/360°) と 45°パス口 の間
+            (323f, 343f),   // 315°パス口 と 赤ベース正面開口(0°)の間
+            (377f, 397f),   // 赤ベース正面開口(0°/360°) と 45°パス口 の間
         };
 
         int i = 0;

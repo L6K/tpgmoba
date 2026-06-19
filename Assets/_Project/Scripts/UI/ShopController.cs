@@ -20,7 +20,9 @@ namespace Enigma.UI
         // ビルダーが青本拠地中心 (-56,0,0) を設定する
         [SerializeField] private Vector3 _shopCenter = new Vector3(-56f, 0f, 0f);
 
-        private const float ShopRadius = 14f;
+        // ショップは後方の安全パッド(泉)と同じコンパクト範囲に限定する。基地全体や
+        // タイタン前広場をショップ圏にしないことで「後方=復帰/回復/購入」の役割を分離する。
+        private const float ShopRadius = 6f;
 
         private VisualElement _shopOverlay;
         private VisualElement _shopGrid;
