@@ -26,6 +26,12 @@ namespace Enigma.Character
         private const float AutoWindup   = 0.15f;
         private const float AutoRecovery = 0.25f;
 
+        // この射程以下のキャラは飛翔弾を使わず即時近接斬撃にする（ガロン3.5/ヴェイル4/ソーン3.5）
+        private const float MeleeRangeThreshold = 7f;
+
+        // 設定された射程が閾値以下なら近接キャラと判定
+        private bool IsMelee => _attackRange <= MeleeRangeThreshold;
+
         // AA モーション中(準備〜後隙)にターゲットへ向き直る速度
         private const float FaceTurnSpeed = 14f;
 
@@ -86,13 +92,20 @@ namespace Enigma.Character
                 _motor.RequestAttack(AutoWindup, AutoRecovery, () =>
                 {
                     _motor.SnapToLunge();
-                    FireProjectile(capturedTarget);
+                    // 近接キャラは飛翔弾を出さず即時斬撃。ランジ前進は近接にも自然に合う
+                    if (IsMelee)
+                        StrikeMelee(capturedTarget);
+                    else
+                        FireProjectile(capturedTarget);
                 });
             }
             else
             {
-                // _motor 未設定時は従来どおり即時発射（後方互換）
-                FireProjectile(target);
+                // _motor 未設定時は従来どおり即時発射（後方互換）。近接キャラは斬撃
+                if (IsMelee)
+                    StrikeMelee(target);
+                else
+                    FireProjectile(target);
             }
         }
 
@@ -116,6 +129,40 @@ namespace Enigma.Character
                 transform.rotation,
                 Quaternion.LookRotation(flat),
                 FaceTurnSpeed * Time.deltaTime);
+        }
+
+        private void StrikeMelee(HealthComponent target)
+        {
+            if (target == null || _muzzle == null) return;
+
+            var dir = target.transform.position - transform.position;
+            dir.y = 0f;
+            dir = dir.sqrMagnitude > 0.001f ? dir.normalized : transform.forward;
+
+            // 命中（飛翔なしの即時ヒット。ターゲットは射程内確定）
+            float finalDamage = DamageUtility.ApplyTeamBuff(_attackDamage, gameObject, target.gameObject);
+            target.TakeDamage(finalDamage, gameObject);
+
+            // 操作プレイヤーの一撃だけ手応え演出（Projectile と同じ条件）
+            bool isPlayer = GetComponent<PlayerController>() != null;
+            if (isPlayer)
+                Enigma.Vfx.AttackJuice.PlayerLandedHit(finalDamage, target.Model.MaxHp, false);
+
+            // 斬撃VFX: キャラ別カラーで前方に一閃 + 接触バースト
+            var profile = AttackVfxProfiles.For(_championVfx);
+            Color slashColor = SkillVfx.ToColor(profile.Primary, profile.EmissionIntensity);
+            Vector3 contact  = target.transform.position + Vector3.up * 1.0f;
+            Vector3 center   = transform.position + dir * (_attackRange * 0.5f) + Vector3.up * 1.0f;
+            Vector3 rightV   = Vector3.Cross(Vector3.up, dir);
+            // 横薙ぎの一閃（dir に対し左右に振る短いストローク）
+            SkillVfx.SpawnBeam(center - rightV * 1.2f + dir * 0.3f, center + rightV * 1.2f - dir * 0.3f, slashColor, 0.25f, 0.18f);
+            SkillVfx.SpawnBurst(contact, slashColor, 0.15f, 0.9f, 0.22f);
+
+            // 操作プレイヤーの一撃のみネオン着弾（Projectile と同じ限定）
+            if (isPlayer)
+                Enigma.Vfx.NeonImpactEffect.Spawn(contact, SkillVfx.ToColor(profile.Primary), SkillVfx.ToColor(profile.Secondary));
+
+            GameSfx.PlayVariant("aa_hit", 3, contact, 0.55f);
         }
 
         private void FireProjectile(HealthComponent target)
