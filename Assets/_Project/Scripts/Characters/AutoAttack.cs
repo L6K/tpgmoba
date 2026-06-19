@@ -82,7 +82,9 @@ namespace Enigma.Character
 
             if (_statusEffects != null && !_statusEffects.CanAct) return;
             if (!_cooldown.TryConsume(Time.time)) return;
-            if (_projectilePrefab == null || _muzzle == null) return;
+            // 近接キャラは飛翔弾を使わないため、ここでは _muzzle のみ必須にする。
+            // 弾プレハブの null 検査は遠距離経路の FireProjectile 側でのみ行う。
+            if (_muzzle == null) return;
 
             if (_motor != null)
             {
