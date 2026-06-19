@@ -35,7 +35,7 @@ public static class CreateRotatingMagicCircleEffectPrefab
             AssetDatabase.CreateFolder("Assets/_Project", "Prefabs");
 
         PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
-        Object.DestroyImmediate(root);
+        UnityEngine.Object.DestroyImmediate(root);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log("Created " + PrefabPath);

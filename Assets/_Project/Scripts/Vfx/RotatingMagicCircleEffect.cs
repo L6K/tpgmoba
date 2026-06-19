@@ -33,6 +33,7 @@ namespace Enigma.Vfx
         private readonly List<LineRenderer> _rings = new List<LineRenderer>();
         private readonly List<LineRenderer> _glyphs = new List<LineRenderer>();
         private readonly List<Ember> _embers = new List<Ember>();
+        private readonly List<Material> _runtimeMaterials = new List<Material>();
 
         private Transform _outerLayer;
         private Transform _innerLayer;
@@ -85,6 +86,16 @@ namespace Enigma.Vfx
             inst.Configure(core, edge, circleRadius, isLoop: false, autoDestroy: true);
             inst.Play();
             return inst;
+        }
+
+        private void OnDestroy()
+        {
+            for (int i = 0; i < _runtimeMaterials.Count; i++)
+            {
+                if (_runtimeMaterials[i] != null)
+                    Destroy(_runtimeMaterials[i]);
+            }
+            _runtimeMaterials.Clear();
         }
 
         private void OnEnable()
@@ -141,7 +152,7 @@ namespace Enigma.Vfx
             {
                 LineRenderer ring = CreateLine("Ring_" + i, ringMaterial, 144, _outerLayer);
                 ring.loop = true;
-                ring.widthMultiplier = 0.04f + i * 0.012f;
+                ring.widthMultiplier = 0.09f + i * 0.018f;
                 _rings.Add(ring);
             }
 
@@ -149,7 +160,7 @@ namespace Enigma.Vfx
             {
                 LineRenderer ring = CreateLine("InnerRing_" + i, ringMaterial, 96, _innerLayer);
                 ring.loop = true;
-                ring.widthMultiplier = 0.055f;
+                ring.widthMultiplier = 0.085f;
                 _rings.Add(ring);
             }
         }
@@ -159,20 +170,20 @@ namespace Enigma.Vfx
             for (int i = 0; i < 8; i++)
             {
                 LineRenderer spoke = CreateLine("RadialGlyph_" + i, glyphMaterial, 2, _innerLayer);
-                spoke.widthMultiplier = 0.045f;
+                spoke.widthMultiplier = 0.08f;
                 _glyphs.Add(spoke);
             }
 
             for (int i = 0; i < 6; i++)
             {
                 LineRenderer arc = CreateLine("BrokenArc_" + i, glyphMaterial, 18, _outerLayer);
-                arc.widthMultiplier = 0.055f;
+                arc.widthMultiplier = 0.095f;
                 _glyphs.Add(arc);
             }
 
             LineRenderer star = CreateLine("CenterStar", glyphMaterial, 13, _innerLayer);
             star.loop = true;
-            star.widthMultiplier = 0.05f;
+            star.widthMultiplier = 0.09f;
             _glyphs.Add(star);
         }
 
@@ -183,7 +194,7 @@ namespace Enigma.Vfx
             {
                 LineRenderer rune = CreateLine("RuneDiamond_" + i, glyphMaterial, 5, _runeLayer);
                 rune.loop = false;
-                rune.widthMultiplier = 0.04f;
+                rune.widthMultiplier = 0.075f;
                 _glyphs.Add(rune);
             }
         }
@@ -194,7 +205,7 @@ namespace Enigma.Vfx
             for (int i = 0; i < count; i++)
             {
                 LineRenderer ember = CreateLine("RisingEmber_" + i, sparkMaterial, 2, _emberLayer);
-                ember.widthMultiplier = 0.035f;
+                ember.widthMultiplier = 0.075f;
                 float angle = i * 137.5f * Mathf.Deg2Rad;
                 float distance = radius * Mathf.Lerp(0.18f, 0.95f, Hash01(i * 37 + 11));
                 float height = Mathf.Lerp(0.35f, 1.25f, Hash01(i * 53 + 7));
@@ -209,9 +220,14 @@ namespace Enigma.Vfx
             go.transform.SetParent(parent, false);
             LineRenderer line = go.AddComponent<LineRenderer>();
             line.positionCount = positions;
-            line.material = material;
+            if (material != null)
+            {
+                var instance = new Material(material);
+                line.material = instance;
+                _runtimeMaterials.Add(instance);
+            }
             line.useWorldSpace = false;
-            line.alignment = LineAlignment.View;
+            line.alignment = LineAlignment.TransformZ;
             line.textureMode = LineTextureMode.Stretch;
             line.numCapVertices = 4;
             line.numCornerVertices = 4;
@@ -221,7 +237,7 @@ namespace Enigma.Vfx
         private void ApplyFrame(float t, float alpha)
         {
             float pulse = 0.75f + 0.25f * Mathf.Sin((_age * pulseSpeed) * Mathf.PI * 2f);
-            float glow = alpha * pulse;
+            float glow = Mathf.Clamp01(alpha * (1.2f + 0.45f * pulse));
 
             _outerLayer.localRotation = Quaternion.Euler(0f, rotationSpeed * _age, 0f);
             _innerLayer.localRotation = Quaternion.Euler(0f, -rotationSpeed * 0.62f * _age, 0f);
@@ -364,6 +380,19 @@ namespace Enigma.Vfx
             color.a = Mathf.Clamp01(alpha);
             line.startColor = color;
             line.endColor = color;
+
+            Material material = line.material;
+            if (material == null)
+                return;
+
+            Color emission = color * 6.0f;
+            emission.a = color.a;
+            if (material.HasProperty("_BaseColor"))
+                material.SetColor("_BaseColor", color);
+            if (material.HasProperty("_Color"))
+                material.SetColor("_Color", color);
+            if (material.HasProperty("_EmissionColor"))
+                material.SetColor("_EmissionColor", emission);
         }
 
         private float AlphaAt(float age, float cycle)
