@@ -56,6 +56,9 @@ namespace Enigma.Ability
         // 方向インジケーター（地面に寝た帯）を真上から見えるよう両面化する一度きりの初期化フラグ
         private bool _dirIndicatorDoubleSided;
 
+        // AoE インジケーターの色をスロット別に設定するための MaterialPropertyBlock（共有マテリアルを汚染しない）
+        private MaterialPropertyBlock _aoeMpb;
+
         private StatusEffectController _statusEffects;
         private PlayerController _playerController;
         private HealthComponent _health;
@@ -310,6 +313,20 @@ namespace Enigma.Ability
                 var   pos  = transform.position + dir.normalized * dist;
                 pos.y      = GroundLevelY() + 0.05f; // 床に接地させる(ピボット高さだと浮く)
                 _aoeIndicator.transform.position = pos;
+
+                // Radius に応じてインジケーターを拡縮する（Cylinder 基準直径1: 視覚半径 = localScale.x * 0.5）
+                float r = def.Radius > 0f ? def.Radius : 2f;
+                var t = _aoeIndicator.transform;
+                t.localScale = new Vector3(r * 2f, t.localScale.y, r * 2f);
+
+                // アルティメット(slot==2)はスロット混色、それ以外はスロット固有色で色分け（共有マテリアル不変）
+                if (_aoeIndicator.TryGetComponent<Renderer>(out var aoeRenderer))
+                {
+                    if (_aoeMpb == null) _aoeMpb = new MaterialPropertyBlock();
+                    Color indicatorColor = slot == 2 ? SlotColor(2) : SlotColor(slot);
+                    _aoeMpb.SetColor("_BaseColor", indicatorColor);
+                    aoeRenderer.SetPropertyBlock(_aoeMpb);
+                }
             }
         }
 
@@ -560,6 +577,10 @@ namespace Enigma.Ability
             Vector3 center = transform.position;
             float radius = def.Radius > 0f ? def.Radius : 5f;
 
+            // SelfAoe はアーム不要でインジケーターが出ない。発動時に実半径ぴったりの地面リングを一瞬表示して当たり範囲を示す。
+            var telegraphPos = new Vector3(transform.position.x, GroundLevelY() + 0.05f, transform.position.z);
+            SkillVfx.SpawnRing(telegraphPos, SlotColor(slot), radius * 0.85f, radius, 0.4f);
+
             var damaged = new HashSet<HealthComponent>();
             foreach (var col in Physics.OverlapSphere(center, radius))
             {
@@ -581,7 +602,7 @@ namespace Enigma.Ability
 
             var color = SlotColor(slot);
             var groundPos = new Vector3(center.x, GroundLevelY(), center.z);
-            SkillVfx.SpawnRing(groundPos, color, 0.5f, radius * 1.2f, 0.5f);
+            SkillVfx.SpawnRing(groundPos, color, 0.5f, radius, 0.5f);
             SkillVfx.SpawnBurst(center + Vector3.up * 0.6f, color, 1f, radius, 0.4f);
             GameSfx.Play("skill_r_hit", center, 0.9f);
             if (slot == 2) SkillVfx.PlayUltimate(_championVfx, groundPos, Vector3.zero);

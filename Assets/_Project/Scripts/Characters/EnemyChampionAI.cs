@@ -967,7 +967,7 @@ namespace Enigma.Character
             if (hc == null) return;
             if (def.HealAmount > 0f) hc.Model.Heal(def.HealAmount);
             if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
-            var color = new Color(0.36f, 0.84f, 0.42f, 1f);
+            var color = SkillSlotColor(2);
             SkillVfx.SpawnBurst(transform.position, color, 0.5f, 2.5f, 0.4f);
         }
 
@@ -1031,14 +1031,20 @@ namespace Enigma.Character
             if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
         }
 
-        // スロット色（プレイヤー SkillCaster と同系: Q=シアン, E=マゼンタ, R=ゴールド）
-        private static Color SkillSlotColor(int slot) => slot switch
+        // スロット色: champion プロファイル由来(Q=主色 / E=副色 / R=混色)。プレイヤー SkillCaster.SlotColor と一致させる。
+        private Color SkillSlotColor(int slot)
         {
-            0 => Color.cyan,
-            1 => Color.magenta,
-            2 => new Color(1f, 0.84f, 0.2f, 1f),
-            _ => Color.white,
-        };
+            var profile = AttackVfxProfiles.For(_championVfx);
+            var prim = SkillVfx.ToColor(profile.Primary);
+            var sec  = SkillVfx.ToColor(profile.Secondary);
+            return slot switch
+            {
+                0 => prim,
+                1 => sec,
+                2 => Color.Lerp(prim, sec, 0.5f),
+                _ => Color.white,
+            };
+        }
 
         private void OnHealthChanged(float current, float max)
         {
