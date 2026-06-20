@@ -66,21 +66,22 @@ public static partial class BuildAetherRiftMap
 
         // Ground: Cylinder scale(150,1,150)
         {
-            var ground = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            ground.name = "Ground";
-            // Cylinder メッシュは高さ2のため scaleY=0.5 で天面が y=0 になる
-            ground.transform.position   = new Vector3(0f, -0.5f, 0f);
-            // 目形(アーモンド)境界の余白として: X 半径 80 維持、Z 半径 53 に縮める(scale Z 120→106)。
-            // 目形は x=±77.5/z=±50 まで → ground は少し外まで広げる(視覚の余白、プレイヤーは境界壁で止まる)。
-            ground.transform.localScale = new Vector3(160f, 0.5f, 106f);
-            UseFlatMeshCollider(ground, keepCollider: true);
+            // Ground は目形境界(R=85, B=35)と完全に一致するアーモンド形メッシュ。
+            // ピッタリ収めることで境界の外に地面がはみ出すのを防ぐ。
+            var ground = new GameObject("Ground");
+            ground.transform.position = new Vector3(0f, 0f, 0f);
+            var groundMesh = CreateAlmondGroundMesh(85f, 35f, 48);
+            var gMf = ground.AddComponent<MeshFilter>();
+            gMf.sharedMesh = groundMesh;
+            var gMr = ground.AddComponent<MeshRenderer>();
+            var gMc = ground.AddComponent<MeshCollider>();
+            gMc.sharedMesh = groundMesh;
             SetStatic(ground);
-            // 草原グリーン
+            // 草原グリーン + 鳴潮風ランプ + 色むらノイズ
             matGround.SetColor("_BaseColor", new Color(0.40f, 0.58f, 0.32f));
-            // 鳴潮風: 柔らかいランプ + 青みの影、色むらノイズテクスチャ
             ApplyWutheringRamp(matGround);
             ApplyNoiseBaseMap(matGround, "GroundNoise", new Vector2(10f, 10f));
-            SetMat(ground, matGround);
+            gMr.sharedMaterial = matGround;
         }
 
         // 川: 縦帯 Cube (両レーンに届く長さ92)
@@ -978,11 +979,13 @@ public static partial class BuildAetherRiftMap
         const float EyeStepDeg = 3.75f;
 
         // 目尻の角度: 中心(0,0,-EyeB)から目尻(sqrt(R²-B²),0)へ atan2(B, sqrt(R²-B²))
+        // 両端を CornerOverlapDeg 度ずつ延長することで上下の弧が目尻で重なり、継ぎ目が見えなくなる。
         float cornerDeg = Mathf.Atan2(EyeB, Mathf.Sqrt(EyeR * EyeR - EyeB * EyeB)) * Mathf.Rad2Deg;
-        float upperStart = cornerDeg;
-        float upperEnd   = 180f - cornerDeg;
-        float lowerStart = 180f + cornerDeg;
-        float lowerEnd   = 360f - cornerDeg;
+        const float CornerOverlapDeg = 3f;
+        float upperStart = cornerDeg - CornerOverlapDeg;
+        float upperEnd   = 180f - cornerDeg + CornerOverlapDeg;
+        float lowerStart = 180f + cornerDeg - CornerOverlapDeg;
+        float lowerEnd   = 360f - cornerDeg + CornerOverlapDeg;
         int upperSegs = Mathf.Max(1, Mathf.RoundToInt((upperEnd - upperStart) / EyeStepDeg));
         int lowerSegs = Mathf.Max(1, Mathf.RoundToInt((lowerEnd - lowerStart) / EyeStepDeg));
 
@@ -3721,6 +3724,52 @@ public static partial class BuildAetherRiftMap
         mesh.vertices  = vertices;
         mesh.normals   = normals;
         mesh.triangles = triangles;
+        return mesh;
+    }
+
+    /// <summary>
+    /// 目形(アーモンド/vesica piscis)の地面メッシュを生成する。上下2大円(中心(0,0,∓eyeB)・半径 eyeR)の
+    /// 共通内側を、原点中心の三角形ファンで埋める。境界は y=0 の平面に乗る。
+    /// 頂点順は上方(+Y)から見て CCW にし、面が +Y を向くようにする。
+    /// </summary>
+    private static Mesh CreateAlmondGroundMesh(float eyeR, float eyeB, int sideSegs)
+    {
+        float corner = Mathf.Sqrt(Mathf.Max(0f, eyeR * eyeR - eyeB * eyeB));
+        var verts = new List<Vector3>();
+        verts.Add(Vector3.zero); // 中心(原点) = index 0
+
+        // 上まぶた: 中心(0,0,-eyeB)、上に膨らむ弧。x を -corner → +corner と振ると z = -eyeB + sqrt(R²-x²)。
+        for (int i = 0; i <= sideSegs; i++)
+        {
+            float t = (float)i / sideSegs;
+            float x = Mathf.Lerp(-corner, corner, t);
+            float z = -eyeB + Mathf.Sqrt(Mathf.Max(0f, eyeR * eyeR - x * x));
+            verts.Add(new Vector3(x, 0f, z));
+        }
+        // 下まぶた: 中心(0,0,+eyeB)、下に膨らむ弧。両端の目尻は既に上の弧で追加済みのため i=1..segs-1。
+        for (int i = 1; i < sideSegs; i++)
+        {
+            float t = (float)i / sideSegs;
+            float x = Mathf.Lerp(corner, -corner, t);
+            float z = +eyeB - Mathf.Sqrt(Mathf.Max(0f, eyeR * eyeR - x * x));
+            verts.Add(new Vector3(x, 0f, z));
+        }
+
+        int boundary = verts.Count - 1; // 境界頂点 = verts[1..]
+        var tris = new List<int>();
+        for (int i = 0; i < boundary; i++)
+        {
+            int a = 1 + i;
+            int b = 1 + ((i + 1) % boundary);
+            tris.Add(0); tris.Add(a); tris.Add(b); // CCW from +Y
+        }
+
+        var mesh = new Mesh { name = "AlmondGround" };
+        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt16;
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
         return mesh;
     }
 
