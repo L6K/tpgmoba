@@ -70,8 +70,9 @@ public static partial class BuildAetherRiftMap
             ground.name = "Ground";
             // Cylinder メッシュは高さ2のため scaleY=0.5 で天面が y=0 になる
             ground.transform.position   = new Vector3(0f, -0.5f, 0f);
-            // 拡張したベースポケット(後方-74)を内包できるよう地面を r75→80 へ
-            ground.transform.localScale = new Vector3(160f, 0.5f, 160f);
+            // マップを楕円(瞳)に: X 半径 80 維持、Z 半径 60 に縮める(scale Z 160→120)。
+            // 楕円境界(OuterBoundary の z-scale 0.75)を内包する。
+            ground.transform.localScale = new Vector3(160f, 0.5f, 120f);
             UseFlatMeshCollider(ground, keepCollider: true);
             SetStatic(ground);
             // 草原グリーン
@@ -85,7 +86,8 @@ public static partial class BuildAetherRiftMap
         // 川: 縦帯 Cube (両レーンに届く長さ92)
         // 階段順: 地面(0) < 川上面(0.03) < パス(0.045) < レーン(0.06) < ベイスン(0.12) < ピット(0.18)
         // レーンが川の上を「橋」として通るため、川はレーンより下に置く
-        PlaceCube("River", new Vector3(0f, -0.02f, 0f), new Vector3(14f, 0.1f, 92f), matRiver);
+        // 川は楕円境界(z半径≈54)とレーン帯(r40〜50)の内側に収めるため z=±42 まで(scale.z 92→84)。
+        PlaceCube("River", new Vector3(0f, -0.02f, 0f), new Vector3(14f, 0.1f, 84f), matRiver);
 
         // レーン色を土色に更新
         matLane.SetColor("_BaseColor", new Color(0.62f, 0.55f, 0.42f));
@@ -124,64 +126,9 @@ public static partial class BuildAetherRiftMap
             SetMat(pit, matPit);
         }
 
-        // 外周リング: 36分割、半径72に岩壁配置
-        {
-            const int ringSegs = 36;
-            // 優先順位: cliff_block_rock > cliff_blockCave_rock > Cube フォールバック
-            string[] cliffCandidates = {
-                "Assets/External/Kenney/Nature/cliff_block_rock.fbx",
-                "Assets/External/Kenney/Nature/cliff_blockCave_rock.fbx",
-                "Assets/External/Kenney/Castle/cliff_block_rock.fbx",
-            };
-            GameObject cliffModel = null;
-            foreach (var cp in cliffCandidates)
-            {
-                cliffModel = AssetDatabase.LoadAssetAtPath<GameObject>(cp);
-                if (cliffModel != null) break;
-            }
-
-            for (int ri = 0; ri < ringSegs; ri++)
-            {
-                float phi = ri * (360f / ringSegs) * Mathf.Deg2Rad;
-                float rx = 72f * Mathf.Cos(phi);
-                float rz = 72f * Mathf.Sin(phi);
-                var wallPos = new Vector3(rx, 0f, rz);
-
-                GameObject wallGo;
-                if (cliffModel != null)
-                {
-                    wallGo = (GameObject)PrefabUtility.InstantiatePrefab(cliffModel);
-                    wallGo.transform.position   = wallPos;
-                    wallGo.transform.localScale = Vector3.one * 6f;
-                    // 中心向き回転
-                    wallGo.transform.rotation = Quaternion.LookRotation(-wallPos.normalized, Vector3.up);
-                    // BoxCollider をレンダラー境界に合わせて追加
-                    var bounds = new Bounds(Vector3.zero, Vector3.zero);
-                    bool boundsInit = false;
-                    foreach (var r in wallGo.GetComponentsInChildren<Renderer>())
-                    {
-                        if (!boundsInit) { bounds = r.bounds; boundsInit = true; }
-                        else bounds.Encapsulate(r.bounds);
-                    }
-                    var bc = wallGo.AddComponent<BoxCollider>();
-                    if (boundsInit)
-                    {
-                        bc.center = wallGo.transform.InverseTransformPoint(bounds.center);
-                        bc.size   = Vector3.Scale(bounds.size, new Vector3(
-                            1f / wallGo.transform.lossyScale.x,
-                            1f / wallGo.transform.lossyScale.y,
-                            1f / wallGo.transform.lossyScale.z));
-                    }
-                }
-                else
-                {
-                    wallGo = PlaceCube($"RingWall_{ri:D2}", wallPos, new Vector3(13f, 6f, 4f), matJungle);
-                    wallGo.transform.rotation = Quaternion.LookRotation(-wallPos.normalized, Vector3.up);
-                }
-                wallGo.name = $"RingWall_{ri:D2}";
-                SetStatic(wallGo);
-            }
-        }
+        // 外周岩壁(旧 RingWall_00〜35) は削除した。境界の見た目と衝突は楕円化した
+        // OuterBoundary(z-scale 0.75 で円弧帯を z 方向に潰して楕円にした連続チューブ)に
+        // 一本化する。上から見ると楕円の外枠 + 円形レーン帯(LaneRing r40〜50) で「瞳」になる。
 
         // ジャングル樹木: System.Random(42) で各象限に26本（計104本）
         // クラスタ中心3〜4箇所 + 一様散布、木同士最小間隔1.2m
@@ -1052,6 +999,11 @@ public static partial class BuildAetherRiftMap
         PlaceWallBandAt(parent, "BoundaryTubePocket_Red", new Vector3(56f, 0f, 0f),
             TubePocketInnerR, TubePocketOuterR, TubeHeight, pocketSegs, redStart, redEnd, matBoundary,
             redVisualStart, redVisualEnd);
+
+        // 境界全体を z 方向 0.75 倍に潰して楕円化(上から見ると瞳の外形)。
+        // 子の MeshCollider/MeshRenderer は親 scale を受け取って楕円潰しに追従する。
+        // ベース口ポケットの中心(±56, 0, 0)は z=0 なので位置は変わらず、円弧帯のみ楕円化する。
+        parent.transform.localScale = new Vector3(1f, 1f, 0.75f);
     }
 
     /// <summary>
