@@ -395,30 +395,32 @@ public static partial class BuildAetherRiftMap
         // ---- 地表植生の散布（草タフト・小石）----
         ScatterGroundVegetation();
 
-        // 本拠地: Cylinder scale(22,1,22) pos(±56,0.5,0)
+        // リスポーンパッド: 各チームの色付き円盤は「リスポーン地点だけ」を示す小さな目印にする
+        // (LoL の召喚士の祭壇)。場外境界(±56 中心の TubePocket 内径17.4)は不変で、その内側の
+        // 大部分はメイン地面が見える。パッドは ±68 中心・半径6・薄板(地面とほぼ同高)。
         {
             var baseBlue = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseBlue.name = "Base_Blue";
-            baseBlue.transform.position   = new Vector3(-56f, 0.5f, 0f);
-            // LoL 風にリスポーン付近を広く: 基壇 半径 14→17（ポケット壁 内17.4 の内側に収める）
-            baseBlue.transform.localScale = new Vector3(34f, 0.5f, 34f);
+            baseBlue.transform.position   = new Vector3(-68f, 0.06f, 0f);
+            baseBlue.transform.localScale = new Vector3(12f, 0.12f, 12f);
             UseFlatMeshCollider(baseBlue, keepCollider: true);
             SetStatic(baseBlue);
             SetMat(baseBlue, matBlue);
 
             var baseRed = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseRed.name = "Base_Red";
-            baseRed.transform.position   = new Vector3(56f, 0.5f, 0f);
-            baseRed.transform.localScale = new Vector3(34f, 0.5f, 34f);
+            baseRed.transform.position   = new Vector3(68f, 0.06f, 0f);
+            baseRed.transform.localScale = new Vector3(12f, 0.12f, 12f);
             UseFlatMeshCollider(baseRed, keepCollider: true);
             SetStatic(baseRed);
             SetMat(baseRed, matRed);
         }
 
-        // タイタン=ネクサス: 基地のほぼ中央(±56)に置き、後方の泉パッドと前方の防衛広場の
-        // 間の独立した破壊目標にする。リングを縮めて前方に広い 3v3 広場を確保する(report25)。
-        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-56f, 7f, 0f), matBlue);
-        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 56f, 7f, 0f), matRed);
+        // タイタン=ネクサス: 小さなリスポーンパッド(±68)の前方(±52)に独立して立てる。
+        // 「復帰→ネクサス→レーン」の並び。造形は単色カプセルではなく多段台座+発光クリスタル
+        // のプロシージャル ネクサスで、破壊目標として一目で分かるようにする。
+        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-52f, 0f, 0f), matBlue);
+        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 52f, 0f, 0f), matRed);
 
         // タワー8基: Kenney tower-square.fbx (フォールバック: Cylinder)
         // TOP: θ=160°,140° (Blue)、θ=40°,20° (Red)
@@ -2212,35 +2214,92 @@ public static partial class BuildAetherRiftMap
     // HealthComponent を返すことで MatchFlowController の結線に利用する
     private static HealthComponent PlaceTitan(string name, Vector3 pos, Material mat)
     {
-        var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-        go.name              = name;
-        go.transform.position   = pos;
-        // 大型化して接地（高さ14m＝最も背の高い構造物）。pos.y=7 でカプセル底が y=0 に来る
-        go.transform.localScale = new Vector3(4.5f, 7f, 4.5f);
-        SetStatic(go);
-        SetMat(go, mat);
+        // 親 GO: 当たり判定(CapsuleCollider)/HealthComponent/TeamTag を持つ「ネクサス本体」。
+        // 見た目は子オブジェクトの多段台座+石柱+発光クリスタルでプロシージャルに組む。
+        var root = new GameObject(name);
+        root.transform.position = new Vector3(pos.x, 0f, pos.z);
+        SetStatic(root);
 
-        // 足元のチーム色リング: ネクサスの位置と所属を遠目でも識別しやすくする
+        // ダメージ受け取り用のコライダー(クリック・スキル弾の命中判定)
+        var col = root.AddComponent<CapsuleCollider>();
+        col.center = new Vector3(0f, 5.5f, 0f);
+        col.height = 11f;
+        col.radius = 2.6f;
+
+        // 足元の影リング(チーム色の薄リング)。前方広場を広く取るため小さめに(半径4)。
         var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
         ring.name = $"{name}_Ring";
-        ring.transform.position   = new Vector3(pos.x, 0.1f, pos.z);
-        // 直径8(半径4)。前方の防衛広場を広く取るためリングを縮小(report25)。
-        ring.transform.localScale = new Vector3(8f, 0.05f, 8f);
+        ring.transform.SetParent(root.transform, false);
+        ring.transform.localPosition = new Vector3(0f, 0.1f, 0f);
+        ring.transform.localScale    = new Vector3(8f, 0.05f, 8f);
         UseFlatMeshCollider(ring, keepCollider: false);
         SetStatic(ring);
         SetMat(ring, mat);
 
-        var hc = go.AddComponent<HealthComponent>();
+        // 多段台座: 3段重ね。下が広く上が狭い、いかにも祭壇な見た目。チーム色 + 暗色トリム。
+        Material trim = GetOrCreateMat($"{name}_Trim", new Color(0.18f, 0.18f, 0.22f));
+        AddTitanTier(root.transform, $"{name}_Tier1", new Vector3(0f, 0.30f, 0f), new Vector3(9.0f, 0.50f, 9.0f), mat);
+        AddTitanTier(root.transform, $"{name}_Tier1Trim", new Vector3(0f, 0.62f, 0f), new Vector3(9.1f, 0.10f, 9.1f), trim);
+        AddTitanTier(root.transform, $"{name}_Tier2", new Vector3(0f, 0.95f, 0f), new Vector3(7.0f, 0.50f, 7.0f), mat);
+        AddTitanTier(root.transform, $"{name}_Tier2Trim", new Vector3(0f, 1.27f, 0f), new Vector3(7.1f, 0.10f, 7.1f), trim);
+        AddTitanTier(root.transform, $"{name}_Tier3", new Vector3(0f, 1.60f, 0f), new Vector3(5.0f, 0.50f, 5.0f), mat);
+
+        // 中央の石柱(細く高い)。クリスタルを支える礎。
+        var pillar = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        pillar.name = $"{name}_Pillar";
+        pillar.transform.SetParent(root.transform, false);
+        pillar.transform.localPosition = new Vector3(0f, 4.0f, 0f);
+        pillar.transform.localScale    = new Vector3(2.4f, 2.6f, 2.4f);
+        SetStatic(pillar);
+        SetMat(pillar, trim);
+
+        // 石柱の途中にチーム色のトリム輪(2本)。
+        AddTitanTier(root.transform, $"{name}_PillarRing1", new Vector3(0f, 2.55f, 0f), new Vector3(2.7f, 0.15f, 2.7f), mat);
+        AddTitanTier(root.transform, $"{name}_PillarRing2", new Vector3(0f, 5.45f, 0f), new Vector3(2.7f, 0.15f, 2.7f), mat);
+
+        // 頂上クリスタル: 半透明発光のチーム色。立方体を 45°回転させて八面体っぽく見せる。
+        // チーム色を暗くしたものに少しの透過を乗せた専用マテリアル。
+        Color crystalCol = pos.x < 0f
+            ? new Color(0.35f, 0.65f, 1.00f, 0.85f)
+            : new Color(1.00f, 0.45f, 0.30f, 0.85f);
+        Material crystalMat = GetOrCreateTransparentMat($"{name}_Crystal", crystalCol);
+        var crystal = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        crystal.name = $"{name}_Crystal";
+        crystal.transform.SetParent(root.transform, false);
+        crystal.transform.localPosition = new Vector3(0f, 8.2f, 0f);
+        crystal.transform.localRotation = Quaternion.Euler(0f, 45f, 35f);
+        crystal.transform.localScale    = new Vector3(2.3f, 3.6f, 2.3f);
+        Object.DestroyImmediate(crystal.GetComponent<Collider>());
+        SetStatic(crystal);
+        SetMat(crystal, crystalMat);
+
+        // クリスタル直下の冠リング(チーム色トリム)。
+        AddTitanTier(root.transform, $"{name}_CrystalBase", new Vector3(0f, 6.6f, 0f), new Vector3(3.2f, 0.15f, 3.2f), mat);
+
+        var hc = root.AddComponent<HealthComponent>();
         var soHc = new SerializedObject(hc);
         soHc.FindProperty("_maxHp").floatValue = 2500f;
         soHc.ApplyModifiedPropertiesWithoutUndo();
 
-        var tt   = go.AddComponent<TeamTag>();
+        var tt   = root.AddComponent<TeamTag>();
         var soTt = new SerializedObject(tt);
         soTt.FindProperty("_team").enumValueIndex = pos.x < 0f ? (int)TeamId.Blue : (int)TeamId.Red;
         soTt.ApplyModifiedPropertiesWithoutUndo();
 
         return hc;
+    }
+
+    // ネクサスの台座1段(=チーム色 or トリム色の薄い円柱)を子として追加する。
+    private static void AddTitanTier(Transform parent, string name, Vector3 localPos, Vector3 localScale, Material mat)
+    {
+        var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        go.name = name;
+        go.transform.SetParent(parent, false);
+        go.transform.localPosition = localPos;
+        go.transform.localScale    = localScale;
+        Object.DestroyImmediate(go.GetComponent<Collider>());
+        SetStatic(go);
+        SetMat(go, mat);
     }
 
     private static void SetStatic(GameObject go)
