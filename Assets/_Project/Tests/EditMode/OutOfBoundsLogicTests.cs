@@ -5,8 +5,8 @@ using Enigma.Character;
 namespace Enigma.Tests
 {
     /// <summary>
-    /// OutOfBoundsLogic の純粋関数テスト。境界半径（レーン外周 51.8 / ポケット外周 17.4）と
-    /// 救出地点（半径 45・同一角度）の整合を検証する。
+    /// OutOfBoundsLogic の純粋関数テスト。境界は目形(アーモンド)=上下2大円(中心(0,0,∓35)/r85)の
+    /// AND 内側が場内。救出地点（半径 45・同一角度）の整合も検証する。
     /// </summary>
     public sealed class OutOfBoundsLogicTests
     {
@@ -15,42 +15,42 @@ namespace Enigma.Tests
         [Test]
         public void InsideLane_IsNotOutOfBounds()
         {
-            // 中心距離 45（レーンアーク上）はプレイ領域
+            // (45, 0): 目形中央付近、両円の内側 → 場内
             Assert.IsFalse(OutOfBoundsLogic.IsOutOfBounds(45f, 0f));
         }
 
         [Test]
-        public void OnWallTop_JustInside_IsNotOutOfBounds()
+        public void NearCorner_JustInside_IsNotOutOfBounds()
         {
-            // 中心距離 51（壁体内 51.8 未満）はまだ場外でない
-            Assert.IsFalse(OutOfBoundsLogic.IsOutOfBounds(51f, 0f));
+            // (75, 0): 目尻(±77.46, 0)の手前で両円の内側 → 場内
+            Assert.IsFalse(OutOfBoundsLogic.IsOutOfBounds(75f, 0f));
         }
 
         [Test]
-        public void InsidePocket_IsNotOutOfBounds()
+        public void RespawnPad_IsNotOutOfBounds()
         {
-            // 赤ベース中心 (56,0) の直上はポケット内 → プレイ領域
-            Assert.IsFalse(OutOfBoundsLogic.IsOutOfBounds(56f, 0f));
+            // リスポーンパッド中心 (-68, 0) は目形内側 → 場内
+            Assert.IsFalse(OutOfBoundsLogic.IsOutOfBounds(-68f, 0f));
         }
 
         [Test]
-        public void OutsidePocket_IsOutOfBounds()
+        public void PastCornerX_IsOutOfBounds()
         {
-            // 赤ベース中心から +x へ 18（ポケット外周 17.4 超）かつ中心距離 74 → 場外
-            Assert.IsTrue(OutOfBoundsLogic.IsOutOfBounds(74f, 0f));
+            // (80, 0): 目尻(±77.46, 0)を超えた → 場外
+            Assert.IsTrue(OutOfBoundsLogic.IsOutOfBounds(80f, 0f));
         }
 
         [Test]
-        public void FarOutside_IsOutOfBounds()
+        public void PastTopLid_IsOutOfBounds()
         {
-            // 中心距離 60（51.8 超）でベースポケット外 → 場外
+            // (0, 60): 中央縦幅 z=±50 を超えた → 場外
             Assert.IsTrue(OutOfBoundsLogic.IsOutOfBounds(0f, 60f));
         }
 
         [Test]
-        public void JustOutsideLaneRing_IsOutOfBounds()
+        public void JustPastTopLid_IsOutOfBounds()
         {
-            // 中心距離 52（51.8 超）でポケット外 → 場外
+            // (0, 52): 中央縦幅 z=±50 を超えた → 場外
             Assert.IsTrue(OutOfBoundsLogic.IsOutOfBounds(0f, 52f));
         }
 

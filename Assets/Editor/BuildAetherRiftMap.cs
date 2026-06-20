@@ -70,9 +70,9 @@ public static partial class BuildAetherRiftMap
             ground.name = "Ground";
             // Cylinder メッシュは高さ2のため scaleY=0.5 で天面が y=0 になる
             ground.transform.position   = new Vector3(0f, -0.5f, 0f);
-            // マップを楕円(瞳)に: X 半径 80 維持、Z 半径 60 に縮める(scale Z 160→120)。
-            // 楕円境界(OuterBoundary の z-scale 0.75)を内包する。
-            ground.transform.localScale = new Vector3(160f, 0.5f, 120f);
+            // 目形(アーモンド)境界の余白として: X 半径 80 維持、Z 半径 53 に縮める(scale Z 120→106)。
+            // 目形は x=±77.5/z=±50 まで → ground は少し外まで広げる(視覚の余白、プレイヤーは境界壁で止まる)。
+            ground.transform.localScale = new Vector3(160f, 0.5f, 106f);
             UseFlatMeshCollider(ground, keepCollider: true);
             SetStatic(ground);
             // 草原グリーン
@@ -964,46 +964,32 @@ public static partial class BuildAetherRiftMap
         //    名前に "Boundary" を含め VerifyBoundary のヒット判定に乗せる
         // ============================================================
 
-        // --- B1. リング2弧: [50.0, 51.8]・高さ2.0・弧 12°→168° / 192°→348° ---
-        // セグメント数 = 弧長 / 3.75°（角度幅 156° → 約 42 セグメント）
-        const float RingStepDeg = 3.75f;
-        int ringSegs = Mathf.Max(1, Mathf.RoundToInt(156f / RingStepDeg));
-        PlaceWallBand(parent, "BoundaryTubeRing_North", TubeLaneInnerR, TubeLaneOuterR, TubeHeight, ringSegs, 12f, 168f, matBoundary);
-        PlaceWallBand(parent, "BoundaryTubeRing_South", TubeLaneInnerR, TubeLaneOuterR, TubeHeight, ringSegs, 192f, 348f, matBoundary);
+        // ------------------------------------------------------------
+        // 境界 = 目形(アーモンド/vesica piscis)を上下2本の大円弧で構成する。
+        //   上まぶた: 中心(0,0,-EyeB), 半径 EyeR、目尻(cornerDeg)〜頂点(+z,90°)〜反対目尻(180-cornerDeg)
+        //   下まぶた: 中心(0,0,+EyeB), 半径 EyeR、目尻(180+cornerDeg)〜頂点(-z,270°)〜反対目尻(360-cornerDeg)
+        // 2弧は z=0, x=±sqrt(EyeR²-EyeB²) で接続(=目尻)。プレイヤーは目形の内側に閉じ込められる。
+        // OutOfBoundsLogic も目形2円の AND 内側で場内判定するように変更済み。
+        // ------------------------------------------------------------
+        const float EyeR = 85f;
+        const float EyeB = 35f;
+        const float EyeInnerR = EyeR;          // 内周(プレイヤー側)= 円弧そのもの
+        const float EyeOuterR = EyeR + 1.8f;   // 外周(視覚壁厚)
+        const float EyeStepDeg = 3.75f;
 
-        // --- B2. ベースポケット2つ: [14.4, 15.8]・高さ2.0 ---
-        // レーン側（ベース正面=原点方向）に固定半角の開口を残し、それ以外を壁で囲う + 両端 5° 延長。
-        //   Blue: 中心は -56、レーン側(=+x, 原点方向)は φ≈0 → 開口は |φ| < φ0
-        //   Red : 中心は +56、レーン側(=-x)は φ≈180 → 開口は |φ-180| < φ0
-        float phi0Deg = PocketOpeningHalfDeg;  // 開口の半角（ベース正面 ±）
+        // 目尻の角度: 中心(0,0,-EyeB)から目尻(sqrt(R²-B²),0)へ atan2(B, sqrt(R²-B²))
+        float cornerDeg = Mathf.Atan2(EyeB, Mathf.Sqrt(EyeR * EyeR - EyeB * EyeB)) * Mathf.Rad2Deg;
+        float upperStart = cornerDeg;
+        float upperEnd   = 180f - cornerDeg;
+        float lowerStart = 180f + cornerDeg;
+        float lowerEnd   = 360f - cornerDeg;
+        int upperSegs = Mathf.Max(1, Mathf.RoundToInt((upperEnd - upperStart) / EyeStepDeg));
+        int lowerSegs = Mathf.Max(1, Mathf.RoundToInt((lowerEnd - lowerStart) / EyeStepDeg));
 
-        // Blue: 壁弧 = [phi0, 360 - phi0]、両端 5° 延長
-        float blueStart = phi0Deg - PocketEndExtendDeg;
-        float blueEnd   = 360f - phi0Deg + PocketEndExtendDeg;
-        // Red: 開口が 180° 中心 → 壁弧 = [180 + phi0, 180 - phi0 + 360]、両端 5° 延長
-        float redStart  = 180f + phi0Deg - PocketEndExtendDeg;
-        float redEnd    = 180f - phi0Deg + 360f + PocketEndExtendDeg;
-
-        // ポケット弧のセグメント数（弧長を 3.75° 相当で割る）
-        int pocketSegs = Mathf.Max(1, Mathf.RoundToInt((blueEnd - blueStart) / RingStepDeg));
-
-        // 描画弧は 5° 延長前の範囲（衝突は延長維持=すり抜け防止、描画は延長なし=リング壁内側への出っ張り解消）
-        float blueVisualStart = phi0Deg;
-        float blueVisualEnd   = 360f - phi0Deg;
-        float redVisualStart  = 180f + phi0Deg;
-        float redVisualEnd    = 180f - phi0Deg + 360f;
-
-        PlaceWallBandAt(parent, "BoundaryTubePocket_Blue", new Vector3(-56f, 0f, 0f),
-            TubePocketInnerR, TubePocketOuterR, TubeHeight, pocketSegs, blueStart, blueEnd, matBoundary,
-            blueVisualStart, blueVisualEnd);
-        PlaceWallBandAt(parent, "BoundaryTubePocket_Red", new Vector3(56f, 0f, 0f),
-            TubePocketInnerR, TubePocketOuterR, TubeHeight, pocketSegs, redStart, redEnd, matBoundary,
-            redVisualStart, redVisualEnd);
-
-        // 境界全体を z 方向 0.75 倍に潰して楕円化(上から見ると瞳の外形)。
-        // 子の MeshCollider/MeshRenderer は親 scale を受け取って楕円潰しに追従する。
-        // ベース口ポケットの中心(±56, 0, 0)は z=0 なので位置は変わらず、円弧帯のみ楕円化する。
-        parent.transform.localScale = new Vector3(1f, 1f, 0.75f);
+        PlaceWallBandAt(parent, "BoundaryEye_UpperLid", new Vector3(0f, 0f, -EyeB),
+            EyeInnerR, EyeOuterR, TubeHeight, upperSegs, upperStart, upperEnd, matBoundary);
+        PlaceWallBandAt(parent, "BoundaryEye_LowerLid", new Vector3(0f, 0f,  EyeB),
+            EyeInnerR, EyeOuterR, TubeHeight, lowerSegs, lowerStart, lowerEnd, matBoundary);
     }
 
     /// <summary>

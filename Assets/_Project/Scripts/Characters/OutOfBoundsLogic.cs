@@ -4,32 +4,26 @@ namespace Enigma.Character
 {
     /// <summary>
     /// マップ境界に対する場外判定・救出地点算出の純粋関数ユーティリティ。
-    /// 衝突チューブの真の境界半径（レーン外周 51.8、ベースポケット外周 11.4）と整合させる。
+    /// マップは目形(アーモンド)で、上下2つの大円(中心(0,0,∓EyeB)・半径 EyeR)の AND 内側が場内。
+    /// BuildAetherRiftMap.CreateOuterBoundary の EyeR / EyeB と一致させる。
     /// </summary>
     public static class OutOfBoundsLogic
     {
-        // 衝突チューブの外殻半径と一致させる（BuildAetherRiftMap の TubeLaneOuterR / TubePocketInnerR）
-        private const float LaneOuterRadius   = 51.8f;
-        // ベースポケット拡張（14.4→17.4）に追従。拡張ベース内が場外判定されないようにする
-        private const float PocketInnerRadius = 17.4f;
-        private const float BaseOffsetX       = 56f;
-        // 救出先の半径（レーンアーク中央 R=45 付近）
-        private const float LaneRescueRadius  = 45f;
+        // 目形(アーモンド)を定義する2円。BuildAetherRiftMap の CreateOuterBoundary と一致。
+        private const float EyeR = 85f;
+        private const float EyeB = 35f;
+        // 救出先の半径（レーンアーク中央 R=45 付近、目形内側に確実に収まる）
+        private const float LaneRescueRadius = 45f;
 
         /// <summary>
-        /// XZ 中心距離が境界外、かつ両ベースポケット内でもない場合に場外とみなす。
-        /// ポケット内（壁の内側で守られている）はプレイ可能領域なので場外ではない。
+        /// 目形の内側 = 上まぶた円(中心(0,0,-EyeB))内 ∧ 下まぶた円(中心(0,0,+EyeB))内 のとき場内。
         /// </summary>
         public static bool IsOutOfBounds(float x, float z)
         {
-            float distCenter = Mathf.Sqrt(x * x + z * z);
-            if (distCenter <= LaneOuterRadius) return false;
-
-            // 両ベース中心 (±56, 0) からの距離がポケット半径以内ならプレイ領域
-            float dBlue = Mathf.Sqrt((x + BaseOffsetX) * (x + BaseOffsetX) + z * z);
-            float dRed  = Mathf.Sqrt((x - BaseOffsetX) * (x - BaseOffsetX) + z * z);
-            if (dBlue <= PocketInnerRadius || dRed <= PocketInnerRadius) return false;
-
+            float r2 = EyeR * EyeR;
+            float dUpper = x * x + (z + EyeB) * (z + EyeB);
+            float dLower = x * x + (z - EyeB) * (z - EyeB);
+            if (dUpper <= r2 && dLower <= r2) return false;
             return true;
         }
 
