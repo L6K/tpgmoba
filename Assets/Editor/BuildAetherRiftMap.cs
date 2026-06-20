@@ -979,13 +979,14 @@ public static partial class BuildAetherRiftMap
         const float EyeStepDeg = 3.75f;
 
         // 目尻の角度: 中心(0,0,-EyeB)から目尻(sqrt(R²-B²),0)へ atan2(B, sqrt(R²-B²))
-        // 両端を CornerOverlapDeg 度ずつ延長することで上下の弧が目尻で重なり、継ぎ目が見えなくなる。
+        // 上下まぶたは目尻 (±cornerX, 0) でちょうど一点で接続する(弧の延長はしない=Ground 外には出ない)。
+        // 接続点の継ぎ目は別途、目尻にコーナーキャップ(細い円柱)を1本ずつ立てて隠す。
         float cornerDeg = Mathf.Atan2(EyeB, Mathf.Sqrt(EyeR * EyeR - EyeB * EyeB)) * Mathf.Rad2Deg;
-        const float CornerOverlapDeg = 3f;
-        float upperStart = cornerDeg - CornerOverlapDeg;
-        float upperEnd   = 180f - cornerDeg + CornerOverlapDeg;
-        float lowerStart = 180f + cornerDeg - CornerOverlapDeg;
-        float lowerEnd   = 360f - cornerDeg + CornerOverlapDeg;
+        float cornerX   = Mathf.Sqrt(EyeR * EyeR - EyeB * EyeB);
+        float upperStart = cornerDeg;
+        float upperEnd   = 180f - cornerDeg;
+        float lowerStart = 180f + cornerDeg;
+        float lowerEnd   = 360f - cornerDeg;
         int upperSegs = Mathf.Max(1, Mathf.RoundToInt((upperEnd - upperStart) / EyeStepDeg));
         int lowerSegs = Mathf.Max(1, Mathf.RoundToInt((lowerEnd - lowerStart) / EyeStepDeg));
 
@@ -993,6 +994,67 @@ public static partial class BuildAetherRiftMap
             EyeInnerR, EyeOuterR, TubeHeight, upperSegs, upperStart, upperEnd, matBoundary);
         PlaceWallBandAt(parent, "BoundaryEye_LowerLid", new Vector3(0f, 0f,  EyeB),
             EyeInnerR, EyeOuterR, TubeHeight, lowerSegs, lowerStart, lowerEnd, matBoundary);
+
+        // 目尻のコーナーシーム・パッチ:
+        //   上まぶた弧の右端 外周 = (EyeOuterR·cos(cornerDeg), 0, -EyeB + EyeOuterR·sin(cornerDeg))
+        //   下まぶた弧の右端 外周 = (EyeOuterR·cos(cornerDeg), 0, +EyeB - EyeOuterR·sin(cornerDeg))
+        //   内側の目尻 = (cornerX, 0, 0)
+        // この3点(と高さ方向の対応点)で楔形のパッチを張って、上下弧の端面の継ぎ目を覆う。
+        // パッチの外側端 x = EyeOuterR·cos(cornerDeg) ≈ 79.1 で、Ground の外には出るが
+        // Wall band の外周と完全に同じ x なので「壁の外に出た」ようには見えない。
+        float cornerRad = cornerDeg * Mathf.Deg2Rad;
+        float patchOuterX = EyeOuterR * Mathf.Cos(cornerRad);
+        float patchOuterZ = EyeOuterR * Mathf.Sin(cornerRad) - EyeB; // 上まぶた弧の +z 側端
+        PlaceCornerSeamPatch(parent, "BoundaryEye_CornerR", +cornerX, +patchOuterX, patchOuterZ, TubeHeight, matBoundary);
+        PlaceCornerSeamPatch(parent, "BoundaryEye_CornerL", -cornerX, -patchOuterX, patchOuterZ, TubeHeight, matBoundary);
+    }
+
+    // 目尻パッチ。内側の目尻(cornerX,0,0) と 外側2点(outerX, ±zOuter) でできる楔を高さ方向に押し出す。
+    // 6頂点(底3 + 天3)、天面1枚 + 上下側面2枚で表面を張る。外周面は Wall band の端面と接して継ぎ目を覆う。
+    private static void PlaceCornerSeamPatch(GameObject parent, string name, float cornerX, float outerX, float zOuter, float height, Material mat)
+    {
+        // 右側(cornerX>0)は z>0 が上まぶた外端、z<0 が下まぶた外端。左側(cornerX<0)は対称。
+        float sgn = Mathf.Sign(cornerX);
+        float zUp   = +Mathf.Abs(zOuter);
+        float zDown = -Mathf.Abs(zOuter);
+
+        var verts = new Vector3[]
+        {
+            new Vector3(cornerX,        0f,     0f),     // 0 内側目尻 底
+            new Vector3(outerX,         0f,     zUp),    // 1 上まぶた外端 底
+            new Vector3(outerX,         0f,     zDown),  // 2 下まぶた外端 底
+            new Vector3(cornerX,        height, 0f),     // 3 内側目尻 天
+            new Vector3(outerX,         height, zUp),    // 4 上まぶた外端 天
+            new Vector3(outerX,         height, zDown),  // 5 下まぶた外端 天
+        };
+
+        // 天面: +Y を向く CCW を sgn で切り替える(右側と左側で巻き向きが反転)
+        var tris = new System.Collections.Generic.List<int>();
+        if (sgn > 0f)
+        {
+            tris.AddRange(new[] { 3, 4, 5 });             // 天面
+            tris.AddRange(new[] { 0, 1, 4, 0, 4, 3 });    // 上側面 (z>0)
+            tris.AddRange(new[] { 0, 3, 5, 0, 5, 2 });    // 下側面 (z<0)
+        }
+        else
+        {
+            tris.AddRange(new[] { 3, 5, 4 });
+            tris.AddRange(new[] { 0, 4, 1, 0, 3, 4 });
+            tris.AddRange(new[] { 0, 5, 3, 0, 2, 5 });
+        }
+
+        var mesh = new Mesh { name = name + "Mesh" };
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        var go = new GameObject(name);
+        go.transform.SetParent(parent.transform, false);
+        var mf = go.AddComponent<MeshFilter>(); mf.sharedMesh = mesh;
+        var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat;
+        var mc = go.AddComponent<MeshCollider>(); mc.sharedMesh = mesh;
+        SetStatic(go);
     }
 
     /// <summary>
