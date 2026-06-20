@@ -364,29 +364,35 @@ public static partial class BuildAetherRiftMap
             SetMat(baseRed, matRed);
         }
 
-        // タイタン=ネクサス: 小さなリスポーンパッド(±68)の前方(±52)に独立して立てる。
-        // 「復帰→ネクサス→レーン」の並び。造形は単色カプセルではなく多段台座+発光クリスタル
-        // のプロシージャル ネクサスで、破壊目標として一目で分かるようにする。
-        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-52f, 0f, 0f), matBlue);
-        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 52f, 0f, 0f), matRed);
+        // タイタン=ネクサス: リスポーンパッド(±68)とレーン円形帯(r=40〜50)の間 (±56) に独立配置。
+        // タイタン台座(r=4.5)中心 ±56:
+        //   レーン外側 x=50 ⟷ 台座内端 x=51.5 = 1.5m 余裕
+        //   リスポーンパッド外端 x=62 ⟷ 台座外端 x=60.5 = 1.5m 余裕
+        // 「復帰→ネクサス→レーン」の並びを保ちつつ、両側に均等な隙間を確保する。
+        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-56f, 0f, 0f), matBlue);
+        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 56f, 0f, 0f), matRed);
 
-        // タワー8基: Kenney tower-square.fbx (フォールバック: Cylinder)
-        // TOP: θ=160°,140° (Blue)、θ=40°,20° (Red)
-        // BOT: θ=200°,220° (Blue)、θ=320°,340° (Red)
+        // タワー8基: 4本のジャングルパス(45°/135°/225°/315°方向)の両側 ±10° に挟む形で配置する。
+        // パスの両側からジャングル出入りを牽制する LoL 風の「ジャングル口タワー」になる。
+        // 半径は R=45 (レーンアーク中央)。チームは象限で決定: 右上=Red, 左上=Blue, 左下=Blue, 右下=Red。
         {
             var towerModel = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/External/Towers/DungeonTowerD.fbx");
 
             (string name, float theta, Material mat)[] towerDefs =
             {
-                ("Tower_BTop",    160f, matBlue),
-                ("Tower_BMidTop", 140f, matBlue),
-                ("Tower_RTop",     40f, matRed),
-                ("Tower_RMidTop",  20f, matRed),
-                ("Tower_BBot",    200f, matBlue),
-                ("Tower_BMidBot", 220f, matBlue),
-                ("Tower_RBot",    320f, matRed),
-                ("Tower_RMidBot", 340f, matRed),
+                // Red パス(右上 45°)を挟む2基
+                ("Tower_RTopOuter", 55f, matRed),
+                ("Tower_RTopInner", 35f, matRed),
+                // Blue パス(左上 135°)を挟む2基
+                ("Tower_BTopOuter", 125f, matBlue),
+                ("Tower_BTopInner", 145f, matBlue),
+                // Blue パス(左下 225°)を挟む2基
+                ("Tower_BBotInner", 215f, matBlue),
+                ("Tower_BBotOuter", 235f, matBlue),
+                // Red パス(右下 315°)を挟む2基
+                ("Tower_RBotOuter", 305f, matRed),
+                ("Tower_RBotInner", 325f, matRed),
             };
 
             foreach (var (tname, theta, tmat) in towerDefs)
