@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -471,6 +472,9 @@ namespace Enigma.Ability
             if (slot == 2) // 方向系アルティメット(リン レールガン): 足元から照準方向へ派手演出
                 SkillVfx.PlayUltimate(_championVfx,
                     new Vector3(transform.position.x, GroundLevelY(), transform.position.z), dir);
+
+            if (slot == 2 && _championVfx == ChampionVfx.Rin)
+                StartCoroutine(RecoilRoutine(-dir));
         }
 
         private void CastGroundAoe(int slot, SkillDefinition def, Vector3 groundCursorPos, float scale)
@@ -536,7 +540,11 @@ namespace Enigma.Ability
         {
             if (_health == null) return;
             if (def.HealAmount > 0f) _health.Model.Heal(def.HealAmount);
-            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) _health.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f)
+            {
+                _health.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+                ShieldShellEffect.Spawn(gameObject, SkillVfx.ToColor(AttackVfxProfiles.For(_championVfx).Secondary));
+            }
         }
 
         // dash(自分)。Targeted は対象方向、それ以外はカーソル方向へ。
@@ -547,6 +555,32 @@ namespace Enigma.Ability
                 ? (target.transform.position - transform.position)
                 : (groundCursorPos - transform.position);
             _playerController.RequestDash(dir, def.DashDistance);
+
+            if (_championVfx == ChampionVfx.Veil)
+            {
+                var p = AttackVfxProfiles.For(_championVfx);
+                DashAfterimage.Spawn(gameObject, SkillVfx.ToColor(p.Primary), SkillVfx.ToColor(p.Secondary));
+            }
+        }
+
+        // リンRの発射反動: 照準逆方向へ短時間の後退インパルス(演出専用、CC判定は不要)
+        private IEnumerator RecoilRoutine(Vector3 backDir)
+        {
+            var cc = GetComponent<CharacterController>();
+            if (cc == null) yield break;
+            backDir.y = 0f;
+            if (backDir.sqrMagnitude < 0.0001f) yield break;
+            backDir.Normalize();
+            const float duration = 0.12f;
+            const float totalDistance = 1.2f;
+            float elapsed = 0f;
+            while (elapsed < duration)
+            {
+                float dt = Mathf.Min(Time.deltaTime, duration - elapsed);
+                cc.Move(backDir * (totalDistance * (dt / duration)));
+                elapsed += dt;
+                yield return null;
+            }
         }
 
         // 味方対象の回復+シールド。カーソル下の味方を探し、無ければ自分。

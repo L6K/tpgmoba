@@ -948,7 +948,14 @@ namespace Enigma.Character
 
             // 対象へブリンク(veil R 等)
             if (def.DashDistance > 0f)
+            {
                 RequestDash(target.transform.position - transform.position, def.DashDistance);
+                if (_championVfx == ChampionVfx.Veil)
+                {
+                    var p = AttackVfxProfiles.For(_championVfx);
+                    DashAfterimage.Spawn(gameObject, SkillVfx.ToColor(p.Primary), SkillVfx.ToColor(p.Secondary));
+                }
+            }
 
             // 胸元→対象へビーム一閃 + バースト+小リング（プレイヤー側と共通化）
             var color = SkillSlotColor(slot);
@@ -966,7 +973,11 @@ namespace Enigma.Character
             var hc = GetComponent<HealthComponent>();
             if (hc == null) return;
             if (def.HealAmount > 0f) hc.Model.Heal(def.HealAmount);
-            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f)
+            {
+                hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+                ShieldShellEffect.Spawn(gameObject, SkillVfx.ToColor(AttackVfxProfiles.For(_championVfx).Secondary));
+            }
             var color = SkillSlotColor(2);
             SkillVfx.SpawnBurst(transform.position, color, 0.5f, 2.5f, 0.4f);
         }
@@ -1028,7 +1039,11 @@ namespace Enigma.Character
             var hc = GetComponent<HealthComponent>();
             if (hc == null) return;
             if (def.HealAmount > 0f) hc.Model.Heal(def.HealAmount);
-            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f) hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+            if (def.ShieldAmount > 0f && def.ShieldDuration > 0f)
+            {
+                hc.Model.AddShield(def.ShieldAmount, def.ShieldDuration);
+                ShieldShellEffect.Spawn(gameObject, SkillVfx.ToColor(AttackVfxProfiles.For(_championVfx).Secondary));
+            }
         }
 
         // スロット色: champion プロファイル由来(Q=主色 / E=副色 / R=混色)。プレイヤー SkillCaster.SlotColor と一致させる。
