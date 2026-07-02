@@ -167,9 +167,22 @@ namespace Enigma.Character
             GameSfx.PlayVariant("aa_hit", 3, contact, 0.55f);
         }
 
+        private bool _warnedMissingProjectile;
+
         private void FireProjectile(HealthComponent target)
         {
-            if (target == null || _projectilePrefab == null || _muzzle == null) return;
+            if (target == null || _muzzle == null) return;
+            if (_projectilePrefab == null)
+            {
+                // シーン再生成でプレハブ fileID 参照が切れると無音で空振りし続けバグ発見が遅れる。
+                // 一度だけ警告して結線切れを可視化する(Sandbox の AaBeam 参照切れの実績あり)。
+                if (!_warnedMissingProjectile)
+                {
+                    _warnedMissingProjectile = true;
+                    Debug.LogWarning($"[AutoAttack] {name}: _projectilePrefab が未結線のため遠距離AAが発射できません(シーンの参照切れ疑い)", this);
+                }
+                return;
+            }
             var dir = (target.transform.position - _muzzle.position).normalized;
             // ビーム見た目を進行方向へ向けるため LookRotation を与える
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
