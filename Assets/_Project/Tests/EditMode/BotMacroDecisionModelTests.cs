@@ -12,10 +12,13 @@ namespace Enigma.Tests
             bool objective = false,
             float objectiveDistance = 999f,
             bool minions = false,
-            bool towerThreat = false)
+            bool towerThreat = false,
+            bool ownTowerUnderAttack = false,
+            float distanceToThreatenedTower = float.MaxValue)
         {
             return new BotMacroContext(
-                hp, allies, enemies, objective, objectiveDistance, minions, towerThreat);
+                hp, allies, enemies, objective, objectiveDistance, minions, towerThreat,
+                ownTowerUnderAttack, distanceToThreatenedTower);
         }
 
         [Test]
@@ -158,6 +161,43 @@ namespace Enigma.Tests
                 C(hp: 0.8f, allies: 4, enemies: 2,
                   objective: true, objectiveDistance: 20f, minions: true));
             Assert.AreEqual(BotMacroAction.GroupForObjective, action);
+        }
+
+        [Test]
+        public void OwnTowerUnderAttack_SafeHp_InRange_Defends()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3,
+                  ownTowerUnderAttack: true, distanceToThreatenedTower: 20f));
+            Assert.AreEqual(BotMacroAction.Defend, action);
+        }
+
+        [Test]
+        public void OwnTowerUnderAttack_LowHp_Outnumbered_RetreatsInstead()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.3f, allies: 2, enemies: 4,
+                  ownTowerUnderAttack: true, distanceToThreatenedTower: 20f));
+            Assert.AreEqual(BotMacroAction.Retreat, action);
+        }
+
+        [Test]
+        public void OwnTowerUnderAttack_OutOfDefendRange_DoesNotDefend()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3,
+                  ownTowerUnderAttack: true, distanceToThreatenedTower: 50f));
+            Assert.AreEqual(BotMacroAction.Farm, action);
+        }
+
+        [Test]
+        public void OwnTowerUnderAttack_AndObjectiveActive_DefendsBeforeGrouping()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3,
+                  objective: true, objectiveDistance: 10f,
+                  ownTowerUnderAttack: true, distanceToThreatenedTower: 20f));
+            Assert.AreEqual(BotMacroAction.Defend, action);
         }
     }
 }

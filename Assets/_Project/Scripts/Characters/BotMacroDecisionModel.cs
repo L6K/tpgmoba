@@ -11,11 +11,14 @@ namespace Enigma.Character
         public readonly float DistanceToObjective;
         public readonly bool AlliedMinionsPresent;
         public readonly bool UnderTowerThreat;
+        public readonly bool OwnTowerUnderAttack;
+        public readonly float DistanceToThreatenedTower;
 
         public BotMacroContext(
             float selfHpFraction, int alliesAlive, int enemiesAlive,
             bool objectiveActiveOrSoon, float distanceToObjective,
-            bool alliedMinionsPresent, bool underTowerThreat)
+            bool alliedMinionsPresent, bool underTowerThreat,
+            bool ownTowerUnderAttack, float distanceToThreatenedTower)
         {
             SelfHpFraction       = selfHpFraction;
             AlliesAlive          = alliesAlive;
@@ -24,6 +27,8 @@ namespace Enigma.Character
             DistanceToObjective  = distanceToObjective;
             AlliedMinionsPresent = alliedMinionsPresent;
             UnderTowerThreat     = underTowerThreat;
+            OwnTowerUnderAttack  = ownTowerUnderAttack;
+            DistanceToThreatenedTower = distanceToThreatenedTower;
         }
     }
 
@@ -32,6 +37,7 @@ namespace Enigma.Character
         public const float LowHpFraction      = 0.35f;
         public const float SafeHpFraction     = 0.45f;
         public const float ObjectiveJoinRange = 35f;
+        public const float DefendJoinRange    = 45f;
 
         public static BotMacroAction Decide(in BotMacroContext ctx)
         {
@@ -39,6 +45,13 @@ namespace Enigma.Character
                 (ctx.EnemiesAlive >= ctx.AlliesAlive || ctx.UnderTowerThreat))
             {
                 return BotMacroAction.Retreat;
+            }
+
+            if (ctx.OwnTowerUnderAttack &&
+                ctx.SelfHpFraction >= SafeHpFraction &&
+                ctx.DistanceToThreatenedTower <= DefendJoinRange)
+            {
+                return BotMacroAction.Defend;
             }
 
             if (ctx.ObjectiveActiveOrSoon &&

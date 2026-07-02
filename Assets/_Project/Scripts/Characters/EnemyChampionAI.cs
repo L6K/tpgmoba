@@ -137,6 +137,21 @@ namespace Enigma.Character
         // UnderTowerThreat とみなす最寄り敵タワー距離（おおよそタワー射程＋余裕）。
         private const float TowerThreatRange = 12f;
 
+        // 自陣タワー被弾から Defend 判定を有効とみなす経過秒数（古い脅威に釣られないため短命）。
+        private const float OwnTowerDamageMemory = 5f;
+        // Defend で被弾タワーへ向かうとき、到達とみなして停止する距離（以降は Sense のフォーカス選択に委ねる）。
+        private const float DefendArriveRange = 12f;
+
+        // 自チーム（TeamTag一致）の Tower_ プレフィックス HealthComponent 一覧。Start で遅延1回キャッシュする。
+        private readonly List<HealthComponent> _ownTowers = new();
+        private readonly List<float> _ownTowerLastHp = new();
+        private bool _ownTowersCacheDone;
+
+        // 自陣タワー被弾の直近記録。OnDied/RespawnRoutine で古い脅威をリセットする。
+        private float  _lastTowerDamageTime = float.NegativeInfinity;
+        private Vector3 _threatenedTowerPos;
+        private HealthComponent _threatenedTowerHc;
+
         // 中立狩りの無進展検知。射線が木に塞がれた等で HP も距離も進展しない場合、
         // 一定時間でそのキャンプを見送って巡回へ復帰する（デッドロック防止）
         private const float NeutralAttackRange      = 5.5f; // 空き地(木なし半径4.5)内から撃つ
@@ -423,11 +438,33 @@ namespace Enigma.Character
                     return true;
 
                 case BotMacroAction.Defend:
+                {
+                    // 自陣タワー被弾由来の Defend: 被弾タワーへ向かう。距離 DefendArriveRange 以内に
+                    // 着いたら以降は主戦闘フロー（Sense のフォーカス選択が周囲の敵を拾って交戦する）。
+                    bool ownTowerUnderAttack = (Time.time - _lastTowerDamageTime) < OwnTowerDamageMemory
+                        && _threatenedTowerHc != null && !_threatenedTowerHc.Model.IsDead;
+
+                    if (ownTowerUnderAttack)
+                    {
+                        float distToThreatenedTower = Vector3.Distance(transform.position, _threatenedTowerPos);
+                        if (distToThreatenedTower > DefendArriveRange)
+                        {
+                            MoveDirectlyToward(_threatenedTowerPos);
+                            // 移動中でも射程内の敵が居ればついでに応戦する（防衛陣地保持のため micro は使わない）。
+                            if (_nearestEnemy != null && !_nearestEnemy.Model.IsDead)
+                                FaceAndAttack(_nearestEnemy, allowSkills: _nearestEnemyIsChampion, useMicro: false);
+                            return true;
+                        }
+                        // 到達済み: 従来どおりその場維持で応戦するフローへ落ちる。
+                    }
+
+                    // 既存の Defend 挙動（従来トリガー=UnderTowerThreat 由来、または到達済みの被弾タワー Defend）。
                     // その場維持し、射程内の敵に応戦する（防衛陣地保持のため micro は使わない）。
                     if (_nearestEnemy != null && !_nearestEnemy.Model.IsDead)
                         FaceAndAttack(_nearestEnemy, allowSkills: _nearestEnemyIsChampion, useMicro: false);
                     ApplyMovement(LaneMove.Stop);
                     return true;
+                }
 
                 default:
                     return false; // Push / Farm は従来フロー
@@ -439,6 +476,9 @@ namespace Enigma.Character
         // チームは TeamTag.Team を基準に判定する（同チーム=味方、それ以外=攻撃対象）。
         private void Sense()
         {
+            if (!_ownTowersCacheDone) BuildOwnTowersCache();
+            UpdateOwnTowerThreat();
+
             _attackerChampion = null;
             _neutralTarget = null;
             _nearestTowerHc = null;
@@ -573,6 +613,66 @@ namespace Enigma.Character
             UpdateMacro(myTeam, towerDist);
         }
 
+        // 自チーム（TeamTag一致）の Tower_ プレフィックス HealthComponent を一度だけ収集してキャッシュする。
+        // シーン内タワーは静的なため Sense のたびに再収集する必要はない。
+        private void BuildOwnTowersCache()
+        {
+            _ownTowersCacheDone = true;
+            _ownTowers.Clear();
+            _ownTowerLastHp.Clear();
+
+            TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Red;
+            var allHealth = Object.FindObjectsByType<HealthComponent>(FindObjectsSortMode.None);
+            for (int i = 0; i < allHealth.Length; i++)
+            {
+                var hc = allHealth[i];
+                if (hc == null || !hc.name.StartsWith("Tower_")) continue;
+
+                var tag = hc.GetComponentInParent<TeamTag>();
+                if (tag == null || tag.Team != myTeam) continue;
+
+                _ownTowers.Add(hc);
+                _ownTowerLastHp.Add(hc.Model.CurrentHp);
+            }
+        }
+
+        // 自陣タワーの HP を前回値と比較し、減っていれば被弾として記録する（複数同時なら最寄りを優先）。
+        private void UpdateOwnTowerThreat()
+        {
+            if (_ownTowers.Count == 0) return;
+
+            float bestDist = float.MaxValue;
+            HealthComponent damagedTower = null;
+
+            for (int i = 0; i < _ownTowers.Count; i++)
+            {
+                var hc = _ownTowers[i];
+                if (hc == null) continue;
+
+                float currentHp = hc.Model.IsDead ? 0f : hc.Model.CurrentHp;
+                float lastHp = _ownTowerLastHp[i];
+
+                if (currentHp < lastHp - 0.01f)
+                {
+                    float dist = Vector3.Distance(transform.position, hc.transform.position);
+                    if (dist < bestDist)
+                    {
+                        bestDist = dist;
+                        damagedTower = hc;
+                    }
+                }
+
+                _ownTowerLastHp[i] = currentHp;
+            }
+
+            if (damagedTower != null)
+            {
+                _lastTowerDamageTime = Time.time;
+                _threatenedTowerPos  = damagedTower.transform.position;
+                _threatenedTowerHc   = damagedTower;
+            }
+        }
+
         // BotMacroContext を組み立て、マクロ判断を更新する（Sense と同頻度）。
         // チャンピオン数の集計は全走査だが小規模かつ 0.3s 間隔なのでコスト許容。
         private void UpdateMacro(TeamId myTeam, float nearestTowerDist)
@@ -597,9 +697,17 @@ namespace Enigma.Character
             // 最寄り敵タワーが概ね射程内なら被タワー脅威とみなす（Sense の towerDist を流用）。
             bool underTowerThreat = nearestTowerDist <= TowerThreatRange;
 
+            // 自陣タワー被弾は直近 OwnTowerDamageMemory 秒以内かつ、そのタワーがまだ生存している場合のみ有効。
+            bool ownTowerUnderAttack = (Time.time - _lastTowerDamageTime) < OwnTowerDamageMemory
+                && _threatenedTowerHc != null && !_threatenedTowerHc.Model.IsDead;
+            float distanceToThreatenedTower = ownTowerUnderAttack
+                ? Vector3.Distance(transform.position, _threatenedTowerPos)
+                : float.MaxValue;
+
             var ctx = new BotMacroContext(
                 selfHp, allies, enemies, objectiveActiveOrSoon,
-                distToObjective, alliedMinionsPresent, underTowerThreat);
+                distToObjective, alliedMinionsPresent, underTowerThreat,
+                ownTowerUnderAttack, distanceToThreatenedTower);
             _macro = BotMacroDecisionModel.Decide(in ctx);
         }
 
@@ -1389,6 +1497,9 @@ namespace Enigma.Character
             _isDead = true;
             _recalling = false; // 死亡で詠唱状態を破棄（復活後に誤ってテレポート完走しないように）
             _controller.enabled = false;
+            // 死亡中に自陣タワーがさらに被弾しても、リスポーン後に古い脅威へ釣られないようリセットする。
+            _lastTowerDamageTime = float.NegativeInfinity;
+            _threatenedTowerHc   = null;
             StartCoroutine(RespawnRoutine());
         }
 
@@ -1403,6 +1514,10 @@ namespace Enigma.Character
             _state            = LaneBotState.Push;
             _waypointIndex    = 0;
             _verticalVelocity = 0f;
+
+            // リスポーン直後は古いタワー被弾記憶を持ち越さない（死亡中の遠隔脅威に釣られないため）。
+            _lastTowerDamageTime = float.NegativeInfinity;
+            _threatenedTowerHc   = null;
 
             _controller.enabled = true;
             // Revive 経由で HealthModel.Revived が発火し DeathPresenter が見た目を復元する
