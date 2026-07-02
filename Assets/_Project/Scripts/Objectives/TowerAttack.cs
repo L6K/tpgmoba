@@ -20,7 +20,9 @@ namespace Enigma.Objective
         [SerializeField] private Transform  _muzzle;
         [SerializeField] private Transform  _crystal; // チャージ予兆を出す頂部クリスタル（ビルダーで結線）
 
-        private const float Range         = 14f;
+        // 隣接タワー間隔(ジャングル口の対=20°間隔・弦長≈15.6m)より攻囲位置(タワー際2〜3m)が
+        // 圏外になるよう 11 に抑える。14 だと外側タワーを殴るミニオンが奥のタワーに撃たれる。
+        private const float Range         = 11f;
         private const float AttackInterval = 1.2f;
         private const float Damage        = 20f;
         private const float ProjectileSpeed = 25f;
