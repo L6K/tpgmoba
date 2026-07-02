@@ -6,6 +6,8 @@ using Enigma.Audio;
 using Enigma.Combat;
 using Enigma.Core;
 using Enigma.GameModes;
+using Enigma.Item;
+using Enigma.UI;
 using Enigma.Vfx;
 
 namespace Enigma.Character
@@ -138,6 +140,34 @@ namespace Enigma.Character
 
         private bool _isDead;
 
+        // ── 買い物 / 買い物リコール（ゴールドが貯まったときの帰還専用。低HP帰還は Retreat が担う） ──
+
+        private PlayerWallet _wallet;
+        private PlayerItems  _items;
+
+        // タンク判定（BaseHp>=250 で MaxHpBonus 品優先）。ApplyCharacter で確定。
+        private bool _preferHpItems;
+
+        // ShopController.Catalog の遅延解決キャッシュ。見つからなければ買い物機能は静かに無効。
+        private ShopController _shopController;
+        private bool _shopCatalogResolveAttempted;
+
+        // Sense と同程度の低頻度で購入/リコール判断を行う。
+        private const float ShoppingCheckInterval = 0.5f;
+        private float _shoppingCheckTimer;
+
+        // 自チーム泉中心（Red=+68 / Blue=-68, y=1.1, z=0）。購入/リコール判定と帰還先テレポートに使う。
+        private const float FountainX = 68f;
+        private const float FountainY = 1.1f;
+        private const float FountainRadius = 6f; // この半径内で自動購入する
+        private const float RecallEnemyCheckRadius = 15f;
+
+        // 買い物リコール詠唱
+        private const float RecallChannelSeconds = 4f;
+        private bool  _recalling;
+        private float _recallTimeRemaining;
+        private float _recallStartHp;
+
         private void Awake()
         {
             _controller     = GetComponent<CharacterController>();
@@ -145,6 +175,13 @@ namespace Enigma.Character
             _teamTag        = GetComponent<TeamTag>();
             _attackCooldown = new AttackCooldown(_attackCdSeconds);
             _statusEffects  = StatusEffectController.GetOrAdd(gameObject);
+
+            // Bot はシーン上で AddComponent されないため、Wallet/Items を自給する
+            // （PlayerWallet/PlayerItems は GetComponent ベースで単体動作するため安全）。
+            _wallet = GetComponent<PlayerWallet>();
+            if (_wallet == null) _wallet = gameObject.AddComponent<PlayerWallet>();
+            _items = GetComponent<PlayerItems>();
+            if (_items == null) _items = gameObject.AddComponent<PlayerItems>();
         }
 
         /// <summary>
@@ -160,6 +197,9 @@ namespace Enigma.Character
             if (data.AttackDamage > 0f)    _attackDamage    = data.AttackDamage;
             if (data.AttackRange > 0f)     _attackRange     = data.AttackRange;
             if (data.AttackCooldown > 0f)  _attackCdSeconds = data.AttackCooldown;
+
+            // タンク（BaseHp>=250）は MaxHpBonus 品を優先して購入する。
+            _preferHpItems = data.BaseHp >= 250f;
 
             // AA ビームのネオン着色用に champion プロファイルを解決（プレイヤー側 AutoAttack と同経路）
             _championVfx = AttackVfxProfiles.Parse(data.CharId);
@@ -210,6 +250,29 @@ namespace Enigma.Character
         {
             if (_isDead) return;
 
+            // 買い物リコール詠唱中: 移動/攻撃/スキルを止めてその場待機（重力のみ適用）。
+            // HP が詠唱開始時より減ったら即中断して通常行動へ戻す。
+            if (_recalling)
+            {
+                if (_health.Model.CurrentHp < _recallStartHp - 0.01f)
+                {
+                    _recalling = false;
+                }
+                else
+                {
+                    _recallTimeRemaining -= Time.deltaTime;
+
+                    if (_controller.isGrounded && _verticalVelocity < 0f) _verticalVelocity = -1f;
+                    _verticalVelocity += Gravity * Time.deltaTime;
+                    var stayStep = Vector3.zero;
+                    stayStep.y = _verticalVelocity * Time.deltaTime;
+                    _controller.Move(stayStep);
+
+                    if (_recallTimeRemaining <= 0f) CompleteRecall();
+                    return;
+                }
+            }
+
             // ダッシュ中は通常の知覚/移動を上書きして踏み込みを優先する
             if (_dashTimeRemaining > 0f)
             {
@@ -236,6 +299,13 @@ namespace Enigma.Character
             {
                 _senseTimer = SenseInterval;
                 Sense();
+            }
+
+            _shoppingCheckTimer -= Time.deltaTime;
+            if (_shoppingCheckTimer <= 0f)
+            {
+                _shoppingCheckTimer = ShoppingCheckInterval;
+                UpdateShopping();
             }
 
             var decision = LaneBotLogic.Decide(_state, _perception);
@@ -483,6 +553,120 @@ namespace Enigma.Character
             _macro = BotMacroDecisionModel.Decide(in ctx);
         }
 
+        // 自チーム泉中心（Red=+68 / Blue=-68, y=1.1, z=0）。
+        private Vector3 FountainCenter()
+        {
+            TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Red;
+            float x = myTeam == TeamId.Red ? FountainX : -FountainX;
+            return new Vector3(x, FountainY, 0f);
+        }
+
+        // ShopController.Catalog を遅延で一度だけ解決してキャッシュする。見つからなければ以降も無効のまま。
+        private ItemShopCatalog ResolveShopCatalog()
+        {
+            if (_shopCatalogResolveAttempted) return _shopController != null ? _shopController.Catalog : null;
+
+            _shopCatalogResolveAttempted = true;
+            _shopController = Object.FindFirstObjectByType<ShopController>();
+            return _shopController != null ? _shopController.Catalog : null;
+        }
+
+        // Sense と同程度の低頻度で: 泉内なら自動購入し、Farm/Push 中は買い物リコール開始可否を判定する。
+        private void UpdateShopping()
+        {
+            if (_recalling) return; // 詠唱中は Update 冒頭で別処理するためここには来ないが念のため
+
+            var catalog = ResolveShopCatalog();
+            if (catalog == null || _wallet == null || _items == null) return;
+
+            var fountain = FountainCenter();
+            var diff = transform.position - fountain;
+            diff.y = 0f;
+            float distToFountain = diff.magnitude;
+
+            // 泉圏内: 買える限り買い続ける（1回のチェックで完結させる）。
+            if (distToFountain <= FountainRadius)
+            {
+                while (true)
+                {
+                    int idx = BotShoppingModel.ChooseNextPurchase(
+                        BuildShopItemInfos(catalog), _wallet.Wallet.Gold,
+                        _items.Inventory.Items.Count, _preferHpItems);
+                    if (idx < 0) break;
+                    if (!_items.TryPurchase(catalog.Items[idx])) break;
+                }
+                return;
+            }
+
+            // リコールは Retreat/GroupForObjective/Defend 中には開始しない（Farm/Push のみ）。
+            if (_macro != BotMacroAction.Farm && _macro != BotMacroAction.Push) return;
+
+            int nextIdx = BotShoppingModel.ChooseNextPurchase(
+                BuildShopItemInfos(catalog), _wallet.Wallet.Gold,
+                _items.Inventory.Items.Count, _preferHpItems);
+            int nextPrice = nextIdx >= 0 ? catalog.Items[nextIdx].Price : -1;
+
+            bool enemyNearby = IsEnemyChampionNearby(RecallEnemyCheckRadius);
+            float hpRatio = _health.Model.MaxHp > 0f ? _health.Model.CurrentHp / _health.Model.MaxHp : 0f;
+
+            bool shouldRecall = BotShoppingModel.ShouldRecallForShopping(
+                hpRatio, enemyNearby, _wallet.Wallet.Gold, nextPrice, distToFountain);
+
+            if (shouldRecall) StartRecall();
+        }
+
+        // カタログの ItemData を BotShoppingModel 用の値型へ変換する。
+        private static List<ShopItemInfo> BuildShopItemInfos(ItemShopCatalog catalog)
+        {
+            var list = new List<ShopItemInfo>(catalog.Items.Count);
+            for (int i = 0; i < catalog.Items.Count; i++)
+            {
+                var item = catalog.Items[i];
+                if (item == null) continue;
+                list.Add(new ShopItemInfo(i, item.Price, item.AttackPercent, item.MaxHpBonus, item.MoveSpeedPercent));
+            }
+            return list;
+        }
+
+        // 半径内に生存中の敵チャンピオン（PlayerController / EnemyChampionAI）が居るか。
+        private bool IsEnemyChampionNearby(float radius)
+        {
+            TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Red;
+            var cols = Physics.OverlapSphere(transform.position, radius);
+            foreach (var col in cols)
+            {
+                if (col.gameObject == gameObject) continue;
+                var tag = col.GetComponent<TeamTag>();
+                if (tag == null || tag.Team == myTeam || tag.Team == TeamId.Neutral) continue;
+                if (ClassifyTarget(col) != LaneThreatKind.Champion) continue;
+                var hc = col.GetComponent<HealthComponent>();
+                if (hc == null || hc.Model.IsDead) continue;
+                return true;
+            }
+            return false;
+        }
+
+        // 買い物リコール詠唱を開始する。
+        private void StartRecall()
+        {
+            _recalling            = true;
+            _recallTimeRemaining  = RecallChannelSeconds;
+            _recallStartHp        = _health.Model.CurrentHp;
+        }
+
+        // 詠唱完走: 泉中心へテレポートし、ウェイポイント進行度を再同期する（PlayerRespawn と同じ流儀）。
+        private void CompleteRecall()
+        {
+            _recalling = false;
+
+            _controller.enabled = false;
+            transform.position = FountainCenter();
+            _controller.enabled = true;
+
+            _verticalVelocity = 0f;
+            _waypointIndex    = 0;
+        }
+
         // 生存チャンピオン(PlayerController / EnemyChampionAI)を TeamTag でチーム分けして数える。
         // 自分を含む自チーム=allies、Neutral 以外の異チーム=enemies。
         private void CountChampions(TeamId myTeam, ref int allies, ref int enemies)
@@ -611,7 +795,8 @@ namespace Enigma.Character
             // CC 反映: ルート/スタン中は水平移動を止め、スロウは速度倍率を掛ける(ApplyMovement と同様)
             if (_statusEffects != null && !_statusEffects.CanMove) dir = Vector3.zero;
             float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f)
-                          * ObjectiveMoveSpeedMultiplier();
+                          * ObjectiveMoveSpeedMultiplier()
+                          * (_items != null ? _items.MoveSpeedMultiplier : 1f);
 
             var motion = dir * speed;
             motion.y = _verticalVelocity;
@@ -655,7 +840,8 @@ namespace Enigma.Character
             if (_statusEffects != null && !_statusEffects.CanMove)
                 horizontal = Vector3.zero;
             float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f)
-                          * ObjectiveMoveSpeedMultiplier();
+                          * ObjectiveMoveSpeedMultiplier()
+                          * (_items != null ? _items.MoveSpeedMultiplier : 1f);
             var motion = horizontal * speed;
             motion.y = _verticalVelocity;
             _controller.Move(motion * Time.deltaTime);
@@ -891,7 +1077,8 @@ namespace Enigma.Character
 
             if (_statusEffects != null && !_statusEffects.CanMove) dir = Vector3.zero;
             float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f)
-                          * ObjectiveMoveSpeedMultiplier();
+                          * ObjectiveMoveSpeedMultiplier()
+                          * (_items != null ? _items.MoveSpeedMultiplier : 1f);
 
             var motion = dir * speed;
             motion.y = _verticalVelocity;
@@ -1136,6 +1323,7 @@ namespace Enigma.Character
         {
             // 見た目（フェード/転倒）は DeathPresenter に委譲。AI 側は当たり/移動だけ止める
             _isDead = true;
+            _recalling = false; // 死亡で詠唱状態を破棄（復活後に誤ってテレポート完走しないように）
             _controller.enabled = false;
             StartCoroutine(RespawnRoutine());
         }

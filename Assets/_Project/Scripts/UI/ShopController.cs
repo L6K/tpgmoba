@@ -17,6 +17,9 @@ namespace Enigma.UI
         [SerializeField] private ItemShopCatalog _catalog;
         [SerializeField] private Transform       _player;
 
+        // Bot がカタログを参照するための公開アクセサ。
+        public ItemShopCatalog Catalog => _catalog;
+
         // ビルダーが青本拠地中心 (-56,0,0) を設定する
         [SerializeField] private Vector3 _shopCenter = new Vector3(-56f, 0f, 0f);
 
