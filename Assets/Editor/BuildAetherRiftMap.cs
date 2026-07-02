@@ -2423,10 +2423,12 @@ public static partial class BuildAetherRiftMap
         Material matBody, Material matBar, Color ringColor, Projectile projPrefab,
         GameObject telegraphPrefab, bool farmsNeutralCamps = false)
     {
-        // 経路先頭にスポーン地点(=泉中心)を挿入する。後退(Backward)が index 0 まで
-        // 戻ったとき開口部でなく泉の回復圏(半径10)内で止まるようにするため
+        // 経路先頭に「チーム泉中心(±68, 0)」を挿入する。後退(Backward)が index 0 まで戻ったとき、
+        // WaypointReach(3m) 手前で停止しても泉の回復圏(中心±68・半径5)内に必ず収まるようにする。
+        // spawnPos(±66, ±3.5)を先頭にすると停止位置が泉圏から最大7m外れ、低HPの Retreat が
+        // 回復できず永久に解除されないデッドロックになる(泉を r10→5 に縮めた際の回帰)。
         var route = new Vector3[waypoints.Length + 1];
-        route[0] = new Vector3(spawnPos.x, 0f, spawnPos.z);
+        route[0] = new Vector3(Mathf.Sign(spawnPos.x) * 68f, 0f, 0f);
         System.Array.Copy(waypoints, 0, route, 1, waypoints.Length);
         waypoints = route;
 
