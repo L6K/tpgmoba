@@ -2,6 +2,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UIElements;
 using Enigma.Ability;
 using Enigma.Character;
@@ -155,12 +156,20 @@ public static partial class BuildAetherRiftMap
         soOverheadUi.FindProperty("_progression").objectReferenceValue     = playerProgression;
         soOverheadUi.ApplyModifiedPropertiesWithoutUndo();
 
-        // ── 4. カメラ ──────────────────────────────────────────
+        // ── 4. カメラ + ポスプロ ─────────────────────────────────
+        // URPポスプロはカメラ側フラグ + グローバルVolume(EnigmaPost)の両方が無いと効かない
         var camGo = new GameObject("Main Camera");
         camGo.tag = "MainCamera";
-        camGo.AddComponent<Camera>();
+        var sandboxCam = camGo.AddComponent<Camera>();
+        sandboxCam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
         camGo.AddComponent<AudioListener>();
         var orbitCam = camGo.AddComponent<OrbitCamera>();
+
+        var postGo  = new GameObject("Global Post Volume");
+        var sandboxVolume = postGo.AddComponent<UnityEngine.Rendering.Volume>();
+        sandboxVolume.isGlobal = true;
+        var postProfile = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.VolumeProfile>("Assets/Settings/URP/EnigmaPost.asset");
+        if (postProfile != null) sandboxVolume.sharedProfile = postProfile;
 
         var soPlayer = new SerializedObject(player.GetComponent<PlayerController>());
         soPlayer.FindProperty("_cameraTransform").objectReferenceValue = camGo.transform;

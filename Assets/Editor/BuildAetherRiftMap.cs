@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UIElements;
 using Enigma.Character;
 using Enigma.Combat;
@@ -731,10 +732,11 @@ public static partial class BuildAetherRiftMap
 
         // PlayerController のカメラ参照は後で設定
 
-        // 10. Main Camera
+        // 10. Main Camera(URPポスプロ有効化: Bloom等のVolumeオーバーライドはカメラ側フラグが無いと一切効かない)
         var camGo = new GameObject("Main Camera");
         camGo.tag = "MainCamera";
-        camGo.AddComponent<Camera>();
+        var mainCam = camGo.AddComponent<Camera>();
+        mainCam.GetUniversalAdditionalCameraData().renderPostProcessing = true;
         camGo.AddComponent<AudioListener>();
         var orbitCam = camGo.AddComponent<OrbitCamera>();
 
