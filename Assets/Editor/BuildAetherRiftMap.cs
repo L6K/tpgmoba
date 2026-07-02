@@ -2799,40 +2799,44 @@ public static partial class BuildAetherRiftMap
             return new Vector3(45f * Mathf.Cos(r), 0f, 45f * Mathf.Sin(r));
         }
 
-        // BlueTop: 出発(-50,0,10)→ θ=160,135,90,45,20 のアーク→終点(50,0,8)
+        // 各ルートの終端はレーン開口(±50, ±8)から敵タイタン前(±52, ±4 → ±52, 0)まで延伸する。
+        // 最終WP(±52, 0)は敵タイタン(±56, 0)の中心から4m=カプセル(r2.6)の外・aggro(8m)の内なので、
+        // ウェーブは到達前に索敵でタイタンを標的化して攻城に移る(=タイタン撃破で決着が付く)。
+
+        // BlueTop: 出発(-50,0,10)→ θ=160,135,90,45,20 のアーク→敵開口→Redタイタン前
         PlaceSpawner("Spawner_BlueTop",
             new Vector3(-50f, 0f, 10f),
             TeamId.Blue, matBlue, minionPrefab,
             new Vector3[] {
                 ArcPt(160f), ArcPt(135f), ArcPt(90f), ArcPt(45f), ArcPt(20f),
-                new Vector3(50f, 0f, 8f)
+                new Vector3(50f, 0f, 8f), new Vector3(52f, 0f, 4f), new Vector3(52f, 0f, 0f)
             });
 
-        // RedTop: 出発(50,0,10)→ θ=20,45,90,135,160 のアーク→終点(-50,0,8)
+        // RedTop: 出発(50,0,10)→ θ=20,45,90,135,160 のアーク→敵開口→Blueタイタン前
         PlaceSpawner("Spawner_RedTop",
             new Vector3(50f, 0f, 10f),
             TeamId.Red, matRed, minionPrefab,
             new Vector3[] {
                 ArcPt(20f), ArcPt(45f), ArcPt(90f), ArcPt(135f), ArcPt(160f),
-                new Vector3(-50f, 0f, 8f)
+                new Vector3(-50f, 0f, 8f), new Vector3(-52f, 0f, 4f), new Vector3(-52f, 0f, 0f)
             });
 
-        // BlueBot: z 符号反転版（出発(-50,0,-10)→ θ=200,225,270,315,340→終点(50,0,-8)）
+        // BlueBot: z 符号反転版
         PlaceSpawner("Spawner_BlueBot",
             new Vector3(-50f, 0f, -10f),
             TeamId.Blue, matBlue, minionPrefab,
             new Vector3[] {
                 ArcPt(200f), ArcPt(225f), ArcPt(270f), ArcPt(315f), ArcPt(340f),
-                new Vector3(50f, 0f, -8f)
+                new Vector3(50f, 0f, -8f), new Vector3(52f, 0f, -4f), new Vector3(52f, 0f, 0f)
             });
 
-        // RedBot: z 符号反転版（出発(50,0,-10)→ θ=340,315,270,225,200→終点(-50,0,-8)）
+        // RedBot: z 符号反転版
         PlaceSpawner("Spawner_RedBot",
             new Vector3(50f, 0f, -10f),
             TeamId.Red, matRed, minionPrefab,
             new Vector3[] {
                 ArcPt(340f), ArcPt(315f), ArcPt(270f), ArcPt(225f), ArcPt(200f),
-                new Vector3(-50f, 0f, -8f)
+                new Vector3(-50f, 0f, -8f), new Vector3(-52f, 0f, -4f), new Vector3(-52f, 0f, 0f)
             });
     }
 

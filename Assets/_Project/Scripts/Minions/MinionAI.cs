@@ -198,7 +198,13 @@ namespace Enigma.Minion
         {
             if (_currentTarget == null) return;
 
-            float dist = Vector3.Distance(transform.position, _currentTarget.transform.position);
+            // 距離は対象コライダーの最近接点で測る。タイタン(カプセル半径2.6)のような太い構造物は
+            // 中心間距離だと _attackRange(1.8) 以内に物理的に入れず、永遠に攻撃できないため。
+            var targetCol = _currentTarget.GetComponent<Collider>();
+            Vector3 closest = targetCol != null
+                ? targetCol.ClosestPoint(transform.position)
+                : _currentTarget.transform.position;
+            float dist = Vector3.Distance(transform.position, closest);
 
             if (dist > _attackRange)
             {
