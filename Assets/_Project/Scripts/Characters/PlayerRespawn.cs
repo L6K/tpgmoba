@@ -36,7 +36,7 @@ namespace Enigma.Character
 
         private IEnumerator RespawnRoutine()
         {
-            yield return new WaitForSeconds(1f);
+            yield return new WaitForSeconds(5f);
 
             // CharacterController を無効化してからワープ（有効時はコライダー解決が阻害するため）
             if (_cc != null) _cc.enabled = false;

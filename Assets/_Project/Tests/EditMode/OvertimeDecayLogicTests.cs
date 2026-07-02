@@ -8,14 +8,14 @@ namespace Enigma.Tests.EditMode
         [Test]
         public void オーバータイム前は減衰しない()
         {
-            Assert.AreEqual(0f, OvertimeDecayLogic.DamagePerSecond(800f, 1199f));
+            Assert.AreEqual(0f, OvertimeDecayLogic.DamagePerSecond(800f, 899f));
         }
 
         [Test]
         public void オーバータイム後は最大HPの1パーセントを毎秒減衰()
         {
-            Assert.AreEqual(8f, OvertimeDecayLogic.DamagePerSecond(800f, 1200f), 0.001f);
-            Assert.AreEqual(25f, OvertimeDecayLogic.DamagePerSecond(2500f, 1500f), 0.001f);
+            Assert.AreEqual(8f, OvertimeDecayLogic.DamagePerSecond(800f, 900f), 0.001f);
+            Assert.AreEqual(25f, OvertimeDecayLogic.DamagePerSecond(2500f, 1200f), 0.001f);
         }
 
         [Test]

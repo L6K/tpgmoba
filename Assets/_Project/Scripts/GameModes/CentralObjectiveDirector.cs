@@ -191,16 +191,16 @@ namespace Enigma.GameModes
             CaptureCount++;
 
             // Damage は常に付与（3回目以降は強化）
-            buffs.Grant(team, ObjectiveBuffType.Damage, n >= 3 ? 0.20f : 0.15f, 30f, now);
+            buffs.Grant(team, ObjectiveBuffType.Damage, n >= 3 ? 0.25f : 0.20f, 45f, now);
 
             if (n >= 2)
-                buffs.Grant(team, ObjectiveBuffType.MoveSpeed, 0.12f, 30f, now);
+                buffs.Grant(team, ObjectiveBuffType.MoveSpeed, 0.15f, 45f, now);
 
             if (n >= 3)
             {
-                GrantTeamShield(team, 120f, 8f);
+                GrantTeamShield(team, 150f, 10f);
                 // HUD のバフ表示用に Shield 種別も記録(実シールドは GrantTeamShield が即時付与)
-                buffs.Grant(team, ObjectiveBuffType.Shield, 120f, 8f, now);
+                buffs.Grant(team, ObjectiveBuffType.Shield, 150f, 10f, now);
             }
         }
 

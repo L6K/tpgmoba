@@ -405,9 +405,9 @@ public static partial class BuildAetherRiftMap
 
                 // 接地位置 y=0。チームはタワー名の B/R プレフィックスで判定
                 bool isBlue = tname.StartsWith("Tower_B");
-                // 外側タワー(名前に "Mid" を含む)=600、本陣寄りの内側タワー=800。
-                // 本陣防衛ほど固くして、ウェーブで段階的に折り進む設計にする。
-                float towerHp = tname.Contains("Mid") ? 600f : 800f;
+                // 外側タワー(名前に "Outer" を含む)=600で先に折られ、内側タワー(Inner)=800で
+                // 本陣寄りほど固い。本陣防衛ほど固くして、ウェーブで段階的に折り進む設計にする。
+                float towerHp = tname.Contains("Outer") ? 600f : 800f;
                 PlaceTower(tname, tPos, tmat, null, towerModel, isBlue, towerHp);
 
                 // 足元チーム色リング

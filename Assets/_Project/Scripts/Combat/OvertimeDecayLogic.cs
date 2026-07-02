@@ -5,7 +5,7 @@ namespace Enigma.Combat
     // 構造物(タワー/タイタン)を毎秒減衰させて決着を構造的に保証する。
     public static class OvertimeDecayLogic
     {
-        public const float DefaultOvertimeStartSeconds = 1200f; // 20分
+        public const float DefaultOvertimeStartSeconds = 900f; // 15分
 
         // 毎秒の減衰率(最大HP比)。タワー(600-800)は約100秒、タイタン(2500)も
         // 同率なので約100秒で崩壊し、オーバータイム突入から2分弱で必ず決着する

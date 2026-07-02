@@ -68,7 +68,7 @@ namespace Enigma.Character
         // AA ビームのネオン着色に使う champion 別プロファイル。ApplyCharacter で CharId から解決。
         private ChampionVfx _championVfx = ChampionVfx.Zeph;
 
-        private const float RespawnDelay = 8f;
+        private const float RespawnDelay = 5f;
 
         // 中立キャンプ狩りの探索半径と射程（その場で殴れる近さ）。
         // キャンプ空き地(木なし半径4.5)+余裕。これより遠くで採用すると経路外の
