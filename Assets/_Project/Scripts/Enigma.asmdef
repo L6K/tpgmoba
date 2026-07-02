@@ -1,5 +1,5 @@
 {
     "name": "Enigma",
     "rootNamespace": "Enigma",
-    "references": ["Unity.InputSystem"]
+    "references": ["Unity.InputSystem", "Unity.VisualEffectGraph.Runtime"]
 }

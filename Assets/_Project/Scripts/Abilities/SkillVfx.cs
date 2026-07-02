@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.VFX;
 using Enigma.Vfx;
 
 namespace Enigma.Ability
@@ -234,6 +235,9 @@ namespace Enigma.Ability
         /// </summary>
         public static void PlayUltimate(ChampionVfx champ, Vector3 groundPos, Vector3 dir)
         {
+            if (TryPlayHeroUltimate(champ, groundPos, dir))
+                return;
+
             var profile = AttackVfxProfiles.For(champ);
             Color core = ToColor(profile.Primary);
             Color edge = ToColor(profile.Secondary);
@@ -248,6 +252,52 @@ namespace Enigma.Ability
                 var a = groundPos + Vector3.up * 1.2f;
                 SpawnBeam(a, a + dir.normalized * 24f, core, 0.7f, 0.5f);
             }
+        }
+
+        // champion 別 Hero プレハブの Resources.Load 結果キャッシュ（未作成キャラは null をキャッシュし毎回の Load を避ける）
+        private static readonly Dictionary<ChampionVfx, GameObject> _heroUltPrefabCache = new();
+
+        /// <summary>
+        /// Hero プレハブは Resources/Vfx/Ult/Ult_{Champ}.prefab、exposed契約は Confluence 07_アルティメットVFX設計を参照。
+        /// </summary>
+        private static bool TryPlayHeroUltimate(ChampionVfx champ, Vector3 groundPos, Vector3 dir)
+        {
+            if (!_heroUltPrefabCache.TryGetValue(champ, out var prefab))
+            {
+                prefab = Resources.Load<GameObject>("Vfx/Ult/Ult_" + champ);
+                _heroUltPrefabCache[champ] = prefab;
+            }
+
+            if (prefab == null)
+                return false;
+
+            var dirFlat = new Vector3(dir.x, 0f, dir.z);
+            var rot = dirFlat.sqrMagnitude > 0.0001f ? Quaternion.LookRotation(dirFlat) : Quaternion.identity;
+
+            var instance = Object.Instantiate(prefab, groundPos, rot);
+
+            var visualEffect = instance.GetComponent<VisualEffect>();
+            if (visualEffect == null)
+                visualEffect = instance.GetComponentInChildren<VisualEffect>();
+
+            if (visualEffect != null)
+            {
+                var profile = AttackVfxProfiles.For(champ);
+
+                if (visualEffect.HasVector4("ColorPrimary"))
+                    visualEffect.SetVector4("ColorPrimary", ToColor(profile.Primary, profile.EmissionIntensity));
+
+                if (visualEffect.HasVector4("ColorSecondary"))
+                    visualEffect.SetVector4("ColorSecondary", ToColor(profile.Secondary, profile.EmissionIntensity));
+
+                if (visualEffect.HasFloat("Scale"))
+                    visualEffect.SetFloat("Scale", 1f);
+
+                visualEffect.SendEvent("OnPlay");
+            }
+
+            Object.Destroy(instance, 6f);
+            return true;
         }
 
         /// <summary>
