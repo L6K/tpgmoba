@@ -27,6 +27,12 @@ namespace Enigma.GameModes
         /// <summary>中央オブジェクトが存在する試合か(ボスが見つかった場合のみ true)。</summary>
         public bool HasObjective => _boss != null;
 
+        /// <summary>ボスの HealthComponent。非アクティブ/未解決/死亡時は null を返す(呼び側は攻撃可否をこれで判定する)。</summary>
+        public HealthComponent BossHealth =>
+            (_resolved && _bossActive && _bossHealth != null && _bossHealth.Model != null && !_bossHealth.Model.IsDead)
+                ? _bossHealth
+                : null;
+
         /// <summary>中央オブジェクトの累計撃破(制圧)回数。HUD がアナウンス検知に使う。</summary>
         public int CaptureCount { get; private set; }
         /// <summary>直近の制圧チーム。HUD がアナウンス色とテキストに使う。</summary>

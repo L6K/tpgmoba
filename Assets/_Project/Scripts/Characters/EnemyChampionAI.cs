@@ -109,6 +109,10 @@ namespace Enigma.Character
 
         // 最寄り敵タワー/タイタンの HealthComponent（終盤にウェーブと一緒に折るため保持）。
         private HealthComponent _nearestTowerHc;
+
+        // フォーカス対象選定用の候補バッファ（Sense 毎に Clear して再利用。GC 回避）。
+        private readonly List<HealthComponent> _focusCandidateHcs = new();
+        private readonly List<FocusCandidate>  _focusCandidates   = new();
         // 味方ミニオンが射程内に居るか（タワーダイブ＝被弾の盾になる味方が居るかの判定）。
         private bool _allyMinionNearby;
 
@@ -117,12 +121,19 @@ namespace Enigma.Character
 
         // 中立キャンプ狩り対象（_farmsNeutralCamps のときのみ採用）。
         private HealthComponent _neutralTarget;
+        // CentralObjectiveDirector.Instance が未生成のフレーム用の遅延1回キャッシュ（GroupForObjective のボス攻撃で使用）。
+        private CentralObjectiveDirector _objectiveDirectorCache;
+        private bool _objectiveDirectorLookupDone;
 
         // Sense と同頻度で算出するマクロ判断（撤退/中央集合/防衛等）。
         private BotMacroAction _macro = BotMacroAction.Farm;
 
         // GroupForObjective で中央到達とみなす半径（この内側なら最寄り敵チャンピオンへ交戦）。
         private const float ObjectiveEngageRange = 6f;
+        // GroupForObjective でボス自体を殴りに行く半径（敵チャンピオン不在時にボスへ切り替える範囲）。
+        private const float BossEngageRange = 14f;
+        // ボス争奪中、敵チャンピオンの交戦を優先する近接判定距離。
+        private const float BossContestEnemyRange = 12f;
         // UnderTowerThreat とみなす最寄り敵タワー距離（おおよそタワー射程＋余裕）。
         private const float TowerThreatRange = 12f;
 
@@ -368,11 +379,29 @@ namespace Enigma.Character
             {
                 case BotMacroAction.GroupForObjective:
                 {
-                    var director = CentralObjectiveDirector.Instance;
+                    var director = ResolveObjectiveDirector();
                     if (director == null || !director.TryGetObjectivePosition(out var objPos))
                         return false; // 位置不明なら通常フローに任せる
 
                     float dist = Vector3.Distance(transform.position, objPos);
+
+                    bool enemyChampionNear = _nearestEnemy != null && _nearestEnemyIsChampion
+                        && !_nearestEnemy.Model.IsDead
+                        && Vector3.Distance(transform.position, _nearestEnemy.transform.position) <= BossContestEnemyRange;
+
+                    if (dist <= BossEngageRange && !enemyChampionNear)
+                    {
+                        // 敵チャンピオン不在: ボスが生存していれば実際に殴る。ボス不在/Dormant なら
+                        // 従来どおり中央へ寄る（下の距離判定にフォールスルー）。
+                        var bossHc = director.BossHealth;
+                        if (bossHc != null)
+                        {
+                            FaceAndAttack(bossHc, allowSkills: false, useMicro: false);
+                            ApplyMovement(LaneMove.Stop);
+                            return true;
+                        }
+                    }
+
                     if (dist > ObjectiveEngageRange)
                     {
                         MoveDirectlyToward(objPos);
@@ -410,15 +439,14 @@ namespace Enigma.Character
         // チームは TeamTag.Team を基準に判定する（同チーム=味方、それ以外=攻撃対象）。
         private void Sense()
         {
-            _nearestEnemy = null;
             _attackerChampion = null;
-            _nearestEnemyIsChampion = false;
             _neutralTarget = null;
             _nearestTowerHc = null;
             _allyMinionNearby = false;
 
-            float nearestDist = float.MaxValue;
-            var nearestKind = LaneThreatKind.None;
+            _focusCandidateHcs.Clear();
+            _focusCandidates.Clear();
+
             float towerDist = float.MaxValue;
             float attackerDist = float.MaxValue;
             bool anyEnemyChampion = false; // 敵チャンピオンを知覚したか（中立狩り抑制用）
@@ -490,14 +518,11 @@ namespace Enigma.Character
                 // 狩りを捨てると、キャンプ横がレーンの本マップでは永遠に狩れない
                 if (kind == LaneThreatKind.Champion && dist < 10f) anyEnemyChampion = true;
 
-                // 最寄りの攻撃対象（チャンピオン/ミニオン）
-                if (dist < nearestDist)
-                {
-                    nearestDist   = dist;
-                    nearestKind   = kind;
-                    _nearestEnemy = hc;
-                    _nearestEnemyIsChampion = kind == LaneThreatKind.Champion;
-                }
+                // 攻撃可能な敵（チャンピオン/ミニオン）候補として収集（フォーカス選定は後段でまとめて行う）
+                bool isChampionKind = kind == LaneThreatKind.Champion;
+                float hpRatio = hc.Model.MaxHp > 0f ? hc.Model.CurrentHp / hc.Model.MaxHp : 0f;
+                _focusCandidateHcs.Add(hc);
+                _focusCandidates.Add(new FocusCandidate(pos.x, pos.z, hpRatio, isChampionKind));
 
                 // 自分を攻撃してきた敵チャンピオン
                 if (kind == LaneThreatKind.Champion && lastAttacker != null
@@ -511,10 +536,35 @@ namespace Enigma.Character
             // 敵チャンピオンが視界にいる間は中立狩りをしない（対面優先）
             if (anyEnemyChampion) _neutralTarget = null;
 
+            // 候補群から CombatMicroModel.ChooseFocusTarget でフォーカス対象を選ぶ
+            // （チャンピオン優先→最低HP、ヒステリシス0.15、クラス格上げは即乗換）。
+            int currentIndex = -1;
+            if (_nearestEnemy != null)
+                currentIndex = _focusCandidateHcs.IndexOf(_nearestEnemy);
+
+            int chosen = CombatMicroModel.ChooseFocusTarget(
+                _focusCandidates, currentIndex, transform.position.x, transform.position.z);
+
+            LaneThreatKind chosenKind = LaneThreatKind.None;
+            float chosenDist = float.MaxValue;
+
+            if (chosen >= 0)
+            {
+                _nearestEnemy = _focusCandidateHcs[chosen];
+                _nearestEnemyIsChampion = _focusCandidates[chosen].IsChampion;
+                chosenKind = _nearestEnemyIsChampion ? LaneThreatKind.Champion : LaneThreatKind.Minion;
+                chosenDist = Vector3.Distance(transform.position, _nearestEnemy.transform.position);
+            }
+            else
+            {
+                _nearestEnemy = null;
+                _nearestEnemyIsChampion = false;
+            }
+
             _perception = new LaneBotPerception(
                 _health.Model.MaxHp > 0f ? _health.Model.CurrentHp / _health.Model.MaxHp : 0f,
-                nearestKind == LaneThreatKind.None ? float.MaxValue : nearestDist,
-                nearestKind,
+                chosenDist,
+                chosenKind,
                 _attackerChampion != null,
                 attackerDist,
                 towerDist,
@@ -559,6 +609,20 @@ namespace Enigma.Character
             TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Red;
             float x = myTeam == TeamId.Red ? FountainX : -FountainX;
             return new Vector3(x, FountainY, 0f);
+        }
+
+        // CentralObjectiveDirector を解決する。static Instance があればそれを使い、
+        // 無ければ FindFirstObjectByType で遅延1回キャッシュする（シーンに1つのみ存在）。
+        private CentralObjectiveDirector ResolveObjectiveDirector()
+        {
+            if (CentralObjectiveDirector.Instance != null) return CentralObjectiveDirector.Instance;
+
+            if (!_objectiveDirectorLookupDone)
+            {
+                _objectiveDirectorLookupDone = true;
+                _objectiveDirectorCache = Object.FindFirstObjectByType<CentralObjectiveDirector>();
+            }
+            return _objectiveDirectorCache;
         }
 
         // ShopController.Catalog を遅延で一度だけ解決してキャッシュする。見つからなければ以降も無効のまま。
