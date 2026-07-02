@@ -259,7 +259,7 @@ Shader "Enigma/Toon"
             Varyings DepthVert(Attributes input)
             {
                 Varyings output;
-                output.positionCS = TransformObjectToWorldHClip(input.positionOS.xyz);
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 return output;
             }
 

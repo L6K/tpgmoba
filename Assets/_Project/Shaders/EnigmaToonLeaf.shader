@@ -214,7 +214,7 @@ Shader "Enigma/ToonLeaf"
             Varyings DepthVert(Attributes input)
             {
                 Varyings output;
-                output.positionCS = TransformObjectToWorldHClip(input.positionOS.xyz);
+                output.positionCS = TransformObjectToHClip(input.positionOS.xyz);
                 output.uv = TRANSFORM_TEX(input.uv, _BaseMap);
                 return output;
             }
