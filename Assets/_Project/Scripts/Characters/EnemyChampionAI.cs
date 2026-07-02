@@ -271,17 +271,23 @@ namespace Enigma.Character
                     : _nearestEnemy;
                 // スキルは最寄り敵がチャンピオン種別のときのみ使う（攻撃者ターゲットも同種別なら可）
                 bool targetIsChampion = decision.TargetIsAttackerChampion || _nearestEnemyIsChampion;
-                FaceAndAttack(target, allowSkills: targetIsChampion);
+                // チャンピオン対面時のみ micro（カイト/ストレイフ/低HP離脱）を使う。
+                // ミニオン等が対象のときは従来どおり decision.Move（経路移動）に任せる。
+                bool usedMicro = FaceAndAttack(target, allowSkills: targetIsChampion, useMicro: targetIsChampion);
+                if (!usedMicro) ApplyMovement(decision.Move);
             }
             else if (CanSiegeTower())
             {
                 // 交戦対象が居らず、敵タワー/タイタンが AA 射程内で味方ミニオンが盾に居るとき、
                 // ウェーブと一緒にタワーを折る。移動は decision.Move のまま継続させ、
                 // スキルは無駄撃ちを避けて使わない(タワー相手は AA で十分)。
-                FaceAndAttack(_nearestTowerHc, allowSkills: false);
+                FaceAndAttack(_nearestTowerHc, allowSkills: false, useMicro: false);
+                ApplyMovement(decision.Move);
             }
-
-            ApplyMovement(decision.Move);
+            else
+            {
+                ApplyMovement(decision.Move);
+            }
         }
 
         // マクロ判断を行動へ落とす。専用挙動を実行したら true を返し、呼び側はその場で return する。
@@ -304,8 +310,9 @@ namespace Enigma.Character
                     else
                     {
                         // 到達圏内: 最寄り敵チャンピオンが居れば交戦、居なければその場待機。
+                        // 中央集合は「その場で構える」意図のため micro（カイト等）は使わない。
                         if (_nearestEnemy != null && _nearestEnemyIsChampion && !_nearestEnemy.Model.IsDead)
-                            FaceAndAttack(_nearestEnemy, allowSkills: true);
+                            FaceAndAttack(_nearestEnemy, allowSkills: true, useMicro: false);
                         else
                             ApplyMovement(LaneMove.Stop);
                     }
@@ -317,9 +324,9 @@ namespace Enigma.Character
                     return true;
 
                 case BotMacroAction.Defend:
-                    // その場維持し、射程内の敵に応戦する。
+                    // その場維持し、射程内の敵に応戦する（防衛陣地保持のため micro は使わない）。
                     if (_nearestEnemy != null && !_nearestEnemy.Model.IsDead)
-                        FaceAndAttack(_nearestEnemy, allowSkills: _nearestEnemyIsChampion);
+                        FaceAndAttack(_nearestEnemy, allowSkills: _nearestEnemyIsChampion, useMicro: false);
                     ApplyMovement(LaneMove.Stop);
                     return true;
 
@@ -557,7 +564,7 @@ namespace Enigma.Character
             }
             else
             {
-                FaceAndAttack(_neutralTarget, allowSkills: false);
+                FaceAndAttack(_neutralTarget, allowSkills: false, useMicro: false);
                 ApplyMovement(LaneMove.Stop);
             }
         }
@@ -798,10 +805,13 @@ namespace Enigma.Character
             return dist <= _attackRange;
         }
 
-        private void FaceAndAttack(HealthComponent target, bool allowSkills)
+        // useMicro: チャンピオン対面時の戦闘マイクロ（カイト/ストレイフ/低HP離脱）を使うか。
+        // true の場合、呼び側の ApplyMovement(decision.Move) を置き換えて本メソッドが移動まで行う
+        // （戻り値 true）。false の場合は従来どおり向き直り+AA のみで移動は呼び側に任せる（戻り値 false）。
+        private bool FaceAndAttack(HealthComponent target, bool allowSkills, bool useMicro)
         {
-            if (_statusEffects != null && !_statusEffects.CanAct) return;
-            if (target == null) return;
+            if (_statusEffects != null && !_statusEffects.CanAct) return false;
+            if (target == null) return false;
 
             var to = target.transform.position - transform.position;
             to.y = 0f;
@@ -812,13 +822,23 @@ namespace Enigma.Character
                     transform.rotation, look, TurnSpeed * Time.deltaTime);
             }
 
+            MicroDecision? micro = null;
+            if (useMicro)
+            {
+                micro = BuildMicroDecision(target);
+                ApplyMicroMove(micro.Value.MoveX, micro.Value.MoveZ);
+            }
+
             // AA の前にスキル発動を試みる。1体に対して撃てたフレームは AA を撃たない。
-            if (allowSkills && TryCastSkill(target)) return;
+            if (allowSkills && TryCastSkill(target)) return useMicro;
 
             float dist = Vector3.Distance(transform.position, target.transform.position);
-            if (dist > _attackRange) return;
-            if (!_attackCooldown.TryConsume(Time.time)) return;
-            if (_projectilePrefab == null || _muzzle == null) return;
+            if (dist > _attackRange) return useMicro;
+            // micro を使うフレームは decision.Attack（射程+CD明けの判定）でも撃ってよいか確認する。
+            // CD 消費自体は従来どおり TryConsume が担う（AttackReady は非消費の IsReady 参照のみ）。
+            if (useMicro && !micro.Value.Attack) return useMicro;
+            if (!_attackCooldown.TryConsume(Time.time)) return useMicro;
+            if (_projectilePrefab == null || _muzzle == null) return useMicro;
 
             // PlayerAttackMotor は使わず即時発射
             var dir = (target.transform.position - _muzzle.position).normalized;
@@ -833,6 +853,49 @@ namespace Enigma.Character
 
             GameSfx.PlayVariant("aa_fire", 3, _muzzle.position, 0.6f);
             _clipSwitcher?.PlayAttack(0.45f);
+            return useMicro;
+        }
+
+        // FaceAndAttack から呼ぶ MicroContext 組み立て。自分位置/HP率/AA射程/CD明け判定(非消費)/
+        // IsMelee=射程<=7/対象位置・HP率/脅威(最寄り敵チャンピオン。居なければ対象自身を脅威として扱う)を渡す。
+        private MicroDecision BuildMicroDecision(HealthComponent target)
+        {
+            float myHpRatio = _health.Model.MaxHp > 0f ? _health.Model.CurrentHp / _health.Model.MaxHp : 0f;
+            float targetHpRatio = target.Model.MaxHp > 0f ? target.Model.CurrentHp / target.Model.MaxHp : 1f;
+            bool attackReady = _attackCooldown.IsReady(Time.time);
+            bool isMelee = _attackRange <= 7f;
+
+            // 脅威 = 最寄り敵チャンピオン(Sense 済みの _nearestEnemy)。攻撃対象自身が最寄り敵
+            // チャンピオンであることが多いため、実質「対象＝脅威」になるケースが大半。
+            bool hasThreat = _nearestEnemy != null && _nearestEnemyIsChampion && !_nearestEnemy.Model.IsDead;
+            var threatPos = hasThreat ? _nearestEnemy.transform.position : target.transform.position;
+
+            var ctx = new MicroContext(
+                transform.position.x, transform.position.z, myHpRatio,
+                _attackRange, attackReady, isMelee,
+                target.transform.position.x, target.transform.position.z, targetHpRatio,
+                hasThreat, threatPos.x, threatPos.z);
+
+            return CombatMicroModel.Decide(in ctx);
+        }
+
+        // MicroDecision.MoveX/MoveZ を既存の CanMove ゲート・移動速度係数を通して適用する
+        // （MoveDirectlyToward と同じ重力/CC/速度経路。回転は FaceAndAttack 側で済んでいるためここでは行わない）。
+        private void ApplyMicroMove(float dirX, float dirZ)
+        {
+            var dir = new Vector3(dirX, 0f, dirZ);
+
+            if (_controller.isGrounded && _verticalVelocity < 0f)
+                _verticalVelocity = -1f;
+            _verticalVelocity += Gravity * Time.deltaTime;
+
+            if (_statusEffects != null && !_statusEffects.CanMove) dir = Vector3.zero;
+            float speed = _moveSpeed * (_statusEffects != null ? _statusEffects.MoveSpeedMultiplier : 1f)
+                          * ObjectiveMoveSpeedMultiplier();
+
+            var motion = dir * speed;
+            motion.y = _verticalVelocity;
+            _controller.Move(motion * Time.deltaTime);
         }
 
         // BotSkillSelector で撃つスロットを選び、選ばれたらキャストして true を返す。
