@@ -11,10 +11,13 @@ namespace Enigma.Combat
     {
         // 対象を加味する版。攻撃者のチームバフ等を適用したうえで、対象が中立なら
         // 攻撃者の所持レリック「中立与ダメ増」を乗算する（プレイヤーのみ・命中時に呼ぶ）。
+        // 対象がタワー/タイタン(StructureTag)なら、攻撃者チームの StructureDamage バフ(コア3回目報酬)を乗算する。
         public static float ApplyTeamBuff(float baseDamage, GameObject attacker, GameObject target)
         {
             float dmg = ApplyTeamBuff(baseDamage, attacker);
             if (attacker == null || target == null) return dmg;
+
+            dmg = ApplyStructureBuff(dmg, attacker, target);
 
             var targetTag = target.GetComponentInParent<TeamTag>();
             if (targetTag == null || targetTag.Team != TeamId.Neutral) return dmg;
@@ -24,6 +27,20 @@ namespace Enigma.Combat
                 dmg *= 1f + relics.NeutralDamageBonus;
 
             return dmg;
+        }
+
+        // 対象が構造物(StructureTag)なら攻撃者チームの StructureDamage バフ倍率を乗算する。
+        private static float ApplyStructureBuff(float dmg, GameObject attacker, GameObject target)
+        {
+            var structureTag = target.GetComponentInParent<StructureTag>();
+            if (structureTag == null) return dmg;
+
+            var attackerTag = attacker.GetComponentInParent<TeamTag>();
+            if (attackerTag == null || attackerTag.Team == TeamId.Neutral) return dmg;
+
+            float magnitude = GameServices.ObjectiveBuffs?.GetMagnitude(
+                attackerTag.Team, ObjectiveBuffType.StructureDamage, Time.time) ?? 0f;
+            return dmg * (1f + magnitude);
         }
 
         public static float ApplyTeamBuff(float baseDamage, GameObject attacker)

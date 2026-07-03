@@ -215,7 +215,9 @@ namespace Enigma.Minion
                 // 射程内：攻撃間隔ごとにダメージ
                 if (_attackCooldown.TryConsume(Time.time))
                 {
-                    float finalDamage = DamageUtility.ApplyTeamBuff(_attackDamage, gameObject);
+                    // タイタン/タワーを攻撃しうる経路のため target 付きオーバーロードを使う
+                    // (StructureDamage バフの対構造物倍率を適用するため)
+                    float finalDamage = DamageUtility.ApplyTeamBuff(_attackDamage, gameObject, _currentTarget.gameObject);
                     finalDamage *= 1f + (GameServices.ObjectiveBuffs != null
                         ? GameServices.ObjectiveBuffs.GetMagnitude(_teamTag.Team, ObjectiveBuffType.MinionPower, Time.time) : 0f);
                     _currentTarget.TakeDamage(finalDamage, gameObject);

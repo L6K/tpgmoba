@@ -62,7 +62,7 @@ namespace Enigma.Combat
             float baseDmgPer = StackDamageLogic.DamagePerTarget(_totalDamage, targets.Count);
             foreach (var hc in targets)
             {
-                float finalDamage = DamageUtility.ApplyTeamBuff(baseDmgPer, _owner);
+                float finalDamage = DamageUtility.ApplyTeamBuff(baseDmgPer, _owner, hc.gameObject);
                 hc.TakeDamage(finalDamage, _owner);
             }
 

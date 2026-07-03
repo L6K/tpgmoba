@@ -902,12 +902,13 @@ namespace Enigma.UI
 
         private static string BuffTypeLabel(ObjectiveBuffType type) => type switch
         {
-            ObjectiveBuffType.Damage      => "ダメージ",
-            ObjectiveBuffType.MinionPower => "ミニオン",
-            ObjectiveBuffType.MoveSpeed   => "移動速度",
-            ObjectiveBuffType.Shield      => "シールド",
-            ObjectiveBuffType.TowerWeaken => "タワー弱体",
-            _                             => type.ToString(),
+            ObjectiveBuffType.Damage          => "ダメージ",
+            ObjectiveBuffType.MinionPower     => "ミニオン",
+            ObjectiveBuffType.MoveSpeed       => "移動速度",
+            ObjectiveBuffType.Shield          => "シールド",
+            ObjectiveBuffType.TowerWeaken     => "タワー弱体",
+            ObjectiveBuffType.StructureDamage => "破城",
+            _                                 => type.ToString(),
         };
 
         private void UpdateLevelXp()

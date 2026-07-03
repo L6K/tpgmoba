@@ -10,7 +10,8 @@ namespace Enigma.GameModes
         MinionPower,
         MoveSpeed,
         Shield,
-        TowerWeaken
+        TowerWeaken,
+        StructureDamage
     }
 
     public sealed class ObjectiveBuffModel

@@ -170,8 +170,9 @@ namespace Enigma.GameModes
             GrantKillReward(now);
         }
 
-        // 撃破チームへ撃破回数で段階化した報酬バフを付与する。
-        // 1回目: Damage / 2回目: + MoveSpeed / 3回目以降: Damage 強化 + MoveSpeed + 全味方 Shield。
+        // 撃破チームへ撃破回数で段階化した報酬バフを付与する。段階の中身は CoreBuffSchedule(純関数)が
+        // 決め、ここは返り値を適用するだけにする(1回目: Damage / 2回目: + MoveSpeed /
+        // 3回目以降: Damage 強化 + MoveSpeed + 全味方 Shield + StructureDamage)。
         private void GrantKillReward(float now)
         {
             var buffs = GameServices.ObjectiveBuffs;
@@ -190,17 +191,14 @@ namespace Enigma.GameModes
             LastCaptureTeam = team;
             CaptureCount++;
 
-            // Damage は常に付与（3回目以降は強化）
-            buffs.Grant(team, ObjectiveBuffType.Damage, n >= 3 ? 0.25f : 0.20f, 45f, now);
-
-            if (n >= 2)
-                buffs.Grant(team, ObjectiveBuffType.MoveSpeed, 0.15f, 45f, now);
-
-            if (n >= 3)
+            foreach (var grant in CoreBuffSchedule.ForKillCount(n))
             {
-                GrantTeamShield(team, 150f, 10f);
-                // HUD のバフ表示用に Shield 種別も記録(実シールドは GrantTeamShield が即時付与)
-                buffs.Grant(team, ObjectiveBuffType.Shield, 150f, 10f, now);
+                buffs.Grant(team, grant.Type, grant.Magnitude, grant.Duration, now);
+
+                // Shield は ObjectiveBuffModel への記録(HUD表示用)だけでは実効果が無いため、
+                // 実シールドを別途チーム全体へ即時付与する
+                if (grant.Type == ObjectiveBuffType.Shield)
+                    GrantTeamShield(team, grant.Magnitude, grant.Duration);
             }
         }
 

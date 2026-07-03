@@ -1364,7 +1364,7 @@ namespace Enigma.Character
             TeamId otherTeam = otherTag != null ? otherTag.Team : TeamId.Neutral;
             if (!TeamRules.CanDamage(myTeam, otherTeam)) return;
 
-            float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage, gameObject);
+            float finalDamage = DamageUtility.ApplyTeamBuff(def.Damage, gameObject, target.gameObject);
             target.TakeDamage(finalDamage, gameObject);
 
             var sc = StatusEffectController.GetOrAdd(target.gameObject);
@@ -1428,7 +1428,7 @@ namespace Enigma.Character
                 TeamId ot = otherTag != null ? otherTag.Team : TeamId.Neutral;
                 if (!TeamRules.CanDamage(myTeam, ot)) continue;
 
-                hc.TakeDamage(DamageUtility.ApplyTeamBuff(def.Damage, gameObject), gameObject);
+                hc.TakeDamage(DamageUtility.ApplyTeamBuff(def.Damage, gameObject, hc.gameObject), gameObject);
                 var sc = StatusEffectController.GetOrAdd(hc.gameObject);
                 if (sc != null)
                 {
