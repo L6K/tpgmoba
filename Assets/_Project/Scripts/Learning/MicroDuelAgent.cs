@@ -21,23 +21,36 @@ namespace Enigma.Learning
         private bool _outcomeResolved;
         private int _episodeSteps;
 
-        private const float StepTimePenalty = -0.0003f;
-        // 射程外に留まる距離比例ペナルティ。旧設計は「60秒逃げ切り(-1.5)が敗北(約-2)より得」で
-        // self-play が相互回避の退化均衡に崩壊した(Mean Reward -1.500/分散0で検出)。
-        // 逃げるほど損にして交戦へ誘導する。
-        private const float DisengageFactor = -0.0008f;
-        // 手動タイムアウト。builder の MaxStep(3000) より先に発火し、引き分けを敗北と同罰にする。
-        private const int TimeoutSteps = 2900;
+        // 報酬v3: 追われる側(Blue)の技術は「生存」そのもの(自動攻撃は生きていれば勝手に当たる)。
+        // 旧設計は 死亡-1+自HP全損-1=-2 の定数が支配し、生存の差が +0.06/発 の微小項にしか
+        // 現れず勾配が消えていた(v3/v4 で 340k〜1.5M ステップ平坦を実測)。
+        // 生存ボーナスを毎ステップ与えて密な勾配にする。逃げ得は存在しない(追跡者が強制交戦、
+        // 逃走中も射程内なら自動で撃つ=生存すれば削り切って勝つ)。
+        private const float SurviveBonus = 0.0005f;
 
         public override void OnEpisodeBegin()
         {
-            // 敵側のリセットは敵 Agent が自分で行う（二重リセット防止のため自分の分のみ）
-            _fighter.ResetFighter(_spawnPos);
+            // 敵側のリセットは敵 Agent が自分で行う（二重リセット防止のため自分の分のみ）。
+            // スポーンはランダム化する: 決定論的スクリプト相手だと固定スポーンでは全エピソードが
+            // ほぼ同一の結末になり、報酬分散=学習信号が消える(v3 で分散0.000 の膠着を実測)。
+            _fighter.ResetFighter(RandomSpawn());
 
             _prevMyHpRatio = HpRatio(_fighter);
             _prevEnemyHpRatio = HpRatio(_enemyFighter);
             _outcomeResolved = false;
             _episodeSteps = 0;
+        }
+
+        // アリーナ内のランダム地点(中心から4〜14m、全方位)。壁際・至近・遠距離など
+        // 多様な初期条件が結果の分散を生み、PPO のアドバンテージ推定を機能させる。
+        private Vector3 RandomSpawn()
+        {
+            float angle = Random.Range(0f, Mathf.PI * 2f);
+            float radius = Random.Range(4f, 14f);
+            return new Vector3(
+                _arenaCenter.x + Mathf.Cos(angle) * radius,
+                _spawnPos.y,
+                _arenaCenter.z + Mathf.Sin(angle) * radius);
         }
 
         public override void CollectObservations(VectorSensor sensor)
@@ -83,34 +96,15 @@ namespace Enigma.Learning
             float moveZ = actions.ContinuousActions[1];
             _fighter.ApplyMove(new Vector2(moveX, moveZ));
 
-            float myHpRatio = HpRatio(_fighter);
             float enemyHpRatio = HpRatio(_enemyFighter);
 
-            // 与ダメ - 被ダメの差分を毎ステップ報酬にする
-            float reward = (_prevEnemyHpRatio - enemyHpRatio) - (_prevMyHpRatio - myHpRatio);
-            AddReward(reward);
-            AddReward(StepTimePenalty);
+            // 与ダメ(敵HP減少)を毎ステップ報酬に。自HP喪失ペナルティは死亡-1と二重計上のため廃止
+            AddReward(_prevEnemyHpRatio - enemyHpRatio);
+            // 生存ボーナス(密な勾配の主役)
+            AddReward(SurviveBonus);
 
-            // 交戦誘導: 射程外に居続けるほど損(相互回避の均衡を潰す)
-            Vector3 myPos = _fighter.transform.position;
-            Vector3 enemyPos = _enemyFighter.transform.position;
-            float dist = Vector2.Distance(
-                new Vector2(myPos.x, myPos.z), new Vector2(enemyPos.x, enemyPos.z));
-            float over = dist - _fighter.AttackRange;
-            if (over > 0f)
-                AddReward(DisengageFactor * over / Mathf.Max(_arenaRadius, 0.0001f));
-
-            _prevMyHpRatio = myHpRatio;
             _prevEnemyHpRatio = enemyHpRatio;
-
-            // 手動タイムアウト: 引き分けは敗北と同罰(逃げ切り得の構造的排除)
             _episodeSteps++;
-            if (!_outcomeResolved && _episodeSteps >= TimeoutSteps)
-            {
-                _outcomeResolved = true;
-                AddReward(-1f);
-                EndEpisode();
-            }
         }
 
         private void Update()
