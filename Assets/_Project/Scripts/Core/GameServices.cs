@@ -16,6 +16,7 @@ namespace Enigma.Core
         public static IMatchmakingService     Matchmaking     { get; private set; }
         public static IMatchContext           Match           { get; private set; }
         public static ObjectiveBuffModel      ObjectiveBuffs  { get; private set; }
+        public static IMatchEventLog          MatchEvents     { get; private set; }
 
         public static bool IsInitialized => Settings != null && Ownership != null && Gacha != null && ControlSettings != null;
 
@@ -49,6 +50,7 @@ namespace Enigma.Core
             Matchmaking     = matchmaking ?? new MatchmakingService(new SystemRandomSource());
             Match           = match       ?? new MatchContext();
             ObjectiveBuffs  = new ObjectiveBuffModel();
+            MatchEvents     = new MatchEventLog();
         }
 
         /// <summary>テスト後のクリーンアップ用。</summary>
@@ -61,6 +63,7 @@ namespace Enigma.Core
             Matchmaking     = null;
             Match           = null;
             ObjectiveBuffs  = null;
+            MatchEvents     = null;
         }
     }
 }

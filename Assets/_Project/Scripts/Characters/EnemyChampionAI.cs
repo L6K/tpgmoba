@@ -107,6 +107,9 @@ namespace Enigma.Character
         // 最寄り敵がチャンピオン種別か（スキル使用可否の判定に使う）。
         private bool _nearestEnemyIsChampion;
 
+        // ミクロ戦闘判断の差し替え境界。既定はスクリプト実装、将来 ML-Agents ポリシーに差し替え可能。
+        private IBotPolicy _policy = new ScriptedBotPolicy();
+
         // 最寄り敵タワー/タイタンの HealthComponent（終盤にウェーブと一緒に折るため保持）。
         private HealthComponent _nearestTowerHc;
 
@@ -251,6 +254,9 @@ namespace Enigma.Character
         {
             _clipSwitcher = switcher;
         }
+
+        /// <summary>ミクロ戦闘判断ポリシーを差し替える(将来の ML-Agents 学習済みポリシー注入用)。</summary>
+        public void SetPolicy(IBotPolicy policy) => _policy = policy ?? new ScriptedBotPolicy();
 
         private void Start()
         {
@@ -1234,7 +1240,7 @@ namespace Enigma.Character
                 target.transform.position.x, target.transform.position.z, targetHpRatio,
                 hasThreat, threatPos.x, threatPos.z);
 
-            return CombatMicroModel.Decide(in ctx);
+            return _policy.DecideMicro(in ctx);
         }
 
         // MicroDecision.MoveX/MoveZ を既存の CanMove ゲート・移動速度係数を通して適用する
