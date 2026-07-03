@@ -96,3 +96,4 @@ InitTestScene*.unity*
 .github/ci-tools/**/bin/
 .github/ci-tools/**/obj/
 !.github/ci-tools/**/*.csproj
+results/
