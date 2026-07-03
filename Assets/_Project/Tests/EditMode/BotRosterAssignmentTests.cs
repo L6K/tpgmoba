@@ -88,5 +88,59 @@ namespace Enigma.Tests
             Assert.AreEqual(5, result.Length);
             Assert.AreEqual(5, result.Distinct().Count());
         }
+
+        [Test]
+        public void AssignPerTeam_ReturnsTwoTeamsOfRequestedSize()
+        {
+            var result = BotRosterAssignment.AssignPerTeam(AllSix, seed: 1, teamSize: 2);
+            Assert.AreEqual(4, result.Length);
+        }
+
+        [Test]
+        public void AssignPerTeam_NoDuplicatesWithinEachTeam()
+        {
+            var result = BotRosterAssignment.AssignPerTeam(AllSix, seed: 7, teamSize: 2);
+            var blue = result.Take(2).ToArray();
+            var red = result.Skip(2).Take(2).ToArray();
+
+            Assert.AreEqual(blue.Length, blue.Distinct().Count());
+            Assert.AreEqual(red.Length, red.Distinct().Count());
+        }
+
+        [Test]
+        public void AssignPerTeam_IsDeterministic_SameSeedSameResult()
+        {
+            var a = BotRosterAssignment.AssignPerTeam(AllSix, seed: 55, teamSize: 2);
+            var b = BotRosterAssignment.AssignPerTeam(AllSix, seed: 55, teamSize: 2);
+            CollectionAssert.AreEqual(a, b);
+        }
+
+        [Test]
+        public void AssignPerTeam_DifferentSeeds_GenerallyDiffer()
+        {
+            var a = BotRosterAssignment.AssignPerTeam(AllSix, seed: 1, teamSize: 2);
+            var b = BotRosterAssignment.AssignPerTeam(AllSix, seed: 2, teamSize: 2);
+            Assert.IsFalse(a.SequenceEqual(b));
+        }
+
+        [Test]
+        public void AssignPerTeam_AllowsOverlapBetweenBlueAndRed()
+        {
+            // 青赤間の重複は許可される仕様。複数シードで確認し、少なくとも1件は重複が起きることを期待する
+            // （重複が起きない seed も理論上ありうるため、複数シードを試して仕様上の許可を検証する）。
+            bool overlapFound = false;
+            for (int seed = 0; seed < 20; seed++)
+            {
+                var result = BotRosterAssignment.AssignPerTeam(AllSix, seed, teamSize: 2);
+                var blue = result.Take(2);
+                var red = result.Skip(2).Take(2);
+                if (blue.Intersect(red).Any())
+                {
+                    overlapFound = true;
+                    break;
+                }
+            }
+            Assert.IsTrue(overlapFound, "Expected at least one seed to produce blue/red overlap (allowed by spec)");
+        }
     }
 }

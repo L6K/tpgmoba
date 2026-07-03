@@ -68,6 +68,9 @@ namespace Enigma.Character
         // AA ビームのネオン着色に使う champion 別プロファイル。ApplyCharacter で CharId から解決。
         private ChampionVfx _championVfx = ChampionVfx.Zeph;
 
+        // ApplyCharacter で割り当てられたキャラ ID。BalanceSimRunner の per-champion 集計キーに使う。
+        public string CharId { get; private set; } = "";
+
         private const float RespawnDelay = 5f;
 
         // 中立キャンプ狩りの探索半径と射程（その場で殴れる近さ）。
@@ -223,6 +226,8 @@ namespace Enigma.Character
         public void ApplyCharacter(CharacterData data)
         {
             if (data == null) return;
+
+            CharId = data.CharId;
 
             if (data.MoveSpeed > 0f)       _moveSpeed       = data.MoveSpeed;
             if (data.AttackDamage > 0f)    _attackDamage    = data.AttackDamage;
