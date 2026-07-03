@@ -51,24 +51,12 @@ namespace Enigma.GameMode
         }
 
         /// <summary>
-        /// バランスシム用: チームごとに独立してシャッフルし、重複なしで割当てる。
-        /// 通常プレイの Assign（単一プールから全ボットへ重複なし割当）と異なり、
-        /// 青チーム・赤チーム内では重複させないが、青赤間の重複は許可する
-        /// （同キャラのミラー対戦を許し、全キャラの出場機会を最大化するため）。
-        /// 同一 seed から teamCount 側は seed、対戦相手側は seed+1 でずらして相関を避ける。
+        /// バランスシム用: 単一プールを seed で1回シャッフルし、先頭から 青 teamSize 枠→赤 teamSize 枠
+        /// の順に配る。プールが足りる限り**青赤間も含めて重複なし**にする(同キャラが両チームに出ると
+        /// キャラ別勝率の帰属が汚染されるため。スモークで実測した問題の再発防止)。
+        /// プールが 2*teamSize 未満の場合のみ巡回で埋める(重複許容)。
         /// </summary>
         public static string[] AssignPerTeam(IReadOnlyList<string> allIds, int seed, int teamSize)
-        {
-            var blue = AssignTeam(allIds, seed, teamSize);
-            var red = AssignTeam(allIds, seed + 1, teamSize);
-
-            var result = new string[teamSize * 2];
-            for (int i = 0; i < teamSize; i++) result[i] = blue[i];
-            for (int i = 0; i < teamSize; i++) result[teamSize + i] = red[i];
-            return result;
-        }
-
-        private static string[] AssignTeam(IReadOnlyList<string> allIds, int seed, int teamSize)
         {
             var pool = new List<string>(allIds.Count);
             var seen = new HashSet<string>();
@@ -81,14 +69,14 @@ namespace Enigma.GameMode
 
             Shuffle(pool, seed);
 
-            var result = new string[teamSize];
+            var result = new string[teamSize * 2];
             if (pool.Count == 0)
             {
-                for (int i = 0; i < teamSize; i++) result[i] = string.Empty;
+                for (int i = 0; i < result.Length; i++) result[i] = string.Empty;
                 return result;
             }
 
-            for (int i = 0; i < teamSize; i++)
+            for (int i = 0; i < result.Length; i++)
                 result[i] = pool[i % pool.Count];
             return result;
         }

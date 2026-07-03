@@ -124,23 +124,26 @@ namespace Enigma.Tests
         }
 
         [Test]
-        public void AssignPerTeam_AllowsOverlapBetweenBlueAndRed()
+        public void AssignPerTeam_NoDuplicatesAcrossTeams_WhenPoolSuffices()
         {
-            // 青赤間の重複は許可される仕様。複数シードで確認し、少なくとも1件は重複が起きることを期待する
-            // （重複が起きない seed も理論上ありうるため、複数シードを試して仕様上の許可を検証する）。
-            bool overlapFound = false;
+            // 同キャラが両チームに出るとキャラ別勝率の帰属が汚染される(シムのスモークで実測)。
+            // プールが 2*teamSize 以上ある限り、青赤間も含めてグローバルに重複しないことを保証する。
             for (int seed = 0; seed < 20; seed++)
             {
                 var result = BotRosterAssignment.AssignPerTeam(AllSix, seed, teamSize: 2);
-                var blue = result.Take(2);
-                var red = result.Skip(2).Take(2);
-                if (blue.Intersect(red).Any())
-                {
-                    overlapFound = true;
-                    break;
-                }
+                Assert.AreEqual(result.Length, result.Distinct().Count(),
+                    $"seed={seed} で重複が発生: [{string.Join(",", result)}]");
             }
-            Assert.IsTrue(overlapFound, "Expected at least one seed to produce blue/red overlap (allowed by spec)");
+        }
+
+        [Test]
+        public void AssignPerTeam_WrapsWithDuplicates_WhenPoolTooSmall()
+        {
+            // プールが枠数未満なら巡回で埋める(空文字は入らない)
+            var three = new[] { "a", "b", "c" };
+            var result = BotRosterAssignment.AssignPerTeam(three, seed: 3, teamSize: 2);
+            Assert.AreEqual(4, result.Length);
+            Assert.IsFalse(result.Any(string.IsNullOrEmpty));
         }
     }
 }

@@ -47,6 +47,9 @@ namespace Enigma.Learning
         private float _matchStartTime;
         private bool _matchResolved;
         private bool _subscribedEvents;
+        private bool _rosterCaptured;
+        private string[] _capturedBlue = Array.Empty<string>();
+        private string[] _capturedRed = Array.Empty<string>();
 
         // GameObject 名（例: "BlueBot_Top"）→ CharId の解決テーブル。試合開始ごとに再構築する。
         private readonly Dictionary<string, string> _nameToCharId = new();
@@ -124,9 +127,16 @@ namespace Enigma.Learning
             var orbitCamera = UnityEngine.Object.FindFirstObjectByType<OrbitCamera>();
             if (orbitCamera != null) orbitCamera.enabled = false;
 
+            // MatchEventCollector は RuntimeInitializeOnLoadMethod でセッション開始時に1回しか
+            // 生成されない(DontDestroyOnLoad でもない)ため、シーン再ロード後の試合ではここで補充する。
+            // 不在のままだと2試合目以降イベントが一切記録されない(スモークで実測)。
+            if (UnityEngine.Object.FindFirstObjectByType<Enigma.GameModes.MatchEventCollector>() == null)
+                new GameObject("MatchEventCollector").AddComponent<Enigma.GameModes.MatchEventCollector>();
+
             SubscribeMatchEvents();
 
             _currentStats = new BalanceMatchStats(_matchIndex, _matchIndex);
+            _rosterCaptured = false;
         }
 
         private void SubscribeMatchEvents()
@@ -200,6 +210,20 @@ namespace Enigma.Learning
         {
             if (_matchResolved || _currentStats == null) return;
 
+            // ロースターは Bootstrap.Start()(=sceneLoaded より後)で割当されるため、
+            // セットアップ時ではなく試合中に一度だけ遅延キャプチャする。Result シーンへ
+            // 遷移してしまうフォールバック経路でも編成を残せるようにするため。
+            if (!_rosterCaptured)
+            {
+                var rosters = CollectRosters();
+                if (rosters.blue.Length > 0 || rosters.red.Length > 0)
+                {
+                    _capturedBlue = rosters.blue;
+                    _capturedRed = rosters.red;
+                    _rosterCaptured = true;
+                }
+            }
+
             float elapsed = Time.time - _matchStartTime;
             if (elapsed > TimeoutSeconds)
             {
@@ -218,8 +242,13 @@ namespace Enigma.Learning
             _currentStats.SetWinner(winnerTeam);
             _currentStats.SetDuration(Time.time - _matchStartTime);
 
-            var rosters = CollectRosters();
-            _currentStats.SetRosters(rosters.blue, rosters.red);
+            if (!_rosterCaptured)
+            {
+                var rosters = CollectRosters();
+                _capturedBlue = rosters.blue;
+                _capturedRed = rosters.red;
+            }
+            _currentStats.SetRosters(_capturedBlue, _capturedRed);
 
             File.AppendAllText(_batchPath, _currentStats.ToJsonLine() + "\n");
 
