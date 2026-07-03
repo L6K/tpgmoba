@@ -1086,7 +1086,7 @@ public static partial class BuildAetherRiftMap
     // visualStartDeg/visualEndDeg を NaN にすると衝突弧（startDeg/endDeg）と同じ範囲で描画する。
     // ベースポケット壁のみ、すり抜け防止の 5° 延長を衝突には残しつつ描画弧だけ延長前範囲を渡すことで
     // リング壁内側への出っ張りを解消する。
-    private static void PlaceWallBandAt(GameObject parent, string name, Vector3 center,
+    private static GameObject PlaceWallBandAt(GameObject parent, string name, Vector3 center,
         float innerR, float outerR, float height, int segments, float startDeg, float endDeg, Material mat,
         float visualStartDeg = float.NaN, float visualEndDeg = float.NaN)
     {
@@ -1109,6 +1109,8 @@ public static partial class BuildAetherRiftMap
         var vmr = visual.AddComponent<MeshRenderer>();
         vmr.sharedMaterial = mat;
         SetStatic(visual);
+
+        return go;
     }
 
     /// <summary>
@@ -3117,8 +3119,10 @@ public static partial class BuildAetherRiftMap
         foreach (var (start, end) in wallArcs)
         {
             int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
-            PlaceWallBandAt(parent, $"JungleLaneWall_{i:D2}", Vector3.zero,
+            var wallGo = PlaceWallBandAt(parent, $"JungleLaneWall_{i:D2}", Vector3.zero,
                 innerR, outerR, height, segs, start, end, mat);
+            // 視界2.0(M-V): レーン/ジャングル分離壁は地形遮蔽の対象(茂み演出ではなく構造物の視界ブロック)
+            wallGo.AddComponent<Enigma.Vision.VisionBlockerTag>();
             i++;
         }
     }
@@ -3160,8 +3164,10 @@ public static partial class BuildAetherRiftMap
         foreach (var (start, end, innerR, outerR) in arcDefs)
         {
             int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
-            PlaceWallBandAt(parent, $"JungleMazeArc_{ai:D2}", Vector3.zero,
+            var arcGo = PlaceWallBandAt(parent, $"JungleMazeArc_{ai:D2}", Vector3.zero,
                 innerR, outerR, height, segs, start, end, mat);
+            // 視界2.0(M-V): 迷路壁も地形遮蔽の対象
+            arcGo.AddComponent<Enigma.Vision.VisionBlockerTag>();
             ai++;
         }
 
@@ -3175,6 +3181,8 @@ public static partial class BuildAetherRiftMap
     {
         var go = PlaceCube(name, center, new Vector3(10f, 2.5f, 1.5f), mat);
         go.transform.SetParent(parent.transform, true);
+        // 視界2.0(M-V): 放射壁も地形遮蔽の対象
+        go.AddComponent<Enigma.Vision.VisionBlockerTag>();
     }
 
     // ---- 基地囲い + ゲートタワー(M-G) ----
@@ -3240,8 +3248,10 @@ public static partial class BuildAetherRiftMap
         foreach (var (start, end) in wallArcs)
         {
             int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
-            PlaceWallBandAt(parent, $"BaseEnclosureWall_{teamLabel}_{i:D2}", Vector3.zero,
+            var wallGo = PlaceWallBandAt(parent, $"BaseEnclosureWall_{teamLabel}_{i:D2}", Vector3.zero,
                 BaseEnclosureInnerR, BaseEnclosureOuterR, BaseEnclosureHeight, segs, start, end, mat);
+            // 視界2.0(M-V): 基地囲い壁も地形遮蔽の対象
+            wallGo.AddComponent<Enigma.Vision.VisionBlockerTag>();
             i++;
         }
     }
@@ -3337,6 +3347,9 @@ public static partial class BuildAetherRiftMap
         box.size = new Vector3((BaseEnclosureOuterR - BaseEnclosureInnerR) + 1.5f, BaseEnclosureHeight + 1.0f, arcLen + 1.5f);
 
         triggerGo.AddComponent<GateWingTrigger>();
+
+        // 視界2.0(M-V): ゲートウィング壁も地形遮蔽の対象(タワー撃破で GO ごと非アクティブ化=視界も自然開通)
+        go.AddComponent<Enigma.Vision.VisionBlockerTag>();
 
         return go;
     }

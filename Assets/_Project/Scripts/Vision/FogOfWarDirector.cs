@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using Enigma.Combat;
 using Enigma.Character;
+using Enigma.Map;
 
 namespace Enigma.Vision
 {
@@ -19,6 +20,7 @@ namespace Enigma.Vision
         private const float ChampionSight  = 14f;
         private const float MinionSight    = 8f;
         private const float TowerSight     = 12f;
+        private const float EyeHeight      = 1.6f;   // 接地yからの目線オフセット(視界2.0: 高低差/LoS 判定用)
 
         // マップシーンでのみ自動生成(メニュー/選択シーンでは動かさない)
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -90,7 +92,7 @@ namespace Enigma.Vision
 
         private void Awake()
         {
-            _model = new VisionRevealModel(LingerSeconds);
+            _model = new VisionRevealModel(LingerSeconds, new RaycastLineOfSightChecker());
             Instance = this;
             // static レジストリは前試合の残りを持ちうるので、マップ初期化時に一掃する
             _externalSources.Clear();
@@ -160,7 +162,9 @@ namespace Enigma.Vision
                     if (radius > 0f)
                     {
                         var p = go.transform.position;
-                        _sources.Add(new VisionSource(p.x, p.z, radius));
+                        float eyeY = p.y + EyeHeight;
+                        int brushId = FindBrushId(p);
+                        _sources.Add(new VisionSource(p.x, p.z, radius, eyeY, brushId));
                     }
                     continue;
                 }
@@ -172,7 +176,9 @@ namespace Enigma.Vision
                 int id = go.GetInstanceID();
                 _seenThisTick.Add(id);
                 var pos = go.transform.position;
-                _targets.Add(new VisionTarget(id, pos.x, pos.z));
+                float targetEyeY = pos.y + EyeHeight;
+                int targetBrushId = FindBrushId(pos);
+                _targets.Add(new VisionTarget(id, pos.x, pos.z, targetEyeY, targetBrushId));
 
                 if (!_foggables.TryGetValue(id, out var fog))
                 {
@@ -192,14 +198,15 @@ namespace Enigma.Vision
                 }
             }
 
-            // ワード/スキャン等の外部視界源のうち、味方チームのものを合流する
+            // ワード/スキャン等の外部視界源のうち、味方チームのものを合流する。
+            // 設置者(ワード等)の接地位置は個々に把握していないため、目線は固定の EyeHeight・茂み判定なしで扱う。
             if (_externalSources.Count > 0)
             {
                 foreach (var kv in _externalSources)
                 {
                     var src = kv.Value;
                     if (_teamResolved && src.Team == _playerTeam)
-                        _sources.Add(new VisionSource(src.X, src.Z, src.Radius));
+                        _sources.Add(new VisionSource(src.X, src.Z, src.Radius, EyeHeight, -1));
                 }
             }
 
@@ -256,6 +263,60 @@ namespace Enigma.Vision
             }
             for (int i = 0; i < _toRemove.Count; i++)
                 _foggables.Remove(_toRemove[i]);
+        }
+
+        // BrushZone.Active を線形走査し、pos を含む最初のゾーンの index を返す(非該当は -1)。
+        // ゾーン数は現状12個程度で毎tick数十ユニット走査しても軽量なため単純な線形探索でよい。
+        private static int FindBrushId(Vector3 pos)
+        {
+            var zones = BrushZone.Active;
+            for (int i = 0; i < zones.Count; i++)
+            {
+                if (zones[i] != null && zones[i].Contains(pos))
+                    return i;
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// Physics.RaycastAll 相当(NonAlloc)でソース目線→ターゲット目線の間を遮る構造物の有無を判定する。
+        /// 遮蔽体は <see cref="VisionBlockerTag"/> を持つコライダー、または名前が "Ground" の地形メッシュのみ。
+        /// ユニット本体(CharacterController は Physics.Raycast に無関係、CapsuleCollider 等も無視)は遮蔽対象にしない。
+        /// </summary>
+        private sealed class RaycastLineOfSightChecker : ILineOfSightChecker
+        {
+            // 区間長ぴったりのヒット(ソース/ターゲット自身の当たり判定等)を遮蔽と誤認しないための余裕。
+            private const float DistanceMargin = 0.1f;
+            private const int   MaxHits = 32;
+
+            private readonly RaycastHit[] _hits = new RaycastHit[MaxHits];
+
+            public bool HasLineOfSight(in VisionSource source, in VisionTarget target)
+            {
+                var from = new Vector3(source.X, source.Y, source.Z);
+                var to   = new Vector3(target.X, target.Y, target.Z);
+                Vector3 delta = to - from;
+                float distance = delta.magnitude;
+                if (distance <= 0.0001f) return true;
+                Vector3 direction = delta / distance;
+
+                int hitCount = Physics.RaycastNonAlloc(from, direction, _hits, distance, ~0, QueryTriggerInteraction.Ignore);
+                for (int i = 0; i < hitCount; i++)
+                {
+                    var hit = _hits[i];
+                    if (hit.distance >= distance - DistanceMargin) continue; // 区間端(ターゲット自身等)は無視
+                    if (IsBlocker(hit.collider)) return false;
+                }
+                return true;
+            }
+
+            private static bool IsBlocker(Collider collider)
+            {
+                if (collider == null) return false;
+                if (collider is CharacterController) return false;
+                if (collider.GetComponent<VisionBlockerTag>() != null) return true;
+                return collider.gameObject.name == "Ground";
+            }
         }
     }
 }
