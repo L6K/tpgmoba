@@ -36,8 +36,9 @@ namespace Enigma.Character
     {
         public const float LowHpFraction      = 0.35f;
         public const float SafeHpFraction     = 0.45f;
-        public const float ObjectiveJoinRange = 35f;
-        public const float DefendJoinRange    = 45f;
+        // マップ半径由来の距離しきい値。M-0(平面1.4倍拡張)に合わせて更新(35→49, 45→63)。
+        public const float ObjectiveJoinRange = 49f;
+        public const float DefendJoinRange    = 63f;
 
         public static BotMacroAction Decide(in BotMacroContext ctx)
         {

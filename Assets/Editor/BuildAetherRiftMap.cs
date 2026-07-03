@@ -71,7 +71,7 @@ public static partial class BuildAetherRiftMap
             // ピッタリ収めることで境界の外に地面がはみ出すのを防ぐ。
             var ground = new GameObject("Ground");
             ground.transform.position = new Vector3(0f, 0f, 0f);
-            var groundMesh = CreateAlmondGroundMesh(85f, 35f, 48);
+            var groundMesh = CreateAlmondGroundMesh(120f, 48f, 48);
             var gMf = ground.AddComponent<MeshFilter>();
             gMf.sharedMesh = groundMesh;
             var gMr = ground.AddComponent<MeshRenderer>();
@@ -88,8 +88,8 @@ public static partial class BuildAetherRiftMap
         // 川: 縦帯 Cube (両レーンに届く長さ92)
         // 階段順: 地面(0) < 川上面(0.03) < パス(0.045) < レーン(0.06) < ベイスン(0.12) < ピット(0.18)
         // レーンが川の上を「橋」として通るため、川はレーンより下に置く
-        // 川は楕円境界(z半径≈54)とレーン帯(r40〜50)の内側に収めるため z=±42 まで(scale.z 92→84)。
-        PlaceCube("River", new Vector3(0f, -0.02f, 0f), new Vector3(14f, 0.1f, 84f), matRiver);
+        // 川は楕円境界(z半径≈76)とレーン帯(r56〜70)の内側に収めるため z=±58 まで(scale.z 84→116)。
+        PlaceCube("River", new Vector3(0f, -0.02f, 0f), new Vector3(18f, 0.1f, 116f), matRiver);
 
         // レーン色を土色に更新
         matLane.SetColor("_BaseColor", new Color(0.62f, 0.55f, 0.42f));
@@ -98,12 +98,12 @@ public static partial class BuildAetherRiftMap
         ApplyNoiseBaseMap(matLane, "LaneNoise", new Vector2(8f, 8f));
 
         // レーンアーク: Cube 48個を滑らかなリング帯メッシュ1枚に置換（角のはみ出し解消）
-        const float R = 45f;
+        const float R = 63f;
         {
             var laneRing = new GameObject("LaneRing");
             laneRing.transform.position = new Vector3(0f, 0.06f, 0f);
             var mf = laneRing.AddComponent<MeshFilter>();
-            mf.sharedMesh = CreateRingBandMesh(40f, 50f, 96);
+            mf.sharedMesh = CreateRingBandMesh(56f, 70f, 96);
             var mr2 = laneRing.AddComponent<MeshRenderer>();
             mr2.sharedMaterial = matLane;
             SetStatic(laneRing);
@@ -114,7 +114,7 @@ public static partial class BuildAetherRiftMap
             var basin = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             basin.name = "Basin";
             basin.transform.position   = new Vector3(0f, 0.12f, 0f);
-            basin.transform.localScale = new Vector3(32f, 0.06f, 32f);
+            basin.transform.localScale = new Vector3(44f, 0.06f, 44f);
             UseFlatMeshCollider(basin, keepCollider: false);
             SetStatic(basin);
             SetMat(basin, matRiver);
@@ -122,7 +122,7 @@ public static partial class BuildAetherRiftMap
             var pit = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             pit.name = "BossPit";
             pit.transform.position   = new Vector3(0f, 0.18f, 0f);
-            pit.transform.localScale = new Vector3(16f, 0.04f, 16f);
+            pit.transform.localScale = new Vector3(22f, 0.04f, 22f);
             UseFlatMeshCollider(pit, keepCollider: false);
             SetStatic(pit);
             SetMat(pit, matPit);
@@ -172,16 +172,16 @@ public static partial class BuildAetherRiftMap
                     // クラスタ中心候補を最大50回試行（棄却条件は木と同じ）
                     for (int ca = 0; ca < 50; ca++)
                     {
-                        float cr    = (float)(rng.NextDouble() * 18.0 + 20.0);
+                        float cr    = (float)(rng.NextDouble() * 25.2 + 28.0);
                         float cang  = (float)(rng.NextDouble() * 90.0 + q * 90.0);
                         float crad  = cang * Mathf.Deg2Rad;
                         float cx    = cr * Mathf.Cos(crad);
                         float cz    = cr * Mathf.Sin(crad);
-                        if (Mathf.Abs(cx) < 9f) continue;
+                        if (Mathf.Abs(cx) < 12.6f) continue;
                         float distFromArcC = Mathf.Abs(Mathf.Sqrt(cx * cx + cz * cz) - R);
-                        if (distFromArcC < 7f) continue;
-                        if (IsNearAnyJunglePath(new Vector3(cx, 0f, cz), 4.5f)) continue;
-                        if (IsNearAnyCamp(new Vector3(cx, 0f, cz), 6f)) continue;
+                        if (distFromArcC < 9.8f) continue;
+                        if (IsNearAnyJunglePath(new Vector3(cx, 0f, cz), 6.3f)) continue;
+                        if (IsNearAnyCamp(new Vector3(cx, 0f, cz), 8.4f)) continue;
                         clusterCenters.Add(new Vector2(cx, cz));
                         break;
                     }
@@ -208,17 +208,17 @@ public static partial class BuildAetherRiftMap
                         float tx = clusterCenter.x + offsetDist * Mathf.Cos(offsetAngle);
                         float tz = clusterCenter.y + offsetDist * Mathf.Sin(offsetAngle);
 
-                        if (Mathf.Abs(tx) < 9f) continue;
+                        if (Mathf.Abs(tx) < 12.6f) continue;
                         float distFromArc = Mathf.Abs(Mathf.Sqrt(tx * tx + tz * tz) - R);
-                        if (distFromArc < 7f) continue;
-                        if (IsNearAnyJunglePath(new Vector3(tx, 0f, tz), 4.5f)) continue;
-                        if (IsNearAnyCamp(new Vector3(tx, 0f, tz), 6f)) continue;
+                        if (distFromArc < 9.8f) continue;
+                        if (IsNearAnyJunglePath(new Vector3(tx, 0f, tz), 6.3f)) continue;
+                        if (IsNearAnyCamp(new Vector3(tx, 0f, tz), 8.4f)) continue;
 
-                        // 木同士の最小間隔 1.2m
+                        // 木同士の最小間隔 1.68m(旧1.2m×1.4)
                         bool tooClose = false;
                         foreach (var pp in placedPositions)
                         {
-                            if (Vector2.Distance(new Vector2(tx, tz), pp) < 1.2f) { tooClose = true; break; }
+                            if (Vector2.Distance(new Vector2(tx, tz), pp) < 1.68f) { tooClose = true; break; }
                         }
                         if (tooClose) continue;
 
@@ -235,22 +235,22 @@ public static partial class BuildAetherRiftMap
                 while (placed < totalGoal && uAttempts < 600)
                 {
                     uAttempts++;
-                    float r     = (float)(rng.NextDouble() * 18.0 + 20.0);
+                    float r     = (float)(rng.NextDouble() * 25.2 + 28.0);
                     float angle = (float)(rng.NextDouble() * 90.0 + q * 90.0);
                     float rad2  = angle * Mathf.Deg2Rad;
                     float tx    = r * Mathf.Cos(rad2);
                     float tz    = r * Mathf.Sin(rad2);
 
-                    if (Mathf.Abs(tx) < 9f) continue;
+                    if (Mathf.Abs(tx) < 12.6f) continue;
                     float distFromArc = Mathf.Abs(Mathf.Sqrt(tx * tx + tz * tz) - R);
-                    if (distFromArc < 7f) continue;
-                    if (IsNearAnyJunglePath(new Vector3(tx, 0f, tz), 4.5f)) continue;
-                    if (IsNearAnyCamp(new Vector3(tx, 0f, tz), 6f)) continue;
+                    if (distFromArc < 9.8f) continue;
+                    if (IsNearAnyJunglePath(new Vector3(tx, 0f, tz), 6.3f)) continue;
+                    if (IsNearAnyCamp(new Vector3(tx, 0f, tz), 8.4f)) continue;
 
                     bool tooClose = false;
                     foreach (var pp in placedPositions)
                     {
-                        if (Vector2.Distance(new Vector2(tx, tz), pp) < 1.2f) { tooClose = true; break; }
+                        if (Vector2.Distance(new Vector2(tx, tz), pp) < 1.68f) { tooClose = true; break; }
                     }
                     if (tooClose) continue;
 
@@ -265,22 +265,22 @@ public static partial class BuildAetherRiftMap
                 while (rocksPlaced < 4 && rockAttempts < 200)
                 {
                     rockAttempts++;
-                    float rr    = (float)(rng.NextDouble() * 18.0 + 20.0);
+                    float rr    = (float)(rng.NextDouble() * 25.2 + 28.0);
                     float rang  = (float)(rng.NextDouble() * 90.0 + q * 90.0);
                     float rrad  = rang * Mathf.Deg2Rad;
                     float rx    = rr * Mathf.Cos(rrad);
                     float rz    = rr * Mathf.Sin(rrad);
 
-                    if (Mathf.Abs(rx) < 9f) continue;
+                    if (Mathf.Abs(rx) < 12.6f) continue;
                     float distFromArcR = Mathf.Abs(Mathf.Sqrt(rx * rx + rz * rz) - R);
-                    if (distFromArcR < 7f) continue;
-                    if (IsNearAnyJunglePath(new Vector3(rx, 0f, rz), 4.5f)) continue;
-                    if (IsNearAnyCamp(new Vector3(rx, 0f, rz), 6f)) continue;
+                    if (distFromArcR < 9.8f) continue;
+                    if (IsNearAnyJunglePath(new Vector3(rx, 0f, rz), 6.3f)) continue;
+                    if (IsNearAnyCamp(new Vector3(rx, 0f, rz), 8.4f)) continue;
 
                     bool tooClose = false;
                     foreach (var pp in placedPositions)
                     {
-                        if (Vector2.Distance(new Vector2(rx, rz), pp) < 1.2f) { tooClose = true; break; }
+                        if (Vector2.Distance(new Vector2(rx, rz), pp) < 1.68f) { tooClose = true; break; }
                     }
                     if (tooClose) continue;
 
@@ -350,7 +350,7 @@ public static partial class BuildAetherRiftMap
         {
             var baseBlue = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseBlue.name = "Base_Blue";
-            baseBlue.transform.position   = new Vector3(-68f, 0.06f, 0f);
+            baseBlue.transform.position   = new Vector3(-100f, 0.06f, 0f);
             baseBlue.transform.localScale = new Vector3(12f, 0.12f, 12f);
             UseFlatMeshCollider(baseBlue, keepCollider: true);
             SetStatic(baseBlue);
@@ -358,7 +358,7 @@ public static partial class BuildAetherRiftMap
 
             var baseRed = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseRed.name = "Base_Red";
-            baseRed.transform.position   = new Vector3(68f, 0.06f, 0f);
+            baseRed.transform.position   = new Vector3(100f, 0.06f, 0f);
             baseRed.transform.localScale = new Vector3(12f, 0.12f, 12f);
             UseFlatMeshCollider(baseRed, keepCollider: true);
             SetStatic(baseRed);
@@ -370,12 +370,12 @@ public static partial class BuildAetherRiftMap
         //   レーン外側 x=50 ⟷ 台座内端 x=51.5 = 1.5m 余裕
         //   リスポーンパッド外端 x=62 ⟷ 台座外端 x=60.5 = 1.5m 余裕
         // 「復帰→ネクサス→レーン」の並びを保ちつつ、両側に均等な隙間を確保する。
-        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-56f, 0f, 0f), matBlue);
-        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 56f, 0f, 0f), matRed);
+        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-82f, 0f, 0f), matBlue);
+        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 82f, 0f, 0f), matRed);
 
         // タワー8基: 4本のジャングルパス(45°/135°/225°/315°方向)の両側 ±10° に挟む形で配置する。
         // パスの両側からジャングル出入りを牽制する LoL 風の「ジャングル口タワー」になる。
-        // 半径は R=45 (レーンアーク中央)。チームは象限で決定: 右上=Red, 左上=Blue, 左下=Blue, 右下=Red。
+        // 半径は R=63 (レーンアーク中央)。チームは象限で決定: 右上=Red, 左上=Blue, 左下=Blue, 右下=Red。
         {
             var towerModel = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/External/Towers/DungeonTowerD.fbx");
@@ -563,9 +563,9 @@ public static partial class BuildAetherRiftMap
         WireCharacterSkills("Char_nova",  new[] { novaQ, novaW, novaE, (SkillDefinition)null });
 
         // 9. プレイヤー
-        // 泉/スポーンは基地最奥のコンパクトな安全パッド(-68)に配置。LoL のフォーメーション:
-        // 奥=泉/ショップ/復帰 → 中央=ネクサス(-56) → 前方=防衛広場 → レーン、の並び(report25)。
-        var playerSpawnPos = new Vector3(-68f, 1.1f, 0f);
+        // 泉/スポーンは基地最奥のコンパクトな安全パッド(-100)に配置。LoL のフォーメーション:
+        // 奥=泉/ショップ/復帰 → 中央=ネクサス(-82) → 前方=防衛広場 → レーン、の並び(report25)。
+        var playerSpawnPos = new Vector3(-100f, 1.1f, 0f);
         var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         player.name = "Player";
         player.tag  = "Player";
@@ -703,7 +703,7 @@ public static partial class BuildAetherRiftMap
         // 泉回復(後方安全パッドの泉=半径5のコンパクト圏で毎秒回復)
         var playerFountain   = player.AddComponent<Enigma.Combat.FountainRegen>();
         var soPlayerFountain = new SerializedObject(playerFountain);
-        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-68f, 1.1f, 0f);
+        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-100f, 1.1f, 0f);
         soPlayerFountain.FindProperty("_radius").floatValue           = 5f;
         soPlayerFountain.ApplyModifiedPropertiesWithoutUndo();
 
@@ -792,26 +792,26 @@ public static partial class BuildAetherRiftMap
         var blueRing    = new Color(0.15f, 0.35f, 0.9f, 0.5f);
 
         // 敵チーム（Red）3体: TOP / BOT / Jungle
-        // スポーンを後方の安全パッド(±66〜±69)に密集配置し、泉(半径5, 中心±68)内に全員が収まる
-        // ようにする(report25: 復帰は小さな泉の中)。前方へ出るときネクサス/タイタン(±56, z=0,
+        // スポーンを後方の安全パッド(±98〜±101)に密集配置し、泉(半径5, 中心±100)内に全員が収まる
+        // ようにする(report25: 復帰は小さな泉の中)。前方へ出るときネクサス/タイタン(±82, z=0,
         // capsule半径~2.25)を横切ってスタックしないよう各 Bot はレーン側へ z オフセットを保つ。
         // CreateBotChampion が spawnPos を route[0] に前置するため後退時は泉圏で止まる。
         var redTop = CreateBotChampion("RedBot_Top", TeamId.Red,
-            new Vector3(66f, 1.1f, 3.5f), BuildTopLaneWaypoints(),
+            new Vector3(98f, 1.1f, 3.5f), BuildTopLaneWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redBot = CreateBotChampion("RedBot_Bot", TeamId.Red,
-            new Vector3(66f, 1.1f, -3.5f), BuildBotLaneWaypoints(),
+            new Vector3(98f, 1.1f, -3.5f), BuildBotLaneWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redJungle = CreateBotChampion("RedBot_Jungle", TeamId.Red,
-            new Vector3(69f, 1.1f, 2f), BuildJungleWaypoints(),
+            new Vector3(101f, 1.1f, 2f), BuildJungleWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab, farmsNeutralCamps: true);
 
         // 味方チーム（Blue）2体: TOP / BOT。経路は各レーンの逆順（青ベース開口スタート）。
         var blueTop = CreateBotChampion("BlueBot_Top", TeamId.Blue,
-            new Vector3(-66f, 1.1f, 3.5f), Reverse(BuildTopLaneWaypoints()),
+            new Vector3(-98f, 1.1f, 3.5f), Reverse(BuildTopLaneWaypoints()),
             matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
         var blueBot = CreateBotChampion("BlueBot_Bot", TeamId.Blue,
-            new Vector3(-66f, 1.1f, -3.5f), Reverse(BuildBotLaneWaypoints()),
+            new Vector3(-98f, 1.1f, -3.5f), Reverse(BuildBotLaneWaypoints()),
             matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
 
         // BotChampionBootstrap（シーンに1個）: CharacterDatabase と5体を結線する
@@ -892,9 +892,9 @@ public static partial class BuildAetherRiftMap
         var soShopCtrl = new SerializedObject(shopCtrl);
         soShopCtrl.FindProperty("_uiDocument").objectReferenceValue = hudDoc;
         soShopCtrl.FindProperty("_player").objectReferenceValue     = player.transform;
-        // _shopCenter は後方安全パッド(-68, 0, 0)。泉と同じパッドに置き、ShopRadius(6)で
+        // _shopCenter は後方安全パッド(-100, 0, 0)。泉と同じパッドに置き、ShopRadius(6)で
         // 後方のみを購入圏にする(report25: ショップをタイタン前広場に広げない)。
-        soShopCtrl.FindProperty("_shopCenter").vector3Value         = new Vector3(-68f, 0f, 0f);
+        soShopCtrl.FindProperty("_shopCenter").vector3Value         = new Vector3(-100f, 0f, 0f);
         soShopCtrl.ApplyModifiedPropertiesWithoutUndo();
 
         // MinimapController: ミニマップドットを毎フレーム更新する
@@ -942,12 +942,13 @@ public static partial class BuildAetherRiftMap
     // ---- 境界壁 ----
 
     // 衝突チューブの半径帯・高さ（視覚壁とは独立した「物理的な真の境界」）
-    private const float TubeLaneInnerR = 50.0f;
-    private const float TubeLaneOuterR = 51.8f;
+    // 注記: 本ファイル内で参照箇所なし（過去設計の名残）。M-0では平面1.4倍に合わせて値のみ更新。
+    private const float TubeLaneInnerR = 70.0f;
+    private const float TubeLaneOuterR = 72.5f;
     private const float TubeHeight     = 2.0f;
-    // LoL 風にリスポーン付近を広く拡張（内 14.4→17.4 / 外 15.8→18.4）。基壇 r17 を内包する
-    private const float TubePocketInnerR = 17.4f;
-    private const float TubePocketOuterR = 18.4f;
+    // LoL 風にリスポーン付近を広く拡張（内 14.4→17.4 / 外 15.8→18.4 の旧値を1.4倍）。基壇 r17 を内包する
+    private const float TubePocketInnerR = 24.4f;
+    private const float TubePocketOuterR = 25.8f;
     // ポケット弧をレーン弧の壁体内部へ食い込ませる延長角（継ぎ目スリットを構造的に排除）
     private const float PocketEndExtendDeg = 5f;
     // レーン側開口（ベース正面=原点方向）の半角。ポケット半径に依らず固定角で開口を切り出す。
@@ -980,8 +981,8 @@ public static partial class BuildAetherRiftMap
         // 2弧は z=0, x=±sqrt(EyeR²-EyeB²) で接続(=目尻)。プレイヤーは目形の内側に閉じ込められる。
         // OutOfBoundsLogic も目形2円の AND 内側で場内判定するように変更済み。
         // ------------------------------------------------------------
-        const float EyeR = 85f;
-        const float EyeB = 35f;
+        const float EyeR = 120f;
+        const float EyeB = 48f;
         const float EyeInnerR = EyeR;          // 内周(プレイヤー側)= 円弧そのもの
         const float EyeOuterR = EyeR + 1.8f;   // 外周(視覚壁厚)
         const float EyeStepDeg = 3.75f;
@@ -1008,7 +1009,7 @@ public static partial class BuildAetherRiftMap
         //   下まぶた弧の右端 外周 = (EyeOuterR·cos(cornerDeg), 0, +EyeB - EyeOuterR·sin(cornerDeg))
         //   内側の目尻 = (cornerX, 0, 0)
         // この3点(と高さ方向の対応点)で楔形のパッチを張って、上下弧の端面の継ぎ目を覆う。
-        // パッチの外側端 x = EyeOuterR·cos(cornerDeg) ≈ 79.1 で、Ground の外には出るが
+        // パッチの外側端 x = EyeOuterR·cos(cornerDeg) ≈ 111.8 で、Ground の外には出るが
         // Wall band の外周と完全に同じ x なので「壁の外に出た」ようには見えない。
         float cornerRad = cornerDeg * Mathf.Deg2Rad;
         float patchOuterX = EyeOuterR * Mathf.Cos(cornerRad);
@@ -1109,13 +1110,13 @@ public static partial class BuildAetherRiftMap
 
     /// <summary>
     /// 境界壁の連続性を検証する。
-    /// 中心 (0, 0.75, 0) から 0.5° 刻み 720 本の水平レイ（半径 48 起点、外向き長さ 6）を飛ばし、
+    /// 中心 (0, 0.75, 0) から 0.5° 刻み 720 本の水平レイ（半径 67.2 起点、外向き長さ 6）を飛ばし、
     /// "Boundary" を名前に含む壁に当たらず かつ ベース開口（0°/180° ±11°）でもない角度を列挙する。
     /// 素通り角度がなければ "OK" を返す。
     /// </summary>
     public static string VerifyBoundary()
     {
-        const float RayOriginR  = 48f;
+        const float RayOriginR  = 67.2f;
         const float RayLength   = 6f;
         const float StepDeg     = 0.5f;
         const float BaseOpenHalf = 11f;
@@ -1160,7 +1161,7 @@ public static partial class BuildAetherRiftMap
     /// <summary>
     /// 場外脱出が不可能であることを検証する（エディタ用）。
     /// VerifyBoundary（放射レイ）に加え、開口端付近で接線スリットを検査する:
-    /// 開口端の各角度で半径 50.9 の点から接線方向（両回り）に長さ 4 のレイを飛ばし、
+    /// 開口端の各角度で半径 71.3 の点から接線方向（両回り）に長さ 4 のレイを飛ばし、
     /// "Boundary" 非ヒットで素通りする角度を列挙する。全て塞がっていれば "OK"。
     /// </summary>
     public static string VerifyEscapeProof()
@@ -1177,7 +1178,7 @@ public static partial class BuildAetherRiftMap
             (9f, 15f), (165f, 171f), (189f, 195f), (345f, 351f),
         };
 
-        const float ProbeR    = 50.9f;
+        const float ProbeR    = 71.3f;
         const float TangentLen = 4f;
 
         foreach (var (from, to) in ranges)
@@ -1466,8 +1467,8 @@ public static partial class BuildAetherRiftMap
         var redHdr  = new Color(1.00f, 0.55f, 0.10f, 0.90f); // 橙（赤床に映える）
         // 基地床の外周に発光リム（水平アニュラス・加算・単色）。CreateRingBandMesh は UV 無しのため
         // テクスチャは使わず単色加算にする（テクスチャを使うと (0,0) サンプルで暗くなる）。
-        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimBlue", new Vector3(-56f, 1.3f, 0f), blueHdr);
-        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimRed",  new Vector3( 56f, 1.3f, 0f), redHdr);
+        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimBlue", new Vector3(-82f, 1.3f, 0f), blueHdr);
+        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimRed",  new Vector3( 82f, 1.3f, 0f), redHdr);
 
         // 中央コア（NeutralBoss）の発光ハロー
         var boss = FindInSceneByName(scene, "NeutralBoss");
@@ -1497,8 +1498,8 @@ public static partial class BuildAetherRiftMap
     {
         var parent = new GameObject("FountainRings");
         SetStatic(parent);
-        CreateFountainRing(parent.transform, "FountainRing_Blue", new Vector3(-68f, 1.06f, 0f), new Color(0.35f, 0.75f, 1.00f, 0.32f));
-        CreateFountainRing(parent.transform, "FountainRing_Red",  new Vector3( 68f, 1.06f, 0f), new Color(1.00f, 0.55f, 0.30f, 0.32f));
+        CreateFountainRing(parent.transform, "FountainRing_Blue", new Vector3(-100f, 1.06f, 0f), new Color(0.35f, 0.75f, 1.00f, 0.32f));
+        CreateFountainRing(parent.transform, "FountainRing_Red",  new Vector3( 100f, 1.06f, 0f), new Color(1.00f, 0.55f, 0.30f, 0.32f));
     }
 
     // 泉回復半径(10)の内縁に薄い半透明リングを敷く（床面のすぐ上）。
@@ -2425,12 +2426,12 @@ public static partial class BuildAetherRiftMap
         Material matBody, Material matBar, Color ringColor, Projectile projPrefab,
         GameObject telegraphPrefab, bool farmsNeutralCamps = false)
     {
-        // 経路先頭に「チーム泉中心(±68, 0)」を挿入する。後退(Backward)が index 0 まで戻ったとき、
-        // WaypointReach(3m) 手前で停止しても泉の回復圏(中心±68・半径5)内に必ず収まるようにする。
-        // spawnPos(±66, ±3.5)を先頭にすると停止位置が泉圏から最大7m外れ、低HPの Retreat が
+        // 経路先頭に「チーム泉中心(±100, 0)」を挿入する。後退(Backward)が index 0 まで戻ったとき、
+        // WaypointReach(3m) 手前で停止しても泉の回復圏(中心±100・半径5)内に必ず収まるようにする。
+        // spawnPos(±98〜101, ±3.5)を先頭にすると停止位置が泉圏から最大7m外れ、低HPの Retreat が
         // 回復できず永久に解除されないデッドロックになる(泉を r10→5 に縮めた際の回帰)。
         var route = new Vector3[waypoints.Length + 1];
-        route[0] = new Vector3(Mathf.Sign(spawnPos.x) * 68f, 0f, 0f);
+        route[0] = new Vector3(Mathf.Sign(spawnPos.x) * 100f, 0f, 0f);
         System.Array.Copy(waypoints, 0, route, 1, waypoints.Length);
         waypoints = route;
 
@@ -2464,11 +2465,11 @@ public static partial class BuildAetherRiftMap
         soTt.FindProperty("_team").enumValueIndex = (int)team;
         soTt.ApplyModifiedPropertiesWithoutUndo();
 
-        // 泉回復: チーム共通の後方安全パッド中心(±68, 0)・半径5のコンパクト圏。視覚リング
+        // 泉回復: チーム共通の後方安全パッド中心(±100, 0)・半径5のコンパクト圏。視覚リング
         // (PlaceFountainRings)と一致させる。各 Bot のスポーンは z オフセットで散らすが泉中心は1点。
         var botFountain   = go.AddComponent<Enigma.Combat.FountainRegen>();
         var soBotFountain = new SerializedObject(botFountain);
-        soBotFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(Mathf.Sign(spawnPos.x) * 68f, 1.1f, 0f);
+        soBotFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(Mathf.Sign(spawnPos.x) * 100f, 1.1f, 0f);
         soBotFountain.FindProperty("_radius").floatValue           = 5f;
         soBotFountain.ApplyModifiedPropertiesWithoutUndo();
 
@@ -2538,41 +2539,41 @@ public static partial class BuildAetherRiftMap
     }
 
     // TOPレーン経路を赤ベース→青ベース方向（角度 20°→160°、12°刻み）で構築する。
-    // ミニオンの ArcPt と同じ半径45・角度系。z>0 側（北回り）。
+    // ミニオンの ArcPt と同じ半径63・角度系。z>0 側（北回り）。
     private static Vector3[] BuildTopLaneWaypoints()
     {
         Vector3 ArcPt(float deg)
         {
             float r = deg * Mathf.Deg2Rad;
-            return new Vector3(45f * Mathf.Cos(r), 0f, 45f * Mathf.Sin(r));
+            return new Vector3(63f * Mathf.Cos(r), 0f, 63f * Mathf.Sin(r));
         }
 
         var list = new List<Vector3>();
-        // 開口点はポケット壁帯(中心±56, 半径11.4-12.8)の外かつ開口セクター内に置く。
-        // (±50,±10) は壁帯内部に埋まりボットが壁をよじ登ってスタックする
-        list.Add(new Vector3(45.5f, 0f, 8f)); // 赤ベース開口
+        // 開口点はポケット壁帯の外かつ開口セクター内に置く(M-0で半径1.4倍・z オフセットも同比率)。
+        // 壁帯内部に埋まりボットが壁をよじ登ってスタックしないよう外側に置く
+        list.Add(new Vector3(63.5f, 0f, 11.2f)); // 赤ベース開口
         for (float deg = 20f; deg <= 160f + 0.01f; deg += 12f)
             list.Add(ArcPt(deg));
-        list.Add(new Vector3(-45.5f, 0f, 8f)); // 青ベース開口
+        list.Add(new Vector3(-63.5f, 0f, 11.2f)); // 青ベース開口
         return list.ToArray();
     }
 
     // BOTレーン経路を赤ベース→青ベース方向（角度 -20°→-160°、-12°刻み）で構築する。
-    // TOP の z>0 ミラー。z<0 側（南回り）。開口は z=-10 側。
+    // TOP の z>0 ミラー。z<0 側（南回り）。開口は z=-14 側。
     private static Vector3[] BuildBotLaneWaypoints()
     {
         Vector3 ArcPt(float deg)
         {
             float r = deg * Mathf.Deg2Rad;
-            return new Vector3(45f * Mathf.Cos(r), 0f, 45f * Mathf.Sin(r));
+            return new Vector3(63f * Mathf.Cos(r), 0f, 63f * Mathf.Sin(r));
         }
 
         var list = new List<Vector3>();
         // 開口点は壁帯の外かつ開口セクター内(TOP と同様の理由)
-        list.Add(new Vector3(45.5f, 0f, -8f)); // 赤ベース開口（南側）
+        list.Add(new Vector3(63.5f, 0f, -11.2f)); // 赤ベース開口（南側）
         for (float deg = -20f; deg >= -160f - 0.01f; deg -= 12f)
             list.Add(ArcPt(deg));
-        list.Add(new Vector3(-45.5f, 0f, -8f)); // 青ベース開口（南側）
+        list.Add(new Vector3(-63.5f, 0f, -11.2f)); // 青ベース開口（南側）
         return list.ToArray();
     }
 
@@ -2591,17 +2592,17 @@ public static partial class BuildAetherRiftMap
 
         return new[]
         {
-            new Vector3(45.5f, 0f, 8f),   // 赤ベース開口（TOP側、壁帯の外）
-            Polar(32f,  45f),             // レーン帯を45°方向へ
-            Polar(45f,  45f),             // 45°パス外端（レーン接続点）
-            Polar(45f,  30f),             // 右上キャンプ空き地
-            Polar(45f,  18f),             // 45°パス内端（ベイスン縁）
-            Polar(0f,   13f),             // ベイスン東縁（ボスピットr8の外・basin r16内）
-            Polar(-45f, 18f),             // 315°パス内端
-            Polar(-45f, 30f),             // 右下キャンプ空き地
-            Polar(-45f, 45f),             // 315°パス外端
-            Polar(-32f, 45f),             // レーン帯を赤ベースへ
-            new Vector3(45.5f, 0f, -8f),  // 赤ベース開口（BOT側）
+            new Vector3(63.5f, 0f, 11.2f),  // 赤ベース開口（TOP側、壁帯の外）
+            Polar(32f,  63f),              // レーン帯を45°方向へ
+            Polar(45f,  63f),              // 45°パス外端（レーン接続点）
+            Polar(45f,  42f),              // 右上キャンプ空き地
+            Polar(45f,  25f),              // 45°パス内端（ベイスン縁）
+            Polar(0f,   18f),              // ベイスン東縁（ボスピットr11の外・basin r22内）
+            Polar(-45f, 25f),              // 315°パス内端
+            Polar(-45f, 42f),              // 右下キャンプ空き地
+            Polar(-45f, 63f),              // 315°パス外端
+            Polar(-32f, 63f),              // レーン帯を赤ベースへ
+            new Vector3(63.5f, 0f, -11.2f), // 赤ベース開口（BOT側）
         };
     }
 
@@ -2797,50 +2798,50 @@ public static partial class BuildAetherRiftMap
         var matBlue = GetOrCreateToonUnitMat("MinionBlue", new Color(0.55f, 0.66f, 0.95f));
         var matRed  = GetOrCreateToonUnitMat("MinionRed",  new Color(0.95f, 0.50f, 0.45f));
 
-        // アーク半径 R=45 上のウェイポイント計算ヘルパー
+        // アーク半径 R=63 上のウェイポイント計算ヘルパー
         static Vector3 ArcPt(float deg) {
             float r = deg * Mathf.Deg2Rad;
-            return new Vector3(45f * Mathf.Cos(r), 0f, 45f * Mathf.Sin(r));
+            return new Vector3(63f * Mathf.Cos(r), 0f, 63f * Mathf.Sin(r));
         }
 
-        // 各ルートの終端はレーン開口(±50, ±8)から敵タイタン前(±52, ±4 → ±52, 0)まで延伸する。
-        // 最終WP(±52, 0)は敵タイタン(±56, 0)の中心から4m=カプセル(r2.6)の外・aggro(8m)の内なので、
+        // 各ルートの終端はレーン開口(±70, ±11.2)から敵タイタン前(±72.8, ±5.6 → ±72.8, 0)まで延伸する。
+        // 最終WP(±72.8, 0)は敵タイタン(±82, 0)の中心から約9.2m=カプセル(r2.6)の外・aggro(8m×1.4)の内なので、
         // ウェーブは到達前に索敵でタイタンを標的化して攻城に移る(=タイタン撃破で決着が付く)。
 
-        // BlueTop: 出発(-50,0,10)→ θ=160,135,90,45,20 のアーク→敵開口→Redタイタン前
+        // BlueTop: 出発(-70,0,14)→ θ=160,135,90,45,20 のアーク→敵開口→Redタイタン前
         PlaceSpawner("Spawner_BlueTop",
-            new Vector3(-50f, 0f, 10f),
+            new Vector3(-70f, 0f, 14f),
             TeamId.Blue, matBlue, minionPrefab,
             new Vector3[] {
                 ArcPt(160f), ArcPt(135f), ArcPt(90f), ArcPt(45f), ArcPt(20f),
-                new Vector3(50f, 0f, 8f), new Vector3(52f, 0f, 4f), new Vector3(52f, 0f, 0f)
+                new Vector3(70f, 0f, 11.2f), new Vector3(72.8f, 0f, 5.6f), new Vector3(72.8f, 0f, 0f)
             });
 
-        // RedTop: 出発(50,0,10)→ θ=20,45,90,135,160 のアーク→敵開口→Blueタイタン前
+        // RedTop: 出発(70,0,14)→ θ=20,45,90,135,160 のアーク→敵開口→Blueタイタン前
         PlaceSpawner("Spawner_RedTop",
-            new Vector3(50f, 0f, 10f),
+            new Vector3(70f, 0f, 14f),
             TeamId.Red, matRed, minionPrefab,
             new Vector3[] {
                 ArcPt(20f), ArcPt(45f), ArcPt(90f), ArcPt(135f), ArcPt(160f),
-                new Vector3(-50f, 0f, 8f), new Vector3(-52f, 0f, 4f), new Vector3(-52f, 0f, 0f)
+                new Vector3(-70f, 0f, 11.2f), new Vector3(-72.8f, 0f, 5.6f), new Vector3(-72.8f, 0f, 0f)
             });
 
         // BlueBot: z 符号反転版
         PlaceSpawner("Spawner_BlueBot",
-            new Vector3(-50f, 0f, -10f),
+            new Vector3(-70f, 0f, -14f),
             TeamId.Blue, matBlue, minionPrefab,
             new Vector3[] {
                 ArcPt(200f), ArcPt(225f), ArcPt(270f), ArcPt(315f), ArcPt(340f),
-                new Vector3(50f, 0f, -8f), new Vector3(52f, 0f, -4f), new Vector3(52f, 0f, 0f)
+                new Vector3(70f, 0f, -11.2f), new Vector3(72.8f, 0f, -5.6f), new Vector3(72.8f, 0f, 0f)
             });
 
         // RedBot: z 符号反転版
         PlaceSpawner("Spawner_RedBot",
-            new Vector3(50f, 0f, -10f),
+            new Vector3(70f, 0f, -14f),
             TeamId.Red, matRed, minionPrefab,
             new Vector3[] {
                 ArcPt(340f), ArcPt(315f), ArcPt(270f), ArcPt(225f), ArcPt(200f),
-                new Vector3(-50f, 0f, -8f), new Vector3(-52f, 0f, -4f), new Vector3(-52f, 0f, 0f)
+                new Vector3(-70f, 0f, -11.2f), new Vector3(-72.8f, 0f, -5.6f), new Vector3(-72.8f, 0f, 0f)
             });
     }
 
@@ -3073,24 +3074,30 @@ public static partial class BuildAetherRiftMap
         var parent = new GameObject("JungleLaneWalls");
         SetStatic(parent);
 
-        const float innerR = 38.5f;
-        const float outerR = 39.8f;
+        const float innerR = 54.0f;
+        const float outerR = 55.5f;
         const float height = 2.5f;
         const float stepDeg = 3.75f;
 
         // 開口(start,end)を除いた壁弧。[0,360) を一周し、各開口の隙間を空ける。
-        // 青ベース正面(180°)・赤ベース正面(0°)に約34°(≈23m)の開口を空け、タイタン前の防衛広場を
+        // 青ベース正面(180°)・赤ベース正面(0°)に約34°(≈17°半角)の開口を空け、タイタン前の防衛広場を
         // 外周レーンへ扇形に開く(report25: 広い 3v3 広場)。残りはジャングルとレーンを分離する壁弧。
+        // M-0(平面1.4倍拡張)でパス口±8°/川口±13°/基地正面±17°は角度を維持したまま半径のみ拡張し、
+        // 新規にガンク口±3°を基地軸(0°/180°)から±26°の位置へ各象限1本(計4)追加する。
         (float start, float end)[] wallArcs =
         {
+            ( 17f,  23f),   // 赤ベース正面開口(0°) と 26°ガンク口 の間
+            ( 29f,  37f),   // 26°ガンク口 と 45°パス口 の間
             ( 53f,  77f),   // 45°パス口 と 90°川口 の間
             (103f, 127f),   // 90°川口 と 135°パス口 の間
-            (143f, 163f),   // 135°パス口 と 青ベース正面開口(180°)の間
-            (197f, 217f),   // 青ベース正面開口(180°) と 225°パス口 の間
+            (143f, 151f),   // 135°パス口 と 154°ガンク口 の間
+            (157f, 163f),   // 154°ガンク口 と 青ベース正面開口(180°)の間
+            (197f, 203f),   // 青ベース正面開口(180°) と 206°ガンク口 の間
+            (209f, 217f),   // 206°ガンク口 と 225°パス口 の間
             (233f, 257f),   // 225°パス口 と 270°川口 の間
             (283f, 307f),   // 270°川口 と 315°パス口 の間
-            (323f, 343f),   // 315°パス口 と 赤ベース正面開口(0°)の間
-            (377f, 397f),   // 赤ベース正面開口(0°/360°) と 45°パス口 の間
+            (323f, 331f),   // 315°パス口 と 334°ガンク口 の間
+            (337f, 343f),   // 334°ガンク口 と 赤ベース正面開口(0°/360°) の間
         };
 
         int i = 0;
@@ -3116,9 +3123,9 @@ public static partial class BuildAetherRiftMap
         {
             float rad = deg * Mathf.Deg2Rad;
 
-            // パス端点: レーンアーク側(R=45)からベイスン縁(r=18)
-            var p1 = new Vector3(45f * Mathf.Cos(rad), 0f, 45f * Mathf.Sin(rad));
-            var p2 = new Vector3(18f * Mathf.Cos(rad), 0f, 18f * Mathf.Sin(rad));
+            // パス端点: レーンアーク側(R=63)からベイスン縁(r=25)
+            var p1 = new Vector3(63f * Mathf.Cos(rad), 0f, 63f * Mathf.Sin(rad));
+            var p2 = new Vector3(25f * Mathf.Cos(rad), 0f, 25f * Mathf.Sin(rad));
 
             // パスを5セグメントの Cube で敷く（y=0.045: 川上面0.03とレーン0.06の中間）
             const int   SegCount = 5;
@@ -3140,8 +3147,8 @@ public static partial class BuildAetherRiftMap
                     seg.transform.rotation = Quaternion.LookRotation(fwd, Vector3.up);
             }
 
-            // キャンプ中心（半径30）
-            var campCenter = new Vector3(30f * Mathf.Cos(rad), 0f, 30f * Mathf.Sin(rad));
+            // キャンプ中心（半径42）
+            var campCenter = new Vector3(42f * Mathf.Cos(rad), 0f, 42f * Mathf.Sin(rad));
 
             // 足元の空き地サークル（コライダーなし）
             var clearing = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
@@ -3279,8 +3286,8 @@ public static partial class BuildAetherRiftMap
         foreach (float deg in campAngles)
         {
             float rad = deg * Mathf.Deg2Rad;
-            var p1 = new Vector3(45f * Mathf.Cos(rad), 0f, 45f * Mathf.Sin(rad));
-            var p2 = new Vector3(18f * Mathf.Cos(rad), 0f, 18f * Mathf.Sin(rad));
+            var p1 = new Vector3(63f * Mathf.Cos(rad), 0f, 63f * Mathf.Sin(rad));
+            var p2 = new Vector3(25f * Mathf.Cos(rad), 0f, 25f * Mathf.Sin(rad));
             if (DistPointToSegment(p, p1, p2) < radius) return true;
         }
         return false;
@@ -3293,7 +3300,7 @@ public static partial class BuildAetherRiftMap
         foreach (float deg in campAngles)
         {
             float rad    = deg * Mathf.Deg2Rad;
-            var   center = new Vector3(30f * Mathf.Cos(rad), 0f, 30f * Mathf.Sin(rad));
+            var   center = new Vector3(42f * Mathf.Cos(rad), 0f, 42f * Mathf.Sin(rad));
             if (Vector3.Distance(p, center) < radius) return true;
         }
         return false;
@@ -3306,22 +3313,22 @@ public static partial class BuildAetherRiftMap
     /// </summary>
     private static bool IsExcludedFromScatter(Vector3 p)
     {
-        // 川（中央の縦帯）
-        if (Mathf.Abs(p.x) < 8f) return true;
+        // 川（中央の縦帯）(8f×1.4)
+        if (Mathf.Abs(p.x) < 11.2f) return true;
 
         // ベイスン（中央オブジェクティブ）
         float distFromCenter = Mathf.Sqrt(p.x * p.x + p.z * p.z);
-        if (distFromCenter < 18f) return true;
+        if (distFromCenter < 25f) return true;
 
-        // レーンアーク帯（半径 40〜50）
-        if (distFromCenter > 40f && distFromCenter < 50f) return true;
+        // レーンアーク帯（半径 56〜70）
+        if (distFromCenter > 56f && distFromCenter < 70f) return true;
 
         // ジャングルパス近傍
-        if (IsNearAnyJunglePath(p, 4.5f)) return true;
+        if (IsNearAnyJunglePath(p, 6.3f)) return true;
 
-        // ベース周辺（±56, 半径12）
-        if (Vector3.Distance(p, new Vector3(-56f, 0f, 0f)) < 12f) return true;
-        if (Vector3.Distance(p, new Vector3( 56f, 0f, 0f)) < 12f) return true;
+        // ベース周辺（±100, 半径14）
+        if (Vector3.Distance(p, new Vector3(-100f, 0f, 0f)) < 14f) return true;
+        if (Vector3.Distance(p, new Vector3( 100f, 0f, 0f)) < 14f) return true;
 
         return false;
     }
@@ -3363,8 +3370,8 @@ public static partial class BuildAetherRiftMap
         while (grassPlaced < grassGoal && grassAttempts < grassGoal * 12)
         {
             grassAttempts++;
-            // 草地: 半径 18〜68 のリング内（外周岩壁 72 の内側）に一様散布。
-            float r   = 18f + Random.value * 50f;
+            // 草地: 半径 25〜95 のリング内（外周岩壁の内側、旧18〜68×1.4）に一様散布。
+            float r   = 25f + Random.value * 70f;
             float ang = Random.value * 360f * Mathf.Deg2Rad;
             float gx  = r * Mathf.Cos(ang);
             float gz  = r * Mathf.Sin(ang);
@@ -3401,7 +3408,7 @@ public static partial class BuildAetherRiftMap
         while (pebblePlaced < pebbleGoal && pebbleAttempts < pebbleGoal * 12)
         {
             pebbleAttempts++;
-            float r   = 18f + Random.value * 50f;
+            float r   = 25f + Random.value * 70f;
             float ang = Random.value * 360f * Mathf.Deg2Rad;
             float px  = r * Mathf.Cos(ang);
             float pz  = r * Mathf.Sin(ang);

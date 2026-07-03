@@ -23,10 +23,10 @@ namespace Enigma.GameModes
             firstOpenAt: 60f, warningLead: 8f, openWindow: 25f,
             captureSeconds: 5f, effectDuration: 40f, cooldown: 70f);
 
-        // 配置（上側リバー付近に入口、下側へショートカット出口）。
-        private static readonly Vector3 RiftPos      = new Vector3(0f, 1.1f, 26f);
-        private static readonly Vector3 ShortcutExit = new Vector3(0f, 1.1f, -26f);
-        private const float ZoneRadius     = 5f;
+        // 配置（上側リバー付近に入口、下側へショートカット出口）。M-0(平面1.4倍拡張)で位置・半径を更新。
+        private static readonly Vector3 RiftPos      = new Vector3(0f, 1.1f, 36f);
+        private static readonly Vector3 ShortcutExit = new Vector3(0f, 1.1f, -36f);
+        private const float ZoneRadius     = 7f;
         private const float VisionRadius   = 22f;
         private const float HasteStrength  = 0.25f;
         private const float ShortcutPerUnitCd = 5f;

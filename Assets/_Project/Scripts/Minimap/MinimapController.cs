@@ -23,8 +23,8 @@ namespace Enigma.Minimap
 
         // ---- 定数 ----
 
-        // マップの世界座標範囲（円形マップ: 半径75 の正方形に内包）
-        private static readonly Rect WorldBounds = new Rect(-75f, -75f, 150f, 150f);
+        // マップの世界座標範囲（円形マップ: 半径105 の正方形に内包。M-0で平面1.4倍拡張、旧75→105）
+        private static readonly Rect WorldBounds = new Rect(-105f, -105f, 210f, 210f);
 
         // ミニマップパネルのピクセルサイズ（GameHud.uss の hud-minimap に合わせる）
         private static readonly Vector2 PanelSize = new Vector2(160f, 160f);

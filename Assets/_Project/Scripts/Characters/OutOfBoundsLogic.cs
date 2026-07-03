@@ -10,10 +10,10 @@ namespace Enigma.Character
     public static class OutOfBoundsLogic
     {
         // 目形(アーモンド)を定義する2円。BuildAetherRiftMap の CreateOuterBoundary と一致。
-        private const float EyeR = 85f;
-        private const float EyeB = 35f;
-        // 救出先の半径（レーンアーク中央 R=45 付近、目形内側に確実に収まる）
-        private const float LaneRescueRadius = 45f;
+        private const float EyeR = 120f;
+        private const float EyeB = 48f;
+        // 救出先の半径（レーンアーク中央 R=63 付近、目形内側に確実に収まる）
+        private const float LaneRescueRadius = 63f;
 
         /// <summary>
         /// 目形の内側 = 上まぶた円(中心(0,0,-EyeB))内 ∧ 下まぶた円(中心(0,0,+EyeB))内 のとき場内。
