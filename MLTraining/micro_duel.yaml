@@ -1,5 +1,8 @@
-# B1: 1v1 combat micro, PPO + self-play
-# Run: mlagents-learn MLTraining/micro_duel.yaml --run-id=micro_duel_v0
+# B1 v2: ranged PPO learner vs scripted melee chaser (asymmetric duel).
+# v1 (symmetric self-play) collapsed into stand-and-trade because movement had
+# no causal effect with undodgeable auto-attacks; kiting vs a faster melee
+# chaser gives movement a clear learnable payoff.
+# Run: mlagents-learn MLTraining/micro_duel.yaml --run-id=micro_duel_v2 --force
 #      then press Play on Arena.unity in the Unity editor.
 # Contract: 11 obs / 2 continuous actions / BehaviorName=MicroDuel (Confluence 05 B1)
 behaviors:
@@ -22,13 +25,6 @@ behaviors:
       extrinsic:
         gamma: 0.99
         strength: 1.0
-    max_steps: 2000000
+    max_steps: 1500000
     time_horizon: 128
     summary_freq: 20000
-    self_play:
-      save_steps: 20000
-      team_change: 100000
-      swap_steps: 2000
-      window: 10
-      play_against_latest_model_ratio: 0.5
-      initial_elo: 1200.0

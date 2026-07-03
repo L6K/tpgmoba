@@ -96,7 +96,7 @@ namespace Enigma.Learning
             Vector3 enemyPos = _enemyFighter.transform.position;
             float dist = Vector2.Distance(
                 new Vector2(myPos.x, myPos.z), new Vector2(enemyPos.x, enemyPos.z));
-            float over = dist - 12f; // ArenaFighter の攻撃射程
+            float over = dist - _fighter.AttackRange;
             if (over > 0f)
                 AddReward(DisengageFactor * over / Mathf.Max(_arenaRadius, 0.0001f));
 
@@ -143,9 +143,9 @@ namespace Enigma.Learning
             var ctx = new MicroContext(
                 myX: myPos.x, myZ: myPos.z,
                 myHpRatio: HpRatio(_fighter),
-                attackRange: 12f,
+                attackRange: _fighter.AttackRange,
                 attackReady: _fighter.AttackReady,
-                isMelee: false,
+                isMelee: _fighter.IsMelee,
                 targetX: enemyPos.x, targetZ: enemyPos.z,
                 targetHpRatio: HpRatio(_enemyFighter),
                 hasThreat: true,

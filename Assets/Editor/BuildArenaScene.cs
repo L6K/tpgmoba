@@ -32,10 +32,11 @@ namespace Enigma.EditorTools
             BuildWalls();
             BuildLight();
 
+            // Blue = 遠隔のPPO学習者 / Red = 近接のスクリプト追跡者(HeuristicOnly)
             var blue = BuildFighter("Fighter_Blue", new Vector3(-8f, 1.1f, 0f), TeamId.Blue,
-                new Color(0.25f, 0.45f, 0.90f), new Color(0.30f, 0.85f, 1f));
+                new Color(0.25f, 0.45f, 0.90f), new Color(0.30f, 0.85f, 1f), isMeleeChaser: false);
             var red = BuildFighter("Fighter_Red", new Vector3(8f, 1.1f, 0f), TeamId.Red,
-                new Color(0.90f, 0.30f, 0.25f), new Color(1f, 0.45f, 0.30f));
+                new Color(0.90f, 0.30f, 0.25f), new Color(1f, 0.45f, 0.30f), isMeleeChaser: true);
 
             WireFighters(blue, red);
 
@@ -114,8 +115,12 @@ namespace Enigma.EditorTools
             lightGo.transform.rotation = Quaternion.Euler(48f, -38f, 0f);
         }
 
+        // 非対称デュエル(v2): 対称ステータス+回避不能な自動攻撃では移動が結果に因果を持たず、
+        // self-play が「棒立ち相打ち」に収束した(v1で実測)。遠隔=PPO学習者 / 近接=スクリプト追跡者
+        // (やや速い)にすることで、カイト=学習すべき技術が明確な因果と報酬を持つ。
         private static FighterHandles BuildFighter(
-            string name, Vector3 pos, TeamId team, Color bodyColor, Color beamColor)
+            string name, Vector3 pos, TeamId team, Color bodyColor, Color beamColor,
+            bool isMeleeChaser)
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             go.name = name;
@@ -138,12 +143,21 @@ namespace Enigma.EditorTools
 
             var health = go.AddComponent<HealthComponent>();
             var soHealth = new SerializedObject(health);
-            soHealth.FindProperty("_maxHp").floatValue = 200f;
+            // 近接追跡者は硬く痛く(接近を許すと大損害)、遠隔学習者は柔らかい(被弾が重い教師信号)
+            soHealth.FindProperty("_maxHp").floatValue = isMeleeChaser ? 300f : 200f;
             soHealth.ApplyModifiedPropertiesWithoutUndo();
 
             var fighter = go.AddComponent<ArenaFighter>();
             var soFighter = new SerializedObject(fighter);
             soFighter.FindProperty("_beamColor").colorValue = beamColor;
+            if (isMeleeChaser)
+            {
+                soFighter.FindProperty("_attackRange").floatValue = 3.5f;
+                soFighter.FindProperty("_attackDamage").floatValue = 30f;
+                soFighter.FindProperty("_attackCooldown").floatValue = 1.2f;
+                // 単純後退では逃げ切れない=空間と角度を使うカイトを学ばせるため、わずかに速くする
+                soFighter.FindProperty("_moveSpeed").floatValue = 6.5f;
+            }
             soFighter.ApplyModifiedPropertiesWithoutUndo();
 
             // Agent は [RequireComponent(typeof(BehaviorParameters))] を持つため、
@@ -157,6 +171,9 @@ namespace Enigma.EditorTools
             behaviorParams.BrainParameters.VectorObservationSize = 11;
             behaviorParams.BrainParameters.ActionSpec = ActionSpec.MakeContinuous(2);
             behaviorParams.TeamId = team == TeamId.Blue ? 0 : 1;
+            // 近接追跡者は学習せず常にスクリプト(CombatMicroModel)で動く対戦相手
+            if (isMeleeChaser)
+                behaviorParams.BehaviorType = BehaviorType.HeuristicOnly;
 
             var decisionRequester = go.AddComponent<DecisionRequester>();
             decisionRequester.DecisionPeriod = 5;

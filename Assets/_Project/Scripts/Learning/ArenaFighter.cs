@@ -25,6 +25,8 @@ namespace Enigma.Learning
 
         public HealthComponent Health => _health;
         public ArenaFighter Enemy => _enemy;
+        public float AttackRange => _attackRange;
+        public bool IsMelee => _attackRange <= 7f;
 
         public bool AttackReady => Time.time >= _nextAttackTime;
 
