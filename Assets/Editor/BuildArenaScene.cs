@@ -144,7 +144,9 @@ namespace Enigma.EditorTools
             var health = go.AddComponent<HealthComponent>();
             var soHealth = new SerializedObject(health);
             // 近接追跡者は硬く痛く(接近を許すと大損害)、遠隔学習者は柔らかい(被弾が重い教師信号)
-            soHealth.FindProperty("_maxHp").floatValue = isMeleeChaser ? 300f : 200f;
+            // 近接240=完璧カイト時の討伐約24秒(学習到達可能な長さ)。v2の300+速度優位は
+            // 「最善手でも敗北」の環境になり勾配が消えた
+            soHealth.FindProperty("_maxHp").floatValue = isMeleeChaser ? 240f : 200f;
             soHealth.ApplyModifiedPropertiesWithoutUndo();
 
             var fighter = go.AddComponent<ArenaFighter>();
@@ -155,8 +157,9 @@ namespace Enigma.EditorTools
                 soFighter.FindProperty("_attackRange").floatValue = 3.5f;
                 soFighter.FindProperty("_attackDamage").floatValue = 30f;
                 soFighter.FindProperty("_attackCooldown").floatValue = 1.2f;
-                // 単純後退では逃げ切れない=空間と角度を使うカイトを学ばせるため、わずかに速くする
-                soFighter.FindProperty("_moveSpeed").floatValue = 6.5f;
+                // 速度は対等(v2の速度優位6.5は円形アリーナで「必ず捕まる=最善手でも敗北」となり
+                // 学習勾配が消えた)。同速なら角度カイトで無被弾勝利が正解として存在する
+                soFighter.FindProperty("_moveSpeed").floatValue = 5.5f;
             }
             soFighter.ApplyModifiedPropertiesWithoutUndo();
 
