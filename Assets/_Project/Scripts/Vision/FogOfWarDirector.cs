@@ -162,7 +162,10 @@ namespace Enigma.Vision
                     if (radius > 0f)
                     {
                         var p = go.transform.position;
-                        float eyeY = p.y + EyeHeight;
+                        // 目線yは transform.y でなく地形高から求める。CharacterController の中心オフセットが
+                        // ユニット種別で異なり(チャンプ1.08/ミニオン0.08)、transform 基準だと差がちょうど
+                        // 高低差しきい値1.0になって「ミニオンから敵チャンプが見えない」偽遮蔽が起きた(実測)。
+                        float eyeY = MapHeightModel.Height(p.x, p.z) + EyeHeight;
                         int brushId = FindBrushId(p);
                         _sources.Add(new VisionSource(p.x, p.z, radius, eyeY, brushId));
                     }
@@ -176,7 +179,7 @@ namespace Enigma.Vision
                 int id = go.GetInstanceID();
                 _seenThisTick.Add(id);
                 var pos = go.transform.position;
-                float targetEyeY = pos.y + EyeHeight;
+                float targetEyeY = MapHeightModel.Height(pos.x, pos.z) + EyeHeight;
                 int targetBrushId = FindBrushId(pos);
                 _targets.Add(new VisionTarget(id, pos.x, pos.z, targetEyeY, targetBrushId));
 
