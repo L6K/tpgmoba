@@ -184,9 +184,11 @@ namespace Enigma.Tests
         [Test]
         public void OwnTowerUnderAttack_OutOfDefendRange_DoesNotDefend()
         {
+            // 圏外は定数から導出する(M-0 のマップ1.4倍で 45→63 に変わりリテラル50が圏内化した回帰の再発防止)
             var action = BotMacroDecisionModel.Decide(
                 C(hp: 0.8f, allies: 3, enemies: 3,
-                  ownTowerUnderAttack: true, distanceToThreatenedTower: 50f));
+                  ownTowerUnderAttack: true,
+                  distanceToThreatenedTower: BotMacroDecisionModel.DefendJoinRange + 5f));
             Assert.AreEqual(BotMacroAction.Farm, action);
         }
 
