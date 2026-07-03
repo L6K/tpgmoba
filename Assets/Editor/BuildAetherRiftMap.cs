@@ -66,13 +66,13 @@ public static partial class BuildAetherRiftMap
         // プレイフィールド半径70、レーンアーク半径R=45、レーン幅10
         // 本拠地中心(±56,0,0) 半径11
 
-        // Ground: Cylinder scale(150,1,150)
+        // Ground: 立体化(M-A)で矩形グリッドメッシュへ移行。目形境界の内側判定は
+        // OutOfBoundsLogic と同式(R=120,B=48)。外側頂点は原点からの radial 二分法で境界へスナップし、
+        // 高さは MapHeightModel.Height(x,z) を頂点ごとに評価する。
         {
-            // Ground は目形境界(R=85, B=35)と完全に一致するアーモンド形メッシュ。
-            // ピッタリ収めることで境界の外に地面がはみ出すのを防ぐ。
             var ground = new GameObject("Ground");
             ground.transform.position = new Vector3(0f, 0f, 0f);
-            var groundMesh = CreateAlmondGroundMesh(120f, 48f, 48);
+            var groundMesh = CreateGridGroundMesh(112f, 74f, 2f, 120f, 48f);
             var gMf = ground.AddComponent<MeshFilter>();
             gMf.sharedMesh = groundMesh;
             var gMr = ground.AddComponent<MeshRenderer>();
@@ -87,10 +87,10 @@ public static partial class BuildAetherRiftMap
         }
 
         // 川: 縦帯 Cube (両レーンに届く長さ92)
-        // 階段順: 地面(0) < 川上面(0.03) < パス(0.045) < レーン(0.06) < ベイスン(0.12) < ピット(0.18)
+        // 立体化(M-A)で地形自体がトレンチ(底-1.2)になったため、川の視覚帯はトレンチ底+0.03=-1.17へ。
         // レーンが川の上を「橋」として通るため、川はレーンより下に置く
         // 川は楕円境界(z半径≈76)とレーン帯(r56〜70)の内側に収めるため z=±58 まで(scale.z 84→116)。
-        PlaceCube("River", new Vector3(0f, -0.02f, 0f), new Vector3(18f, 0.1f, 116f), matRiver);
+        PlaceCube("River", new Vector3(0f, -1.17f, 0f), new Vector3(18f, 0.1f, 116f), matRiver);
 
         // レーン色を土色に更新
         matLane.SetColor("_BaseColor", new Color(0.62f, 0.55f, 0.42f));
@@ -110,19 +110,12 @@ public static partial class BuildAetherRiftMap
             SetStatic(laneRing);
         }
 
-        // 中央ベイスン（ボスの足場）: 大円 + 小円、壁なし
+        // 中央ベイスン（ボスの足場）: 立体化(M-A)でクレーター地形(底-2.5)が実体の足場になったため
+        // ベイスン円盤(r22)は撤去。ボスピット目印(r11)のみ残し、クレーター床に追従させる。
         {
-            var basin = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            basin.name = "Basin";
-            basin.transform.position   = new Vector3(0f, 0.12f, 0f);
-            basin.transform.localScale = new Vector3(44f, 0.06f, 44f);
-            UseFlatMeshCollider(basin, keepCollider: false);
-            SetStatic(basin);
-            SetMat(basin, matRiver);
-
             var pit = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             pit.name = "BossPit";
-            pit.transform.position   = new Vector3(0f, 0.18f, 0f);
+            pit.transform.position   = new Vector3(0f, -2.46f, 0f);
             pit.transform.localScale = new Vector3(22f, 0.04f, 22f);
             UseFlatMeshCollider(pit, keepCollider: false);
             SetStatic(pit);
@@ -351,7 +344,8 @@ public static partial class BuildAetherRiftMap
         {
             var baseBlue = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseBlue.name = "Base_Blue";
-            baseBlue.transform.position   = new Vector3(-100f, 0.06f, 0f);
+            // 基地プラトー天面(+2.5)に追従
+            baseBlue.transform.position   = new Vector3(-100f, 2.56f, 0f);
             baseBlue.transform.localScale = new Vector3(12f, 0.12f, 12f);
             UseFlatMeshCollider(baseBlue, keepCollider: true);
             SetStatic(baseBlue);
@@ -359,7 +353,7 @@ public static partial class BuildAetherRiftMap
 
             var baseRed = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseRed.name = "Base_Red";
-            baseRed.transform.position   = new Vector3(100f, 0.06f, 0f);
+            baseRed.transform.position   = new Vector3(100f, 2.56f, 0f);
             baseRed.transform.localScale = new Vector3(12f, 0.12f, 12f);
             UseFlatMeshCollider(baseRed, keepCollider: true);
             SetStatic(baseRed);
@@ -568,7 +562,7 @@ public static partial class BuildAetherRiftMap
         // 9. プレイヤー
         // 泉/スポーンは基地最奥のコンパクトな安全パッド(-100)に配置。LoL のフォーメーション:
         // 奥=泉/ショップ/復帰 → 中央=ネクサス(-82) → 前方=防衛広場 → レーン、の並び(report25)。
-        var playerSpawnPos = new Vector3(-100f, 1.1f, 0f);
+        var playerSpawnPos = new Vector3(-100f, 3.6f, 0f);
         var player = GameObject.CreatePrimitive(PrimitiveType.Capsule);
         player.name = "Player";
         player.tag  = "Player";
@@ -706,7 +700,7 @@ public static partial class BuildAetherRiftMap
         // 泉回復(後方安全パッドの泉=半径5のコンパクト圏で毎秒回復)
         var playerFountain   = player.AddComponent<Enigma.Combat.FountainRegen>();
         var soPlayerFountain = new SerializedObject(playerFountain);
-        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-100f, 1.1f, 0f);
+        soPlayerFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(-100f, 3.6f, 0f);
         soPlayerFountain.FindProperty("_radius").floatValue           = 5f;
         soPlayerFountain.ApplyModifiedPropertiesWithoutUndo();
 
@@ -800,21 +794,21 @@ public static partial class BuildAetherRiftMap
         // capsule半径~2.25)を横切ってスタックしないよう各 Bot はレーン側へ z オフセットを保つ。
         // CreateBotChampion が spawnPos を route[0] に前置するため後退時は泉圏で止まる。
         var redTop = CreateBotChampion("RedBot_Top", TeamId.Red,
-            new Vector3(98f, 1.1f, 3.5f), BuildTopLaneWaypoints(),
+            new Vector3(98f, 3.6f, 3.5f), BuildTopLaneWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redBot = CreateBotChampion("RedBot_Bot", TeamId.Red,
-            new Vector3(98f, 1.1f, -3.5f), BuildBotLaneWaypoints(),
+            new Vector3(98f, 3.6f, -3.5f), BuildBotLaneWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab);
         var redJungle = CreateBotChampion("RedBot_Jungle", TeamId.Red,
-            new Vector3(101f, 1.1f, 2f), BuildJungleWaypoints(),
+            new Vector3(101f, 3.6f, 2f), BuildJungleWaypoints(),
             matRed, matBarRed, redRing, aaProj, telegraphPrefab, farmsNeutralCamps: true);
 
         // 味方チーム（Blue）2体: TOP / BOT。経路は各レーンの逆順（青ベース開口スタート）。
         var blueTop = CreateBotChampion("BlueBot_Top", TeamId.Blue,
-            new Vector3(-98f, 1.1f, 3.5f), Reverse(BuildTopLaneWaypoints()),
+            new Vector3(-98f, 3.6f, 3.5f), Reverse(BuildTopLaneWaypoints()),
             matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
         var blueBot = CreateBotChampion("BlueBot_Bot", TeamId.Blue,
-            new Vector3(-98f, 1.1f, -3.5f), Reverse(BuildBotLaneWaypoints()),
+            new Vector3(-98f, 3.6f, -3.5f), Reverse(BuildBotLaneWaypoints()),
             matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
 
         // BotChampionBootstrap（シーンに1個）: CharacterDatabase と5体を結線する
@@ -897,7 +891,7 @@ public static partial class BuildAetherRiftMap
         soShopCtrl.FindProperty("_player").objectReferenceValue     = player.transform;
         // _shopCenter は後方安全パッド(-100, 0, 0)。泉と同じパッドに置き、ShopRadius(6)で
         // 後方のみを購入圏にする(report25: ショップをタイタン前広場に広げない)。
-        soShopCtrl.FindProperty("_shopCenter").vector3Value         = new Vector3(-100f, 0f, 0f);
+        soShopCtrl.FindProperty("_shopCenter").vector3Value         = new Vector3(-100f, 2.5f, 0f);
         soShopCtrl.ApplyModifiedPropertiesWithoutUndo();
 
         // MinimapController: ミニマップドットを毎フレーム更新する
@@ -1501,8 +1495,8 @@ public static partial class BuildAetherRiftMap
     {
         var parent = new GameObject("FountainRings");
         SetStatic(parent);
-        CreateFountainRing(parent.transform, "FountainRing_Blue", new Vector3(-100f, 1.06f, 0f), new Color(0.35f, 0.75f, 1.00f, 0.32f));
-        CreateFountainRing(parent.transform, "FountainRing_Red",  new Vector3( 100f, 1.06f, 0f), new Color(1.00f, 0.55f, 0.30f, 0.32f));
+        CreateFountainRing(parent.transform, "FountainRing_Blue", new Vector3(-100f, 3.56f, 0f), new Color(0.35f, 0.75f, 1.00f, 0.32f));
+        CreateFountainRing(parent.transform, "FountainRing_Red",  new Vector3( 100f, 3.56f, 0f), new Color(1.00f, 0.55f, 0.30f, 0.32f));
     }
 
     // 泉回復半径(10)の内縁に薄い半透明リングを敷く（床面のすぐ上）。
@@ -2474,7 +2468,7 @@ public static partial class BuildAetherRiftMap
         // (PlaceFountainRings)と一致させる。各 Bot のスポーンは z オフセットで散らすが泉中心は1点。
         var botFountain   = go.AddComponent<Enigma.Combat.FountainRegen>();
         var soBotFountain = new SerializedObject(botFountain);
-        soBotFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(Mathf.Sign(spawnPos.x) * 100f, 1.1f, 0f);
+        soBotFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(Mathf.Sign(spawnPos.x) * 100f, 3.6f, 0f);
         soBotFountain.FindProperty("_radius").floatValue           = 5f;
         soBotFountain.ApplyModifiedPropertiesWithoutUndo();
 
@@ -2814,18 +2808,22 @@ public static partial class BuildAetherRiftMap
         // ユニット性能値)は OverlapSphere=コライダー基準のため、タイタンカプセル(r2.6)の表面まで約6.6m<8m で
         // 届き、ウェーブは到達前にタイタンを標的化して攻城に移る(=タイタン撃破で決着が付く。実機検証済 2026-07-04)。
 
-        // BlueTop: 出発(-70,0,14)→ θ=160,135,90,45,20 のアーク→敵開口→Redタイタン前
+        // 立体化(M-A)で出発点を基地内(±76,±6)へ移設(旧±70,±14は囲い壁帯r70.5〜72に埋まっていた)。
+        // 出発点→最初のアーク WP への直線が壁帯(r70.5〜72)を横切る角度は各ゲート開口(±8°)内に
+        // 収まることを事前計算済み(RedTop/RedBot/BlueTop/BlueBotいずれも開口内)。後続WPは不変。
+
+        // BlueTop: 出発(-76,0,6)→ θ=160,135,90,45,20 のアーク→敵開口→Redタイタン前
         PlaceSpawner("Spawner_BlueTop",
-            new Vector3(-70f, 0f, 14f),
+            new Vector3(-76f, 0f, 6f),
             TeamId.Blue, matBlue, minionPrefab,
             new Vector3[] {
                 ArcPt(160f), ArcPt(135f), ArcPt(90f), ArcPt(45f), ArcPt(20f),
                 new Vector3(70f, 0f, 11.2f), new Vector3(72.8f, 0f, 5.6f), new Vector3(72.8f, 0f, 0f)
             });
 
-        // RedTop: 出発(70,0,14)→ θ=20,45,90,135,160 のアーク→敵開口→Blueタイタン前
+        // RedTop: 出発(76,0,6)→ θ=20,45,90,135,160 のアーク→敵開口→Blueタイタン前
         PlaceSpawner("Spawner_RedTop",
-            new Vector3(70f, 0f, 14f),
+            new Vector3(76f, 0f, 6f),
             TeamId.Red, matRed, minionPrefab,
             new Vector3[] {
                 ArcPt(20f), ArcPt(45f), ArcPt(90f), ArcPt(135f), ArcPt(160f),
@@ -2834,7 +2832,7 @@ public static partial class BuildAetherRiftMap
 
         // BlueBot: z 符号反転版
         PlaceSpawner("Spawner_BlueBot",
-            new Vector3(-70f, 0f, -14f),
+            new Vector3(-76f, 0f, -6f),
             TeamId.Blue, matBlue, minionPrefab,
             new Vector3[] {
                 ArcPt(200f), ArcPt(225f), ArcPt(270f), ArcPt(315f), ArcPt(340f),
@@ -2843,7 +2841,7 @@ public static partial class BuildAetherRiftMap
 
         // RedBot: z 符号反転版
         PlaceSpawner("Spawner_RedBot",
-            new Vector3(70f, 0f, -14f),
+            new Vector3(76f, 0f, -6f),
             TeamId.Red, matRed, minionPrefab,
             new Vector3[] {
                 ArcPt(340f), ArcPt(315f), ArcPt(270f), ArcPt(225f), ArcPt(200f),
@@ -2896,7 +2894,8 @@ public static partial class BuildAetherRiftMap
     {
         // ルートは見た目を持たない空 GO。クリック用コライダーのみ持つ
         var boss = new GameObject("NeutralBoss");
-        boss.transform.position = new Vector3(0f, 0.18f, 0f); // ボスピット足場の上
+        // 立体化(M-A)でクレーター底(-2.5)が実体の足場になったため、旧オフセット(+0.18)はそのまま底面基準に加算
+        boss.transform.position = new Vector3(0f, -2.32f, 0f); // クレーター床(-2.5)+ピット足場オフセット(0.18)
 
         // クリック判定用コライダー（旧プリミティブの代替）。全高 4〜5m を覆う
         var bossCol    = boss.AddComponent<CapsuleCollider>();
@@ -3998,49 +3997,108 @@ public static partial class BuildAetherRiftMap
     }
 
     /// <summary>
-    /// 目形(アーモンド/vesica piscis)の地面メッシュを生成する。上下2大円(中心(0,0,∓eyeB)・半径 eyeR)の
-    /// 共通内側を、原点中心の三角形ファンで埋める。境界は y=0 の平面に乗る。
-    /// 頂点順は上方(+Y)から見て CCW にし、面が +Y を向くようにする。
+    /// 目形(アーモンド/vesica piscis)境界の矩形グリッド地面メッシュを生成する(M-A 立体化)。
+    /// halfX/halfZ の矩形を cellSize 間隔でグリッド分割し、各頂点を目形の内外判定にかける。
+    /// 外側頂点は原点からの radial 二分法(15回)で境界へスナップする(アーモンドは原点から見て
+    /// 星形凸なので、放射方向の射影で必ず正しい境界点に乗る)。セルの4頂点が全て外側なら
+    /// 三角形を生成しない。頂点の y は MapHeightModel.Height(x,z) をスナップ後座標で評価する。
     /// </summary>
-    private static Mesh CreateAlmondGroundMesh(float eyeR, float eyeB, int sideSegs)
+    private static Mesh CreateGridGroundMesh(float halfX, float halfZ, float cellSize, float eyeR, float eyeB)
     {
-        float corner = Mathf.Sqrt(Mathf.Max(0f, eyeR * eyeR - eyeB * eyeB));
-        var verts = new List<Vector3>();
-        verts.Add(Vector3.zero); // 中心(原点) = index 0
+        int cols = Mathf.CeilToInt((halfX * 2f) / cellSize);
+        int rows = Mathf.CeilToInt((halfZ * 2f) / cellSize);
+        int vertsPerRow = cols + 1;
 
-        // 上まぶた: 中心(0,0,-eyeB)、上に膨らむ弧。x を -corner → +corner と振ると z = -eyeB + sqrt(R²-x²)。
-        for (int i = 0; i <= sideSegs; i++)
+        var rawPos = new Vector3[vertsPerRow * (rows + 1)];
+        var inside = new bool[rawPos.Length];
+
+        for (int j = 0; j <= rows; j++)
         {
-            float t = (float)i / sideSegs;
-            float x = Mathf.Lerp(-corner, corner, t);
-            float z = -eyeB + Mathf.Sqrt(Mathf.Max(0f, eyeR * eyeR - x * x));
-            verts.Add(new Vector3(x, 0f, z));
-        }
-        // 下まぶた: 中心(0,0,+eyeB)、下に膨らむ弧。両端の目尻は既に上の弧で追加済みのため i=1..segs-1。
-        for (int i = 1; i < sideSegs; i++)
-        {
-            float t = (float)i / sideSegs;
-            float x = Mathf.Lerp(corner, -corner, t);
-            float z = +eyeB - Mathf.Sqrt(Mathf.Max(0f, eyeR * eyeR - x * x));
-            verts.Add(new Vector3(x, 0f, z));
+            for (int i = 0; i <= cols; i++)
+            {
+                float x = -halfX + i * cellSize;
+                float z = -halfZ + j * cellSize;
+                int idx = j * vertsPerRow + i;
+
+                bool isInside = IsInsideAlmond(x, z, eyeR, eyeB);
+                inside[idx] = isInside;
+
+                if (!isInside)
+                {
+                    (x, z) = SnapToAlmondBoundary(x, z, eyeR, eyeB);
+                }
+
+                rawPos[idx] = new Vector3(x, MapHeightModel.Height(x, z), z);
+            }
         }
 
-        int boundary = verts.Count - 1; // 境界頂点 = verts[1..]
+        var verts = new List<Vector3>(rawPos.Length);
         var tris = new List<int>();
-        for (int i = 0; i < boundary; i++)
+
+        for (int j = 0; j < rows; j++)
         {
-            int a = 1 + i;
-            int b = 1 + ((i + 1) % boundary);
-            tris.Add(0); tris.Add(a); tris.Add(b); // CCW from +Y
+            for (int i = 0; i < cols; i++)
+            {
+                int i00 = j * vertsPerRow + i;
+                int i10 = j * vertsPerRow + (i + 1);
+                int i01 = (j + 1) * vertsPerRow + i;
+                int i11 = (j + 1) * vertsPerRow + (i + 1);
+
+                // 4頂点すべてが外側(境界スナップ済み)のセルは面を張らない
+                if (!inside[i00] && !inside[i10] && !inside[i01] && !inside[i11]) continue;
+
+                int base0 = verts.Count;
+                verts.Add(rawPos[i00]);
+                verts.Add(rawPos[i10]);
+                verts.Add(rawPos[i01]);
+                verts.Add(rawPos[i11]);
+
+                // CCW from +Y: (00,01,11) と (00,11,10)
+                tris.Add(base0 + 0); tris.Add(base0 + 2); tris.Add(base0 + 3);
+                tris.Add(base0 + 0); tris.Add(base0 + 3); tris.Add(base0 + 1);
+            }
         }
 
-        var mesh = new Mesh { name = "AlmondGround" };
-        mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt16;
+        var mesh = new Mesh { name = "GridGround" };
+        mesh.indexFormat = verts.Count > 65000
+            ? UnityEngine.Rendering.IndexFormat.UInt32
+            : UnityEngine.Rendering.IndexFormat.UInt16;
         mesh.SetVertices(verts);
         mesh.SetTriangles(tris, 0);
         mesh.RecalculateNormals();
         mesh.RecalculateBounds();
         return mesh;
+    }
+
+    // 目形(アーモンド)内側判定。OutOfBoundsLogic.IsOutOfBounds と同式(上下2大円の AND 内側)。
+    private static bool IsInsideAlmond(float x, float z, float eyeR, float eyeB)
+    {
+        float r2 = eyeR * eyeR;
+        float dUpper = x * x + (z + eyeB) * (z + eyeB);
+        float dLower = x * x + (z - eyeB) * (z - eyeB);
+        return dUpper <= r2 && dLower <= r2;
+    }
+
+    // 原点から (x,z) 方向への radial 二分法で目形境界へスナップする。アーモンドは原点から見て
+    // 星形凸(どの方向にも境界との交点が唯一)なので、この射影で必ず正しい境界点に乗る。
+    private static (float x, float z) SnapToAlmondBoundary(float x, float z, float eyeR, float eyeB)
+    {
+        float dist = Mathf.Sqrt(x * x + z * z);
+        if (dist < 1e-5f) return (0f, 0f); // 原点は常に内側なのでこの分岐には到達しない想定
+
+        float nx = x / dist;
+        float nz = z / dist;
+
+        float lo = 0f;      // 内側(原点)
+        float hi = dist;    // 外側(元の座標)
+        for (int iter = 0; iter < 15; iter++)
+        {
+            float mid = (lo + hi) * 0.5f;
+            if (IsInsideAlmond(nx * mid, nz * mid, eyeR, eyeB)) lo = mid;
+            else hi = mid;
+        }
+        float snapped = (lo + hi) * 0.5f;
+        return (nx * snapped, nz * snapped);
     }
 
     /// <summary>

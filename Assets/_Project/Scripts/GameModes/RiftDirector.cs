@@ -24,8 +24,9 @@ namespace Enigma.GameModes
             captureSeconds: 5f, effectDuration: 40f, cooldown: 70f);
 
         // 配置（上側リバー付近に入口、下側へショートカット出口）。M-0(平面1.4倍拡張)で位置・半径を更新。
-        private static readonly Vector3 RiftPos      = new Vector3(0f, 1.1f, 36f);
-        private static readonly Vector3 ShortcutExit = new Vector3(0f, 1.1f, -36f);
+        // M-A(立体化)で川底(-1.2)に接地するよう y を更新(z=±36 は川のトレンチ範囲内=22<=r<=54)。
+        private static readonly Vector3 RiftPos      = new Vector3(0f, -0.1f, 36f);
+        private static readonly Vector3 ShortcutExit = new Vector3(0f, -0.1f, -36f);
         private const float ZoneRadius     = 7f;
         private const float VisionRadius   = 22f;
         private const float HasteStrength  = 0.25f;
