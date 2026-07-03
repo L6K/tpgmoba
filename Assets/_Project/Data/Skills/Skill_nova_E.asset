@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: Skill_nova_E
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u8D85\u65B0\u661F"
-  Description: "\u5BFE\u8C61\u306E\u6575\u5358\u4F53\u3078\u96FB\u6483\u3092\u6483\u3061\u8FBC\u307F\u3001\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u308B\u3002"
+  Description: "\u5929\u9802\u3067\u661F\u3092\u7206\u767A\u3055\u305B\u3001\u81EA\u30C1\u30FC\u30E0\u5168\u54E1\u3092\u56DE\u5FA9\u3057\u30B7\u30FC\u30EB\u30C9\u3092\u5F35\u308B(\u30A2\u30EB\u30C6\u30A3\u30E1\u30C3\u30C8\u30FB\u5473\u65B9\u5168\u4F53)"
   Targeting: 5
   Damage: 0
   Range: 0
   Radius: 0
   CooldownSeconds: 45
   ProjectileSpeed: 0
-  WindupSeconds: 0.15
-  RecoverySeconds: 0.3
+  WindupSeconds: 0.4
+  RecoverySeconds: 0.5
   StunDuration: 0
   RootDuration: 0
   SlowStrength: 0
