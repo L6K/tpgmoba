@@ -66,7 +66,10 @@ namespace Enigma.Tests.EditMode
         [Test]
         public void Tick_CapturedThenCooldownThenDormantSchedulesNextCycle()
         {
-            var model = new RiftEventModel(firstOpenAt: 10f, warningLead: 0f, captureSeconds: 1f, effectDuration: 5f, cooldown: 7f);
+            // warningLead は 0 以下だとコンストラクタが既定値 10 へ強制するため、0 を渡すと
+            // t=23(次オープン33の10秒前)が既に警告圏で Dormant にならない。本テストの意図
+            // (クールダウン明けは Dormant で次サイクル予約)を保てる lead=2(警告開始31)を使う。
+            var model = new RiftEventModel(firstOpenAt: 10f, warningLead: 2f, captureSeconds: 1f, effectDuration: 5f, cooldown: 7f);
 
             model.Tick(10f, 0f, -1);
             Assert.AreEqual(RiftState.Captured, model.Tick(11f, 1f, 0).State);
