@@ -19,8 +19,15 @@ namespace Enigma.Learning
         private float _prevMyHpRatio;
         private float _prevEnemyHpRatio;
         private bool _outcomeResolved;
+        private int _episodeSteps;
 
-        private const float StepTimePenalty = -0.0005f;
+        private const float StepTimePenalty = -0.0003f;
+        // 射程外に留まる距離比例ペナルティ。旧設計は「60秒逃げ切り(-1.5)が敗北(約-2)より得」で
+        // self-play が相互回避の退化均衡に崩壊した(Mean Reward -1.500/分散0で検出)。
+        // 逃げるほど損にして交戦へ誘導する。
+        private const float DisengageFactor = -0.0008f;
+        // 手動タイムアウト。builder の MaxStep(3000) より先に発火し、引き分けを敗北と同罰にする。
+        private const int TimeoutSteps = 2900;
 
         public override void OnEpisodeBegin()
         {
@@ -30,6 +37,7 @@ namespace Enigma.Learning
             _prevMyHpRatio = HpRatio(_fighter);
             _prevEnemyHpRatio = HpRatio(_enemyFighter);
             _outcomeResolved = false;
+            _episodeSteps = 0;
         }
 
         public override void CollectObservations(VectorSensor sensor)
@@ -83,8 +91,26 @@ namespace Enigma.Learning
             AddReward(reward);
             AddReward(StepTimePenalty);
 
+            // 交戦誘導: 射程外に居続けるほど損(相互回避の均衡を潰す)
+            Vector3 myPos = _fighter.transform.position;
+            Vector3 enemyPos = _enemyFighter.transform.position;
+            float dist = Vector2.Distance(
+                new Vector2(myPos.x, myPos.z), new Vector2(enemyPos.x, enemyPos.z));
+            float over = dist - 12f; // ArenaFighter の攻撃射程
+            if (over > 0f)
+                AddReward(DisengageFactor * over / Mathf.Max(_arenaRadius, 0.0001f));
+
             _prevMyHpRatio = myHpRatio;
             _prevEnemyHpRatio = enemyHpRatio;
+
+            // 手動タイムアウト: 引き分けは敗北と同罰(逃げ切り得の構造的排除)
+            _episodeSteps++;
+            if (!_outcomeResolved && _episodeSteps >= TimeoutSteps)
+            {
+                _outcomeResolved = true;
+                AddReward(-1f);
+                EndEpisode();
+            }
         }
 
         private void Update()
