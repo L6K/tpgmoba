@@ -185,10 +185,11 @@ namespace Enigma.Character
         private const float ShoppingCheckInterval = 0.5f;
         private float _shoppingCheckTimer;
 
-        // 自チーム泉中心（Red=+100 / Blue=-100, y=1.1, z=0）。購入/リコール判定と帰還先テレポートに使う。
-        // M-0(平面1.4倍拡張)で泉/リスポーンパッド中心が ±68→±100 に移動したことに合わせて更新。
+        // 自チーム泉中心（Red=+100 / Blue=-100, z=0）。購入/リコール判定と帰還先テレポートに使う。
+        // M-A(立体化)で泉は基地プラトー(地面y+2.5)上になったため、リコール帰還テレポートの y は
+        // プラトー面より上でなければならない(下に湧くと地面を突き抜けて無限落下する。実測済み)。
         private const float FountainX = 100f;
-        private const float FountainY = 1.1f;
+        private const float FountainY = 3.6f;
         private const float FountainRadius = 6f; // この半径内で自動購入する
         private const float RecallEnemyCheckRadius = 15f;
 
