@@ -332,11 +332,17 @@ public static partial class BuildAetherRiftMap
         // ---- 森とレーンの間の壁（レーンリング内縁に沿った壁。パス/川口だけ開口）----
         PlaceJungleLaneWalls();
 
+        // ---- 迷路ジャングル壁(スライスM-B)。キャンプ・ガンク口へは干渉しない疎な第一段 ----
+        PlaceJungleMaze();
+
         // ---- 泉回復圏(半径10)の視覚リング。ショップ範囲/タイタンと役割を見分けやすくする ----
         PlaceFountainRings();
 
         // ---- 地表植生の散布（草タフト・小石）----
         ScatterGroundVegetation();
+
+        // ---- 茂みゾーン(スライスM-B)。視界ルール適用は次スライスM-Vで実施 ----
+        PlaceBrushZones();
 
         // リスポーンパッド: 各チームの色付き円盤は「リスポーン地点だけ」を示す小さな目印にする
         // (LoL の召喚士の祭壇)。場外境界(±56 中心の TubePocket 内径17.4)は不変で、その内側の
@@ -2595,9 +2601,11 @@ public static partial class BuildAetherRiftMap
             Polar(32f,  63f),              // レーン帯を45°方向へ
             Polar(45f,  63f),              // 45°パス外端（レーン接続点）
             Polar(45f,  42f),              // 右上キャンプ空き地
+            Polar(26f,  48f),              // 26°ガンク口内側の茂みを経由(スライスM-B)
             Polar(45f,  25f),              // 45°パス内端（ベイスン縁）
             Polar(0f,   18f),              // ベイスン東縁（ボスピットr11の外・basin r22内）
             Polar(-45f, 25f),              // 315°パス内端
+            Polar(-26f, 48f),              // 334°ガンク口内側の茂みを経由(スライスM-B)
             Polar(-45f, 42f),              // 右下キャンプ空き地
             Polar(-45f, 63f),              // 315°パス外端
             Polar(-32f, 63f),              // レーン帯を赤ベースへ
@@ -3115,6 +3123,60 @@ public static partial class BuildAetherRiftMap
         }
     }
 
+    /// <summary>
+    /// 迷路ジャングル壁(スライスM-B)の疎な第一段。基地側象限(赤=0°/青=180°)と川側象限(90°/270°)に
+    /// 円弧帯+放射壁を配置し、回廊幅≥12mを保ったままジャングル内の見通しを分断する。
+    /// キャンプ(対角パス、開口±8°)とガンク口(±26°等、開口±3°)へは干渉しない半径・角度で設計済み。
+    /// </summary>
+    private static void PlaceJungleMaze()
+    {
+        var mat = GetOrCreateMat("JungleLaneWall", new Color(0.46f, 0.50f, 0.40f));
+        ApplyWutheringRamp(mat);
+
+        var parent = new GameObject("JungleMaze");
+        SetStatic(parent);
+
+        const float arcInnerR = 40.0f;
+        const float arcOuterR = 41.5f;
+        const float riverArcInnerR = 38.0f;
+        const float riverArcOuterR = 39.5f;
+        const float height = 2.5f;
+        const float stepDeg = 3.75f;
+
+        // 弧壁8本: 基地側象限(0°/180°軸)r=40〜41.5、川側象限(90°/270°軸)r=38〜39.5
+        (float start, float end, float innerR, float outerR)[] arcDefs =
+        {
+            (  8f,  22f, arcInnerR, arcOuterR),       // 赤軸(0°)寄り
+            (338f, 352f, arcInnerR, arcOuterR),       // 赤軸(0°)寄り(対称)
+            (158f, 172f, arcInnerR, arcOuterR),       // 青軸(180°)寄り
+            (188f, 202f, arcInnerR, arcOuterR),       // 青軸(180°)寄り(対称)
+            ( 58f,  72f, riverArcInnerR, riverArcOuterR), // 川北(90°)寄り
+            (108f, 122f, riverArcInnerR, riverArcOuterR), // 川北(90°)寄り(対称)
+            (238f, 252f, riverArcInnerR, riverArcOuterR), // 川南(270°)寄り
+            (288f, 302f, riverArcInnerR, riverArcOuterR), // 川南(270°)寄り(対称)
+        };
+
+        int ai = 0;
+        foreach (var (start, end, innerR, outerR) in arcDefs)
+        {
+            int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
+            PlaceWallBandAt(parent, $"JungleMazeArc_{ai:D2}", Vector3.zero,
+                innerR, outerR, height, segs, start, end, mat);
+            ai++;
+        }
+
+        // 放射壁2本: 赤側(35,1.25,0)/青側(-35,1.25,0)。長軸をX軸方向に、r30〜40を塞ぐ
+        PlaceRadialWall(parent, "JungleMazeRadial_Red",  new Vector3(35f, 1.25f, 0f), mat);
+        PlaceRadialWall(parent, "JungleMazeRadial_Blue", new Vector3(-35f, 1.25f, 0f), mat);
+    }
+
+    // 放射壁1本(直方体、長軸をワールドX方向に向けた Cube)を生成する。
+    private static void PlaceRadialWall(GameObject parent, string name, Vector3 center, Material mat)
+    {
+        var go = PlaceCube(name, center, new Vector3(10f, 2.5f, 1.5f), mat);
+        go.transform.SetParent(parent.transform, true);
+    }
+
     // ---- 基地囲い + ゲートタワー(M-G) ----
 
     // 囲い壁帯・ウィング壁で共通の半径帯/高さ(レーン壁 JungleLaneWall と同系だが、より基地寄りの半径)
@@ -3618,6 +3680,93 @@ public static partial class BuildAetherRiftMap
         }
 
         Debug.Log($"[BuildAetherRiftMap] 植生散布: 草タフト {grassPlaced}個 / 小石 {pebblePlaced}個");
+    }
+
+    /// <summary>
+    /// 茂みゾーン12個(スライスM-B)を配置する。y は MapHeightModel.Height に追従させ、地形に埋まらないようにする。
+    /// 視界ルール(茂み内から見えにくくする等)は次スライスM-Vで実装するため、ここでは
+    /// BrushZone コンポーネント(器)と可視化(半透明ディスク+草タフト)のみを行う。
+    /// </summary>
+    private static void PlaceBrushZones()
+    {
+        Vector3 Polar(float deg, float radius)
+        {
+            float r = deg * Mathf.Deg2Rad;
+            return new Vector3(radius * Mathf.Cos(r), 0f, radius * Mathf.Sin(r));
+        }
+
+        var matBrush = GetOrCreateTransparentMat("BrushZoneDisc", new Color(0.08f, 0.28f, 0.10f, 0.55f));
+        var matTuft  = GetOrCreateMat("BrushZoneTuft", new Color(0.10f, 0.32f, 0.12f));
+        ApplyWutheringRamp(matTuft);
+
+        var parent = new GameObject("BrushZones");
+
+        (string name, Vector3 pos, float radius)[] zoneDefs =
+        {
+            // ガンク口内側×4
+            ("Brush_Gank_026", Polar(26f,  50f), 3.5f),
+            ("Brush_Gank_154", Polar(154f, 50f), 3.5f),
+            ("Brush_Gank_206", Polar(206f, 50f), 3.5f),
+            ("Brush_Gank_334", Polar(334f, 50f), 3.5f),
+            // 川岸×4
+            ("Brush_River_00", new Vector3(13f,  0f, 31f),  3f),
+            ("Brush_River_01", new Vector3(-13f, 0f, 31f),  3f),
+            ("Brush_River_02", new Vector3(-13f, 0f, -31f), 3f),
+            ("Brush_River_03", new Vector3(13f,  0f, -31f), 3f),
+            // レーン中腹×4
+            ("Brush_Lane_058", Polar(58f,  67f), 3.5f),
+            ("Brush_Lane_122", Polar(122f, 67f), 3.5f),
+            ("Brush_Lane_238", Polar(238f, 67f), 3.5f),
+            ("Brush_Lane_302", Polar(302f, 67f), 3.5f),
+        };
+
+        int zoneIndex = 0;
+        foreach (var (name, pos, radius) in zoneDefs)
+        {
+            float y = MapHeightModel.Height(pos.x, pos.z);
+            var zonePos = new Vector3(pos.x, y, pos.z);
+
+            var zoneGo = new GameObject(name);
+            zoneGo.transform.position = zonePos;
+            var brushZone = zoneGo.AddComponent<BrushZone>();
+            var soZone = new SerializedObject(brushZone);
+            soZone.FindProperty("_radius").floatValue = radius;
+            soZone.ApplyModifiedPropertiesWithoutUndo();
+            zoneGo.transform.SetParent(parent.transform, true);
+
+            // 可視化: 半透明の濃緑ディスク(コライダー除去)
+            var disc = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            disc.name = "Disc";
+            disc.transform.SetParent(zoneGo.transform, false);
+            disc.transform.localPosition = new Vector3(0f, 0.03f, 0f);
+            disc.transform.localScale    = new Vector3(radius * 2f, 0.02f, radius * 2f);
+            UseFlatMeshCollider(disc, keepCollider: false);
+            SetMat(disc, matBrush);
+            SetStatic(disc);
+
+            // 可視化: 草タフト8本をインデックスベースの決定的な式で半径内に風配置
+            for (int t = 0; t < 8; t++)
+            {
+                // 黄金角(137.5°)で角度をずらし、インデックスの小数余りで半径・高さ・スケールを分散させる
+                float angleDeg = zoneIndex * 41f + t * 137.5f;
+                float frac     = ((zoneIndex * 7 + t * 3) % 11) / 10f;
+                float tuftR    = frac * radius * 0.8f;
+                float ang      = angleDeg * Mathf.Deg2Rad;
+                float tx       = tuftR * Mathf.Cos(ang);
+                float tz       = tuftR * Mathf.Sin(ang);
+
+                var tuft = PlaceCube($"Tuft_{t:D2}",
+                    new Vector3(tx, 0.4f, tz),
+                    new Vector3(0.12f, 0.8f, 0.12f),
+                    matTuft);
+                tuft.transform.SetParent(zoneGo.transform, false);
+                tuft.transform.localRotation = Quaternion.Euler(0f, angleDeg * 2f, 8f + frac * 10f);
+                Object.DestroyImmediate(tuft.GetComponent<BoxCollider>());
+            }
+
+            SetStatic(zoneGo);
+            zoneIndex++;
+        }
     }
 
     /// <summary>

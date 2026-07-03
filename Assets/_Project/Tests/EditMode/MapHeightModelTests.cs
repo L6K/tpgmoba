@@ -108,5 +108,49 @@ namespace Enigma.Tests
             // (108,0): |x|=108>=92(PlateauOuterX) → プラトー内部(境界付近も含め+2.5で一定)
             Assert.That(MapHeightModel.Height(108f, 0f), Is.EqualTo(2.5f).Within(Epsilon));
         }
+
+        [Test]
+        public void JungleBlobCenter_IsFullHeight()
+        {
+            // (19.4,41.7): 高台ブロブ中心(d=0<=4) → 平坦な満高
+            Assert.That(MapHeightModel.Height(19.4f, 41.7f), Is.EqualTo(1.5f).Within(Epsilon));
+        }
+
+        [Test]
+        public void JungleBlobCenter_NegativeX_IsFullHeight()
+        {
+            // (-19.4,41.7): 対称配置の別ブロブ中心 → 同じく満高
+            Assert.That(MapHeightModel.Height(-19.4f, 41.7f), Is.EqualTo(1.5f).Within(Epsilon));
+        }
+
+        [Test]
+        public void JungleBlobCenter_SouthPair_IsFullHeight()
+        {
+            // (19.4,-41.7): 南側ブロブ中心 → 同じく満高
+            Assert.That(MapHeightModel.Height(19.4f, -41.7f), Is.EqualTo(1.5f).Within(Epsilon));
+        }
+
+        [Test]
+        public void JungleBlobFalloff_IsBetweenZeroAndFull()
+        {
+            // (19.4,37): 中心(19.4,41.7)からd=4.7(4<d<9の補間区間) → 中間高
+            float h = MapHeightModel.Height(19.4f, 37f);
+            Assert.That(h, Is.GreaterThan(0f));
+            Assert.That(h, Is.LessThan(1.5f));
+        }
+
+        [Test]
+        public void JungleBlobOutside_IsFlat()
+        {
+            // (19.4,32): 中心からd=9.7>=9(BlobFalloffR) → ブロブ域外で平地
+            Assert.That(MapHeightModel.Height(19.4f, 32f), Is.EqualTo(0f).Within(Epsilon));
+        }
+
+        [Test]
+        public void RiverBetweenBlobs_IsUnaffectedByBlobs_StaysRiverDepth()
+        {
+            // (0,41.7): x帯は川の中心線(|x|<=9)かつ r≈41.7は川半径帯内 → 川のまま(ブロブに奪われない)
+            Assert.That(MapHeightModel.Height(0f, 41.7f), Is.EqualTo(-1.2f).Within(Epsilon));
+        }
     }
 }

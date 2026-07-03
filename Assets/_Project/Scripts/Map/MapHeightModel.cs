@@ -5,8 +5,9 @@ namespace Enigma.Map
     /// <summary>
     /// マップ地形の高さを座標から純粋計算する。UnityEngine 非依存(EditMode/実行時どちらからも
     /// 同一の値を返すことを保証するため System.Math のみを使用)。
-    /// 地形は「中央クレーター」「川のトレンチ」「基地プラトー」の3領域からなり、重ならないよう
-    /// 各領域の半径・x範囲は設計時点で計算済み(クレーター r&lt;22、川は22≤r≤54、プラトーは|x|≥86)。
+    /// 地形は「中央クレーター」「川のトレンチ」「基地プラトー」「ジャングル高台ブロブ」の4領域からなり、
+    /// 重ならないよう各領域の半径・x範囲は設計時点で計算済み(クレーター r&lt;22、川は22≤r≤54、
+    /// プラトーは|x|≥86、高台ブロブは対角パス上の4点(19.4,±41.7)/(-19.4,±41.7)周辺のみ)。
     /// </summary>
     public static class MapHeightModel
     {
@@ -24,6 +25,19 @@ namespace Enigma.Map
         private const float PlateauOuterX = 92f;
         private const float PlateauHeight = 2.5f;
         private const float RampHalfZ     = 10f;
+
+        // ジャングル高台ブロブ4個(スライスM-B)。中心は対角パス上 Polar(65°,46) 等で、
+        // 川縁(|x|<=9)から6m以上・壁r38帯とは半径分離済みのため他領域と重ならない。
+        private static readonly (float x, float z)[] PlateauBlobCenters =
+        {
+            (19.4f,  41.7f),
+            (-19.4f, 41.7f),
+            (-19.4f, -41.7f),
+            (19.4f,  -41.7f),
+        };
+        private const float BlobFlatR    = 4f;
+        private const float BlobFalloffR = 9f;
+        private const float BlobHeight   = 1.5f;
 
         public static float Height(float x, float z)
         {
@@ -43,6 +57,25 @@ namespace Enigma.Map
             if (ax <= RiverHalfWidth && r >= RiverInnerR && r <= RiverOuterR)
                 return RiverHeight(ax, r);
 
+            // ジャングル高台ブロブ: 上記いずれの領域にも該当しない場合のみ判定(設計上重ならない)。
+            float blob = BlobHeight_(x, z);
+            if (blob != 0f)
+                return blob;
+
+            return 0f;
+        }
+
+        private static float BlobHeight_(float x, float z)
+        {
+            foreach (var (bx, bz) in PlateauBlobCenters)
+            {
+                float dx = x - bx;
+                float dz = z - bz;
+                float d  = (float)Math.Sqrt(dx * dx + dz * dz);
+                if (d <= BlobFlatR) return BlobHeight;
+                if (d < BlobFalloffR)
+                    return BlobHeight * Smooth01((BlobFalloffR - d) / (BlobFalloffR - BlobFlatR));
+            }
             return 0f;
         }
 
