@@ -333,6 +333,7 @@ public static partial class BuildAetherRiftMap
 
         // ---- 迷路ジャングル壁(スライスM-B)。キャンプ・ガンク口へは干渉しない疎な第一段 ----
         PlaceJungleMaze();
+        PlaceOuterLaneWalls();
 
         // ---- 泉回復圏(半径10)の視覚リング。ショップ範囲/タイタンと役割を見分けやすくする ----
         PlaceFountainRings();
@@ -3193,6 +3194,52 @@ public static partial class BuildAetherRiftMap
         // 放射壁2本: 赤側(35,1.25,0)/青側(-35,1.25,0)。長軸をX軸方向に、r30〜40を塞ぐ
         PlaceRadialWall(parent, "JungleMazeRadial_Red",  new Vector3(35f, 1.25f, 0f), mat);
         PlaceRadialWall(parent, "JungleMazeRadial_Blue", new Vector3(-35f, 1.25f, 0f), mat);
+    }
+
+    /// <summary>
+    /// レーン外周壁(物理ゲート廃止後のユーザー指定)。レーン(r56〜70)の外側 r70.5〜72 に
+    /// 弧壁を張り、基地正面(基地軸±30°)は開けたままにする=タイタン前に壁は置かない。
+    /// 弧の端には放射キャップを立て、レーン外の「縁の帯」(境界までの隙間)がバイパス回廊に
+    /// ならないよう塞ぐ(境界は θ=90° で r72 まで迫るため弧はちょうど帯内に収まる)。
+    /// </summary>
+    private static void PlaceOuterLaneWalls()
+    {
+        var mat = GetOrCreateMat("JungleLaneWall", new Color(0.46f, 0.50f, 0.40f));
+        ApplyWutheringRamp(mat);
+
+        var parent = new GameObject("OuterLaneWalls");
+        SetStatic(parent);
+
+        const float innerR  = 70.5f;
+        const float outerR  = 72.0f;
+        const float height  = 2.5f;
+        const float stepDeg = 3.75f;
+
+        (float start, float end)[] arcs = { (30f, 150f), (210f, 330f) };
+        int i = 0;
+        foreach (var (start, end) in arcs)
+        {
+            int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
+            var arcGo = PlaceWallBandAt(parent, $"OuterLaneWall_{i:D2}", Vector3.zero,
+                innerR, outerR, height, segs, start, end, mat);
+            arcGo.AddComponent<Enigma.Vision.VisionBlockerTag>();
+            i++;
+        }
+
+        // 放射キャップ4本: 弧端(θ=30/150/210/330)から境界(r≈88.6)の外まで塞ぐ。
+        // 端点は境界の先(r90.5)に埋めて回り込みを封じる。ルートは r>70 を通らないため無干渉。
+        foreach (float deg in new[] { 30f, 150f, 210f, 330f })
+        {
+            float rad    = deg * Mathf.Deg2Rad;
+            float midR   = (innerR + 90.5f) * 0.5f;
+            float length = 90.5f - innerR;
+            var center   = new Vector3(midR * Mathf.Cos(rad), 1.25f, midR * Mathf.Sin(rad));
+            var go = PlaceCube($"OuterLaneCap_{deg:F0}", center, new Vector3(length, height, 1.5f), mat);
+            // ローカルX(長軸)を θ 方向へ: Unity の +Y 回転は +X を -Z に倒すため yaw=-θ
+            go.transform.rotation = Quaternion.Euler(0f, -deg, 0f);
+            go.transform.SetParent(parent.transform, true);
+            go.AddComponent<Enigma.Vision.VisionBlockerTag>();
+        }
     }
 
     // 放射壁1本(直方体、長軸をワールドX方向に向けた Cube)を生成する。

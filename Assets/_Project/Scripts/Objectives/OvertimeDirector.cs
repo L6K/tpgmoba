@@ -68,10 +68,13 @@ namespace Enigma.Objective
             {
                 // 両方とも致死: 敗者チームのタイタンだけに減衰を適用し、勝者タイタンは
                 // このtickでは温存する(MatchEnd の帰属を正しくするため)。
+                // コインは Random で引く。frameCount 偶奇だと同一タイムラインの連続シム試合で
+                // 毎回同じ側に倒れる(バッチで Red 連勝を実測)。Random 状態は試合ごとの戦闘で
+                // 進むため実質的に試合ごとに変わる。
                 int loserTeam = OvertimeTieBreakLogic.PickLoserTeam(
                     CountAliveTowers(TeamId.Blue), CountAliveTowers(TeamId.Red),
                     SumStructureHp(TeamId.Blue), SumStructureHp(TeamId.Red),
-                    (Time.frameCount & 1) == 0);
+                    UnityEngine.Random.value < 0.5f);
 
                 if (loserTeam == (int)TeamId.Blue) _titanBlue.TakeDamage(blueDmg);
                 else _titanRed.TakeDamage(redDmg);
