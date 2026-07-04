@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "comment": "プレイアブルキャラクター定義(このファイルが正)。変更後は Unity メニュー Enigma/Import Character Roster で SO アセットへ反映する。targeting: Directional(方向指定)/GroundAoe(地点AoE)/Targeted(対象指定)",
   "characters": [
@@ -133,8 +133,8 @@
       "reference": "LoL: ゼド/カタリナ系のバーストアサシン",
       "theme": "記憶を消された元諜報員。影の中にだけ素顔が残る",
       "ownedByDefault": true,
-      "baseHp": 180,
-      "hpPerLevel": 14,
+      "baseHp": 198,
+      "hpPerLevel": 15.4,
       "moveSpeed": 6.0,
       "attackDamage": 16,
       "attackRange": 4,
@@ -195,9 +195,9 @@
       "baseHp": 190,
       "hpPerLevel": 15,
       "moveSpeed": 5.6,
-      "attackDamage": 17,
+      "attackDamage": 15,
       "attackRange": 15,
-      "attackCooldown": 1.2,
+      "attackCooldown": 1.32,
       "model": "Ranger",
       "tintColor": "#E0734D",
       "skills": [
