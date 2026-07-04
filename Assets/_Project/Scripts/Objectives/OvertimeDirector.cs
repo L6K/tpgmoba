@@ -15,6 +15,15 @@ namespace Enigma.Objective
         private HealthComponent _titanRed;
         private float _tickTimer;
 
+        // OT 開始時点のスナップショット。減衰はタワーも溶かすため、タイタン致死 tick の
+        // 時点では全構造物が消えて完全同値になり、タイブレークが常にコインへ落ちる
+        // (バッチで実測=勝率がノイズ化)。「OT 突入時に優勢だった側」で判定する。
+        private bool _otSnapshotTaken;
+        private int _blueTowersAtOt;
+        private int _redTowersAtOt;
+        private float _blueStructHpAtOt;
+        private float _redStructHpAtOt;
+
         private void Start()
         {
             // タワー(TowerAttack 持ち)を収集する
@@ -35,6 +44,15 @@ namespace Enigma.Objective
             _tickTimer -= 1f;
 
             float elapsed = Time.timeSinceLevelLoad;
+
+            if (!_otSnapshotTaken && elapsed >= _overtimeStartSeconds)
+            {
+                _blueTowersAtOt = CountAliveTowers(TeamId.Blue);
+                _redTowersAtOt = CountAliveTowers(TeamId.Red);
+                _blueStructHpAtOt = SumStructureHp(TeamId.Blue);
+                _redStructHpAtOt = SumStructureHp(TeamId.Red);
+                _otSnapshotTaken = true;
+            }
 
             foreach (var hc in _towers)
             {
@@ -72,8 +90,8 @@ namespace Enigma.Objective
                 // 毎回同じ側に倒れる(バッチで Red 連勝を実測)。Random 状態は試合ごとの戦闘で
                 // 進むため実質的に試合ごとに変わる。
                 int loserTeam = OvertimeTieBreakLogic.PickLoserTeam(
-                    CountAliveTowers(TeamId.Blue), CountAliveTowers(TeamId.Red),
-                    SumStructureHp(TeamId.Blue), SumStructureHp(TeamId.Red),
+                    _blueTowersAtOt, _redTowersAtOt,
+                    _blueStructHpAtOt, _redStructHpAtOt,
                     UnityEngine.Random.value < 0.5f);
 
                 if (loserTeam == (int)TeamId.Blue) _titanBlue.TakeDamage(blueDmg);
