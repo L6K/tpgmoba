@@ -32,6 +32,22 @@ namespace Enigma.Character
             _lifetime  = lifetime > 0f ? lifetime : DefaultLifetime;
         }
 
+        // 対象追尾(ホーミング)弾。AA/タワー弾は「対象指定=ロックした相手に必ず当たる」仕様
+        // (2026-07-05 ユーザー指定)のため、飛行中も対象へ向きを更新し続ける。対象が飛行中に
+        // 死亡/消滅した場合は最後の方向へ直進に切り替える。スキルの方向指定弾は従来どおり
+        // Init を使い、この経路には乗らない。
+        public void InitHoming(HealthComponent target, float speed, float damage, GameObject owner,
+                               float lifetime = DefaultLifetime)
+        {
+            Init((AimPoint(target.transform) - transform.position).normalized,
+                speed, damage, owner, lifetime);
+            _homingTarget = target;
+        }
+
+        private HealthComponent _homingTarget;
+
+        private static Vector3 AimPoint(Transform t) => t.position + Vector3.up * 1.0f;
+
         private float _lifetime = DefaultLifetime;
 
         /// <summary>着弾時にネオン演出を出す色を設定する（キャラ別 AttackVfxProfile から）。</summary>
@@ -57,6 +73,12 @@ namespace Enigma.Character
             {
                 Destroy(gameObject);
                 return;
+            }
+
+            if (_homingTarget != null && !_homingTarget.Model.IsDead)
+            {
+                _direction = (AimPoint(_homingTarget.transform) - transform.position).normalized;
+                transform.rotation = Quaternion.LookRotation(_direction);
             }
 
             transform.Translate(_direction * (_speed * Time.deltaTime), Space.World);

@@ -186,7 +186,8 @@ namespace Enigma.Character
             var dir = (target.transform.position - _muzzle.position).normalized;
             // ビーム見た目を進行方向へ向けるため LookRotation を与える
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
-            proj.Init(dir, _projectileSpeed, _attackDamage, gameObject);
+            // AA は対象指定(ロックした相手に必ず当たる)。方向弾だと移動する相手に外れる
+            proj.InitHoming(target, _projectileSpeed, _attackDamage, gameObject);
 
             // champion 別ネオン着色: 弾本体/トレイルを per-instance で染め、発射口にフラッシュ。
             // 連続ヒットのコンボ倍率で発光/トレイル幅を段階的に派手化する。

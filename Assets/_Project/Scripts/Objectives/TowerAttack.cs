@@ -20,9 +20,11 @@ namespace Enigma.Objective
         [SerializeField] private Transform  _muzzle;
         [SerializeField] private Transform  _crystal; // チャージ予兆を出す頂部クリスタル（ビルダーで結線）
 
-        // 隣接タワー間隔(ジャングル口の対=20°間隔・弦長≈15.6m)より攻囲位置(タワー際2〜3m)が
-        // 圏外になるよう 11 に抑える。14 だと外側タワーを殴るミニオンが奥のタワーに撃たれる。
-        private const float Range         = 11f;
+        // 「タワーは全チャンピオンの AA をアウトレンジする」原則(最長 AA=rin 15)。バランスバッチで
+        // AA射程>タワー射程のキャラだけが無償で攻城でき勝率を支配したため 16 に引き上げ(2026-07-05
+        // ユーザー承認)。隣接タワー誤射の制約は M-0 の1.4倍拡張で対間隔が15.6m→21.9mになったため
+        // 16 でも攻囲位置(タワー際2〜3m)は奥のタワーの圏外に収まる。
+        private const float Range         = 16f;
         private const float AttackInterval = 1.2f;
         private const float Damage        = 20f;
         private const float ProjectileSpeed = 25f;
