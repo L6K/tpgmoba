@@ -13,8 +13,8 @@ namespace Enigma.Learning
     /// <summary>
     /// 自動バランス調整パイプラインの実行基盤。
     /// Temp/balance_sim_request.json が存在するときのみ AetherRift_Map ロード時に自動生成され、
-    /// 2v2（Blue Top/Bot vs Red Top/Bot）でロースターをシャッフルしながら指定試合数を連続実行し、
-    /// 1試合ごとの統計を Temp/balance_runs/*.jsonl に追記する。
+    /// 3v3（Blue Top/Bot/Jungle vs Red Top/Bot/Jungle）でロースターをシャッフルしながら指定試合数を
+    /// 連続実行し、1試合ごとの統計を Temp/balance_runs/*.jsonl に追記する。
     /// トリガファイルが無ければ何もしないため、通常プレイ経路には副作用がない。
     /// </summary>
     public sealed class BalanceSimRunner : MonoBehaviour
@@ -119,8 +119,21 @@ namespace Enigma.Learning
             var player = GameObject.Find("Player");
             if (player != null) player.SetActive(false);
 
-            var redJungle = GameObject.Find("RedBot_Jungle");
-            if (redJungle != null) redJungle.SetActive(false);
+            // 3v3 シム化: BlueBot_Jungle は通常プレイでは非アクティブのため、GameObject.Find
+            // では見つからない(非アクティブオブジェクトを対象にしない)。FindObjectsByType に
+            // FindObjectsInactive.Include を渡して名前一致で探し、Bootstrap.Start() より前
+            // （sceneLoaded 時点）に有効化することで割当に間に合わせる。
+            // RedBot_Jungle は通常どおりアクティブのままにする(3v3 化に伴い無効化は不要)。
+            var allBots = UnityEngine.Object.FindObjectsByType<EnemyChampionAI>(
+                FindObjectsInactive.Include, FindObjectsSortMode.None);
+            foreach (var bot in allBots)
+            {
+                if (bot != null && bot.name == "BlueBot_Jungle")
+                {
+                    bot.gameObject.SetActive(true);
+                    break;
+                }
+            }
 
             // OrbitCamera は _target(Player) 非アクティブ時も null 参照はしないが、
             // 無駄な追従計算を避けるため明示的に無効化する。

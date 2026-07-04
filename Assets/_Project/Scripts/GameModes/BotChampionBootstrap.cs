@@ -57,11 +57,25 @@ namespace Enigma.GameMode
             var allIds = CollectIds();
             string[] assignment;
 
+            // 通常プレイでは BlueBot_Jungle 等の非アクティブなボットが _bots に含まれていても
+            // 割当対象から外す(非アクティブ化だけで4v3化・重複を防ぐ設計のため)。
+            // シムでは BalanceSimRunner が事前に有効化するので6体すべてが対象になる。
             if (s_seedOverride.HasValue)
             {
                 // シムモード: チームごとに独立シャッフル（TeamTag で青/赤を判定）。
-                // Player は参加しないため除外なし。チームサイズは半々前提。
-                int teamSize = _bots.Length / 2;
+                // Player は参加しないため除外なし。チームサイズは実際のアクティブ数から導出する
+                // （ハードコード /2 は BlueBot_Jungle 非対称構成で崩れるため使わない）。
+                int blueCount = 0, redCount = 0;
+                for (int i = 0; i < _bots.Length; i++)
+                {
+                    var bot = _bots[i];
+                    if (bot == null || !bot.gameObject.activeInHierarchy) continue;
+                    var tag = bot.GetComponent<TeamTag>();
+                    if (tag != null && tag.Team == TeamId.Red) redCount++;
+                    else blueCount++;
+                }
+                int teamSize = Mathf.Max(blueCount, redCount);
+
                 var perTeam = BotRosterAssignment.AssignPerTeam(allIds, s_seedOverride.Value, teamSize);
                 assignment = new string[_bots.Length];
 
@@ -69,7 +83,8 @@ namespace Enigma.GameMode
                 for (int i = 0; i < _bots.Length; i++)
                 {
                     var bot = _bots[i];
-                    var tag = bot != null ? bot.GetComponent<TeamTag>() : null;
+                    if (bot == null || !bot.gameObject.activeInHierarchy) continue;
+                    var tag = bot.GetComponent<TeamTag>();
                     if (tag != null && tag.Team == TeamId.Red)
                         assignment[i] = redIdx < teamSize ? perTeam[teamSize + redIdx++] : "";
                     else
@@ -81,7 +96,19 @@ namespace Enigma.GameMode
                 int seed = AssignSeed;
                 var picked = GameServices.Match?.PickedCharacter;
                 string playerPick = picked != null ? picked.CharId : DefaultPlayerPick;
-                assignment = BotRosterAssignment.Assign(allIds, playerPick, seed, _bots.Length);
+
+                int activeBotCount = 0;
+                for (int i = 0; i < _bots.Length; i++)
+                    if (_bots[i] != null && _bots[i].gameObject.activeInHierarchy) activeBotCount++;
+
+                var activeAssignment = BotRosterAssignment.Assign(allIds, playerPick, seed, activeBotCount);
+                assignment = new string[_bots.Length];
+                int idx = 0;
+                for (int i = 0; i < _bots.Length; i++)
+                {
+                    if (_bots[i] == null || !_bots[i].gameObject.activeInHierarchy) continue;
+                    assignment[i] = activeAssignment[idx++];
+                }
             }
 
             LastAssignment = assignment;
@@ -89,7 +116,8 @@ namespace Enigma.GameMode
             for (int i = 0; i < _bots.Length; i++)
             {
                 var bot = _bots[i];
-                if (bot == null) continue;
+                if (bot == null || !bot.gameObject.activeInHierarchy) continue;
+                if (string.IsNullOrEmpty(assignment[i])) continue;
 
                 var data = FindById(assignment[i]);
                 if (data == null) continue;

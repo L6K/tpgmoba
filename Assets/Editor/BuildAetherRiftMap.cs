@@ -817,8 +817,16 @@ public static partial class BuildAetherRiftMap
             new Vector3(-98f, 3.6f, -3.5f), Reverse(BuildBotLaneWaypoints()),
             matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab);
 
-        // BotChampionBootstrap（シーンに1個）: CharacterDatabase と5体を結線する
-        WireBotBootstrap(new[] { redTop, redBot, redJungle, blueTop, blueBot });
+        // BlueBot_Jungle: 3v3 バランスシム専用(通常プレイは従来どおり5体のまま=非アクティブ化)。
+        // マップは180°点対称のため、赤ジャングル経路を MirrorXZ するだけで青側の経路になる。
+        var blueJungle = CreateBotChampion("BlueBot_Jungle", TeamId.Blue,
+            new Vector3(-101f, 3.6f, -2f), MirrorXZ(BuildJungleWaypoints()),
+            matBlue, matBarGreen, blueRing, aaProj, telegraphPrefab, farmsNeutralCamps: true);
+        blueJungle.gameObject.SetActive(false);
+
+        // BotChampionBootstrap（シーンに1個）: CharacterDatabase と6体を結線する
+        // （通常プレイは BlueBot_Jungle が非アクティブなため実質5体のまま）
+        WireBotBootstrap(new[] { redTop, redBot, redJungle, blueTop, blueBot, blueJungle });
 
         // 7b. TelegraphSector プレハブ（空 GO + MeshFilter + MeshRenderer + TelegraphSector）
         var sectorGo   = new GameObject("TelegraphSector");
@@ -2621,6 +2629,16 @@ public static partial class BuildAetherRiftMap
         var dst = new Vector3[src.Length];
         for (int i = 0; i < src.Length; i++)
             dst[i] = src[src.Length - 1 - i];
+        return dst;
+    }
+
+    // 各点の x,z を反転した新配列を返す（マップは180°点対称なので、赤側ジャングル経路を
+    // そのまま青側ジャングル経路に変換できる）。元配列は変更しない。
+    private static Vector3[] MirrorXZ(Vector3[] src)
+    {
+        var dst = new Vector3[src.Length];
+        for (int i = 0; i < src.Length; i++)
+            dst[i] = new Vector3(-src[i].x, src[i].y, -src[i].z);
         return dst;
     }
 
