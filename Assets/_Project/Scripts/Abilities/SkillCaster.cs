@@ -758,6 +758,16 @@ namespace Enigma.Ability
                 TryCast(slot);
         }
 
+        /// <summary>
+        /// 死亡時に呼び出し、アーム中のスキルとインジケーター表示を強制解除する。
+        /// enabled=false で Update を止めるだけではインジケーターが表示されたまま残るため必要。
+        /// </summary>
+        public void CancelArmedForDeath()
+        {
+            _castLogic?.HandleCancel();
+            SetIndicatorActive(null);
+        }
+
         // ── ピック反映 API ────────────────────────────────────
 
         /// <summary>

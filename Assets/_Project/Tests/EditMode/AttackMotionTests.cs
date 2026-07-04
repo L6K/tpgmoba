@@ -136,5 +136,40 @@ namespace Enigma.Tests
             motion.Tick(0.31f); // Recovery 完了
             Assert.AreEqual(1, count, "onStrike は1回だけ発火するべき");
         }
+
+        // --- ForceCancel: 死亡時の即時中断（Windup 中でも onStrike を発火させない） ---
+
+        [Test]
+        public void ForceCancel_DuringWindup_SetsNoneWithoutFiringOnStrike()
+        {
+            bool fired = false;
+            var motion = new AttackMotion();
+            motion.TryBegin(0.2f, 0.3f, () => fired = true);
+
+            motion.ForceCancel();
+            Assert.AreEqual(AttackPhase.None, motion.Phase);
+
+            // ForceCancel 後に Tick が進んでも、破棄済みの onStrike は発火しない
+            motion.Tick(1f);
+            Assert.IsFalse(fired, "ForceCancel 後は onStrike が発火してはならない");
+        }
+
+        [Test]
+        public void ForceCancel_DuringRecovery_SetsNone()
+        {
+            var motion = new AttackMotion();
+            motion.TryBegin(0.1f, 0.3f, () => { });
+            motion.Tick(0.11f); // Recovery へ
+            motion.ForceCancel();
+            Assert.AreEqual(AttackPhase.None, motion.Phase);
+        }
+
+        [Test]
+        public void ForceCancel_WhenNone_DoesNothing()
+        {
+            var motion = new AttackMotion();
+            motion.ForceCancel(); // None でも例外が出ないこと
+            Assert.AreEqual(AttackPhase.None, motion.Phase);
+        }
     }
 }

@@ -72,5 +72,16 @@ namespace Enigma.Character
                 _timer = 0f;
             }
         }
+
+        /// <summary>
+        /// フェーズを問わず強制的に None へ戻す（死亡時の即時中断用）。
+        /// Windup 中でも onStrike を発火させずに破棄する。
+        /// </summary>
+        public void ForceCancel()
+        {
+            _phase    = AttackPhase.None;
+            _timer    = 0f;
+            _onStrike = null;
+        }
     }
 }
