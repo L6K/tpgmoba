@@ -11,7 +11,6 @@ using Enigma.Character;
 using Enigma.Combat;
 using Enigma.Ability;
 using Enigma.Objective;
-using Enigma.Objectives;
 using Enigma.UI;
 using Enigma.Minimap;
 using Enigma.Minion;
@@ -374,24 +373,29 @@ public static partial class BuildAetherRiftMap
         var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-82f, 0f, 0f), matBlue);
         var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 82f, 0f, 0f), matRed);
 
-        // タワー: 4本のジャングルパス(45°/135°/225°/315°方向)の外側(ジャングル口寄り) ±10° に配置する。
-        // パスの外側からジャングル出入りを牽制する LoL 風の「ジャングル口タワー」になる。
+        // タワー: 4本のジャングルパス(45°/135°/225°/315°方向)の両脇 ±10° に対で配置する
+        // (物理ゲート導入=M-G 以前のレイアウトへ復帰。ユーザー承認済み画像レイアウト)。
+        // パスを挟む Outer(基地から遠い側)/Inner(基地軸に近い側)の対になり、
+        // ジャングル出入りを牽制する LoL 風の「ジャングル口タワー」になる。
         // 半径は R=63 (レーンアーク中央)。チームは象限で決定: 右上=Red, 左上=Blue, 左下=Blue, 右下=Red。
-        // 旧 Inner タワー4基(35/145/215/325°)は基地ゲートタワーとして PlaceBaseEnclosures() へ移設した。
         {
             var towerModel = AssetDatabase.LoadAssetAtPath<GameObject>(
                 "Assets/External/Towers/DungeonTowerD.fbx");
 
             (string name, float theta, Material mat)[] towerDefs =
             {
-                // Red パス(右上 45°)の外側
-                ("Tower_RTopOuter", 55f, matRed),
-                // Blue パス(左上 135°)の外側
+                // Red パス(右上 45°)の両脇
+                ("Tower_RTopOuter", 55f,  matRed),
+                ("Tower_RTopInner", 35f,  matRed),
+                // Blue パス(左上 135°)の両脇
                 ("Tower_BTopOuter", 125f, matBlue),
-                // Blue パス(左下 225°)の外側
+                ("Tower_BTopInner", 145f, matBlue),
+                // Blue パス(左下 225°)の両脇
                 ("Tower_BBotOuter", 235f, matBlue),
-                // Red パス(右下 315°)の外側
+                ("Tower_BBotInner", 215f, matBlue),
+                // Red パス(右下 315°)の両脇
                 ("Tower_RBotOuter", 305f, matRed),
+                ("Tower_RBotInner", 325f, matRed),
             };
 
             foreach (var (tname, theta, tmat) in towerDefs)
@@ -417,9 +421,6 @@ public static partial class BuildAetherRiftMap
                 SetMat(ring, tmat);
             }
         }
-
-        // 基地囲い壁 + ゲートタワー(旧 Inner タワー4基をゲート開口中央へ移設 + ウィング壁 + GateWall)
-        PlaceBaseEnclosures(matBlue, matRed);
 
         // 構造物タグ: タワー8基 + タイタン2体へ StructureTag を付与(コア3回目報酬の対構造物バフ判定用)
         TagAllStructures();
@@ -3201,175 +3202,6 @@ public static partial class BuildAetherRiftMap
         go.transform.SetParent(parent.transform, true);
         // 視界2.0(M-V): 放射壁も地形遮蔽の対象
         go.AddComponent<Enigma.Vision.VisionBlockerTag>();
-    }
-
-    // ---- 基地囲い + ゲートタワー(M-G) ----
-
-    // 囲い壁帯・ウィング壁で共通の半径帯/高さ(レーン壁 JungleLaneWall と同系だが、より基地寄りの半径)
-    private const float BaseEnclosureInnerR = 70.5f;
-    private const float BaseEnclosureOuterR = 72.0f;
-    private const float BaseEnclosureHeight = 2.5f;
-    // ゲートタワーの設置半径(囲い壁帯の中間)
-    private const float GateTowerR = 71.25f;
-
-    /// <summary>
-    /// 各基地に「囲い壁帯 + ゲート2箇所」を作る。ゲート開口の中央にはタワー(旧 Inner タワー)を
-    /// 移設し、タワー本体の両脇をウィング壁で塞ぐ(タワー撃破でウィング壁が開通する GateWall)。
-    /// 壁弧・開口は基地正面軸(赤=0°/青=180°)に対して対称に切ってある。
-    /// </summary>
-    private static void PlaceBaseEnclosures(Material matBlue, Material matRed)
-    {
-        var mat = GetOrCreateMat("JungleLaneWall", new Color(0.46f, 0.50f, 0.40f));
-        ApplyWutheringRamp(mat);
-
-        var parent = new GameObject("BaseEnclosures");
-        SetStatic(parent);
-
-        var towerModel = AssetDatabase.LoadAssetAtPath<GameObject>(
-            "Assets/External/Towers/DungeonTowerD.fbx");
-
-        // 赤基地(0°軸)の囲い壁弧。開口2つ(349〜355=BOTゲート、5〜11=TOPゲート、365は5と等価)
-        (float start, float end)[] redWallArcs =
-        {
-            (332f, 349f),
-            (355f, 365f),
-            (11f,  28f),
-        };
-        PlaceEnclosureWallArcs(parent, "Red", redWallArcs, mat);
-
-        // 青基地(180°軸)の囲い壁弧。赤側を+180°した対称配置(開口=169〜175, 185〜191)
-        (float start, float end)[] blueWallArcs =
-        {
-            (152f, 169f),
-            (175f, 185f),
-            (191f, 208f),
-        };
-        PlaceEnclosureWallArcs(parent, "Blue", blueWallArcs, mat);
-
-        // ゲートタワー4基: 旧 Inner タワーをゲート開口の中央(r=71.25)へ移設。名前/HPは不変(800)。
-        PlaceGateTower(parent, "Tower_RTopInner", 8f,   matRed,  towerModel, isBlue: false,
-            wingGapStart: 5f,   wingGapEnd: 11f);
-        PlaceGateTower(parent, "Tower_RBotInner", 352f, matRed,  towerModel, isBlue: false,
-            wingGapStart: 349f, wingGapEnd: 355f);
-        PlaceGateTower(parent, "Tower_BTopInner", 172f, matBlue, towerModel, isBlue: true,
-            wingGapStart: 169f, wingGapEnd: 175f);
-        PlaceGateTower(parent, "Tower_BBotInner", 188f, matBlue, towerModel, isBlue: true,
-            wingGapStart: 185f, wingGapEnd: 191f);
-    }
-
-    // 囲い壁弧をまとめて生成する(JungleLaneWall と同じ PlaceWallBandAt 経由、r=70.5〜72)。
-    private static void PlaceEnclosureWallArcs(GameObject parent, string teamLabel,
-        (float start, float end)[] wallArcs, Material mat)
-    {
-        const float stepDeg = 3.75f;
-        int i = 0;
-        foreach (var (start, end) in wallArcs)
-        {
-            int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
-            var wallGo = PlaceWallBandAt(parent, $"BaseEnclosureWall_{teamLabel}_{i:D2}", Vector3.zero,
-                BaseEnclosureInnerR, BaseEnclosureOuterR, BaseEnclosureHeight, segs, start, end, mat);
-            // 視界2.0(M-V): 基地囲い壁も地形遮蔽の対象
-            wallGo.AddComponent<Enigma.Vision.VisionBlockerTag>();
-            i++;
-        }
-    }
-
-    /// <summary>
-    /// ゲート開口の中央にタワーを配置し、タワー本体の両脇をウィング壁(2枚)で塞ぐ。
-    /// GateWall を AddComponent してタワー撃破時にウィング壁を開通させる。
-    /// </summary>
-    private static void PlaceGateTower(GameObject parent, string name, float theta, Material mat,
-        GameObject towerModel, bool isBlue, float wingGapStart, float wingGapEnd)
-    {
-        float tr  = theta * Mathf.Deg2Rad;
-        var   pos = new Vector3(GateTowerR * Mathf.Cos(tr), 0f, GateTowerR * Mathf.Sin(tr));
-
-        var towerGo = PlaceTower(name, pos, mat, null, towerModel, isBlue, maxHp: 800f);
-        towerGo.transform.SetParent(parent.transform, true);
-
-        // 足元チーム色リング(ジャングル口タワーと同じ演出)
-        var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-        ring.name = $"{name}_Ring";
-        ring.transform.position   = new Vector3(pos.x, 0.08f, pos.z);
-        ring.transform.localScale = new Vector3(7f, 0.05f, 7f);
-        UseFlatMeshCollider(ring, keepCollider: false);
-        SetStatic(ring);
-        SetMat(ring, mat);
-        ring.transform.SetParent(parent.transform, true);
-
-        // ウィング壁2枚: タワー中心±1.2°(占有2.4°)を除いた開口の残りを塞ぐ
-        const float towerHalfWidthDeg = 1.2f;
-        float leftEnd    = theta - towerHalfWidthDeg;
-        float rightStart = theta + towerHalfWidthDeg;
-
-        var wallMat = GetOrCreateMat("JungleLaneWall", new Color(0.46f, 0.50f, 0.40f));
-
-        var wingLeftGo  = CreateGateWing($"GateWing_{name}_L", parent, wingGapStart, leftEnd, wallMat);
-        var wingRightGo = CreateGateWing($"GateWing_{name}_R", parent, rightStart, wingGapEnd, wallMat);
-
-        // GateWall: タワーの HealthComponent/Collider + ウィング壁2枚を結線する
-        var health   = towerGo.GetComponent<HealthComponent>();
-        var towerCol = towerGo.GetComponent<CapsuleCollider>();
-
-        var wingLeftCol  = wingLeftGo.GetComponentInChildren<BoxCollider>();
-        var wingRightCol = wingRightGo.GetComponentInChildren<BoxCollider>();
-
-        var gateWall = towerGo.AddComponent<GateWall>();
-        gateWall.Configure(health, towerCol, wingLeftGo, wingLeftCol, wingRightGo, wingRightCol);
-
-        // ウィング壁のトリガーブリッジへ GateWall を結線(壁ごとに左右を区別)
-        var leftTrigger  = wingLeftGo.GetComponentInChildren<GateWingTrigger>();
-        var rightTrigger = wingRightGo.GetComponentInChildren<GateWingTrigger>();
-        leftTrigger?.Configure(gateWall, isLeftWing: true);
-        rightTrigger?.Configure(gateWall, isLeftWing: false);
-    }
-
-    // ゲートウィング壁1枚を生成する。囲い壁帯と同じ半径帯(r=70.5〜72)・高さの MeshCollider(壁本体)
-    // に加え、味方通過判定用の isTrigger=true BoxCollider を持つ子 "Trigger" を追加する。
-    private static GameObject CreateGateWing(string name, GameObject parent,
-        float startDeg, float endDeg, Material mat)
-    {
-        var go = new GameObject(name);
-        var mf = go.AddComponent<MeshFilter>();
-        mf.sharedMesh = CreateWallBandMesh(BaseEnclosureInnerR, BaseEnclosureOuterR, BaseEnclosureHeight,
-            Mathf.Max(1, Mathf.RoundToInt((endDeg - startDeg) / 1.0f)), startDeg, endDeg);
-        var mc = go.AddComponent<MeshCollider>();
-        mc.sharedMesh = mf.sharedMesh;
-        SetStatic(go);
-        go.transform.SetParent(parent.transform, true);
-
-        var visual = new GameObject("Visual");
-        visual.transform.SetParent(go.transform, false);
-        var vmf = visual.AddComponent<MeshFilter>();
-        vmf.sharedMesh = CreateWallBandRenderMesh(BaseEnclosureInnerR, BaseEnclosureOuterR, BaseEnclosureHeight,
-            Mathf.Max(1, Mathf.RoundToInt((endDeg - startDeg) / 1.0f)), startDeg, endDeg);
-        var vmr = visual.AddComponent<MeshRenderer>();
-        vmr.sharedMaterial = mat;
-        SetStatic(visual);
-
-        // 味方通過判定用トリガー: 壁帯を一回り大きく囲む BoxCollider(ワールド軸整列の簡易版で十分な幅)。
-        // 弧の中点を中心に、半径方向・弧長方向・高さ方向へ余裕を持たせた箱にする。
-        float midDeg = (startDeg + endDeg) * 0.5f;
-        float midRad = midDeg * Mathf.Deg2Rad;
-        float midR   = (BaseEnclosureInnerR + BaseEnclosureOuterR) * 0.5f;
-        var triggerGo = new GameObject("Trigger");
-        triggerGo.transform.SetParent(go.transform, false);
-        triggerGo.transform.position = new Vector3(midR * Mathf.Cos(midRad), BaseEnclosureHeight * 0.5f, midR * Mathf.Sin(midRad));
-        triggerGo.transform.rotation = Quaternion.Euler(0f, -midDeg, 0f);
-
-        var arcLenDeg = Mathf.Abs(endDeg - startDeg);
-        float arcLen  = midR * arcLenDeg * Mathf.Deg2Rad;
-        var box = triggerGo.AddComponent<BoxCollider>();
-        box.isTrigger = true;
-        // ローカル X=半径方向、Z=弧長方向、Y=高さ。壁本体よりひと回り大きく(余裕1.5m)する
-        box.size = new Vector3((BaseEnclosureOuterR - BaseEnclosureInnerR) + 1.5f, BaseEnclosureHeight + 1.0f, arcLen + 1.5f);
-
-        triggerGo.AddComponent<GateWingTrigger>();
-
-        // 視界2.0(M-V): ゲートウィング壁も地形遮蔽の対象(タワー撃破で GO ごと非アクティブ化=視界も自然開通)
-        go.AddComponent<Enigma.Vision.VisionBlockerTag>();
-
-        return go;
     }
 
     /// <summary>
