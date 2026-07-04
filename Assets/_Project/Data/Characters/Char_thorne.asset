@@ -29,7 +29,7 @@ MonoBehaviour:
   BaseHp: 280
   HpPerLevel: 24
   MoveSpeed: 5.8
-  AttackDamage: 19
+  AttackDamage: 21
   AttackRange: 3.5
   AttackCooldown: 1.4
   TintColor: {r: 0.24313726, g: 0.5568628, b: 0.3529412, a: 1}
