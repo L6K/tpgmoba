@@ -1215,7 +1215,8 @@ namespace Enigma.Character
             var dir = (target.transform.position - _muzzle.position).normalized;
             // ビーム見た目を進行方向へ向けるため LookRotation を与える
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
-            proj.Init(dir, ProjectileSpeed, _attackDamage, gameObject);
+            // AA は対象指定(プレイヤー側 AutoAttack と同仕様)。スキル弾(TryCastSkill 経由)は方向指定のまま
+            proj.InitHoming(target, ProjectileSpeed, _attackDamage, gameObject);
 
             // champion 別ネオン着色（プレイヤー側 AutoAttack と同経路）
             var profile = AttackVfxProfiles.For(_championVfx);
