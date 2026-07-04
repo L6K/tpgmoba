@@ -153,6 +153,21 @@ namespace Enigma.Character
         private readonly List<float> _ownTowerLastHp = new();
         private bool _ownTowersCacheDone;
 
+        // 全タワー(自陣/敵陣とも)を1回だけ収集し、以後は生存数を1秒間隔で数え直す(集合はシーン中
+        // 静的なので毎フレーム走査する必要はない。CloseOutSiege の優劣判定・攻囲先選定に使う)。
+        private readonly List<HealthComponent> _allTowersOwnSide  = new();
+        private readonly List<HealthComponent> _allTowersEnemySide = new();
+        private HealthComponent _ownTitan;
+        private HealthComponent _enemyTitan;
+        private bool _allTowersCacheDone;
+
+        private const float TowerAliveCountCacheSeconds = 1f;
+        private float _towerAliveCountCacheUntil;
+        private int _ownTowersMaxCached;
+        private int _enemyTowersMaxCached;
+        private int _ownTowersAliveCached;
+        private int _enemyTowersAliveCached;
+
         // 自陣タワー被弾の直近記録。OnDied/RespawnRoutine で古い脅威をリセットする。
         private float  _lastTowerDamageTime = float.NegativeInfinity;
         private Vector3 _threatenedTowerPos;
@@ -362,6 +377,12 @@ namespace Enigma.Character
                     _neutralTracked = null;
                     _waypointIndex  = NearestWaypointIndex();
                 }
+                else if (JunglerShouldJoinPush())
+                {
+                    // 優勢プッシュ/ボスコミットに切り替え: 進行中のキャンプ狩りを打ち切って合流する。
+                    _neutralTarget  = null;
+                    _neutralTracked = null;
+                }
                 else
                 {
                     UpdateNeutralFarm();
@@ -399,6 +420,25 @@ namespace Enigma.Character
             }
         }
 
+        // ジャングラーが巡回/キャンプ狩りを中断してプッシュ/ボス討伐へ合流すべきか。
+        // 自チーム優勢の閉幕プッシュ中、またはボスが押し切りライン以下でコミット中の場合に true。
+        // _macro は直前の Sense で算出済みの値（0.3s 間隔のためフレーム遅延は許容）。
+        private bool JunglerShouldJoinPush()
+        {
+            if (_macro == BotMacroAction.CloseOutSiege) return true;
+
+            if (_macro == BotMacroAction.GroupForObjective)
+            {
+                var director = ResolveObjectiveDirector();
+                var bossHc = director != null ? director.BossHealth : null;
+                if (bossHc != null && bossHc.Model.MaxHp > 0f
+                    && (bossHc.Model.CurrentHp / bossHc.Model.MaxHp) < BotMacroDecisionModel.BossCommitHpFraction)
+                    return true;
+            }
+
+            return false;
+        }
+
         // マクロ判断を行動へ落とす。専用挙動を実行したら true を返し、呼び側はその場で return する。
         // Push/Farm は false を返して従来フロー（LaneBotLogic / タワー攻囲）へフォールスルーする。
         private bool ApplyMacroOverride()
@@ -413,18 +453,26 @@ namespace Enigma.Character
 
                     float dist = Vector3.Distance(transform.position, objPos);
 
-                    bool enemyChampionNear = _nearestEnemy != null && _nearestEnemyIsChampion
+                    var bossHc = director.BossHealth;
+                    // 押し切りラインを下回ったら「コミット」: 敵接近で離脱せず殴り続ける。
+                    // 300試合実測で 1000→533(0.533)からの離脱が多発したため、それより高い
+                    // BossCommitHpFraction(0.6)を下回ったらコミットし、討伐を完遂させる。
+                    bool committedToBoss = bossHc != null && bossHc.Model.MaxHp > 0f
+                        && (bossHc.Model.CurrentHp / bossHc.Model.MaxHp) < BotMacroDecisionModel.BossCommitHpFraction;
+
+                    bool enemyChampionNear = !committedToBoss
+                        && _nearestEnemy != null && _nearestEnemyIsChampion
                         && !_nearestEnemy.Model.IsDead
                         && Vector3.Distance(transform.position, _nearestEnemy.transform.position) <= BossContestEnemyRange;
 
                     if (dist <= BossEngageRange && !enemyChampionNear)
                     {
-                        // 敵チャンピオン不在: ボスが生存していれば実際に殴る。ボス不在/Dormant なら
-                        // 従来どおり中央へ寄る（下の距離判定にフォールスルー）。
-                        var bossHc = director.BossHealth;
+                        // 敵チャンピオン不在(またはコミット中): ボスが生存していれば実際に殴る。
+                        // コミット中はスキルも使って DPS を上げ、確実に討伐を完遂させる。
+                        // ボス不在/Dormant なら従来どおり中央へ寄る（下の距離判定にフォールスルー）。
                         if (bossHc != null)
                         {
-                            FaceAndAttack(bossHc, allowSkills: false, useMicro: false);
+                            FaceAndAttack(bossHc, allowSkills: committedToBoss, useMicro: false);
                             ApplyMovement(LaneMove.Stop);
                             return true;
                         }
@@ -442,6 +490,33 @@ namespace Enigma.Character
                             FaceAndAttack(_nearestEnemy, allowSkills: true, useMicro: false);
                         else
                             ApplyMovement(LaneMove.Stop);
+                    }
+                    return true;
+                }
+
+                case BotMacroAction.CloseOutSiege:
+                {
+                    // 閉幕プッシュ: 生存する最寄りの敵タワー→タイタンへ向かい攻囲する。
+                    // 対象なし(=全構造物破壊済み=すでに勝敗決着直前)なら通常フローに任せる。
+                    var siegeTarget = NearestSiegeTarget();
+                    if (siegeTarget == null) return false;
+
+                    float distToTarget = Vector3.Distance(transform.position, siegeTarget.transform.position);
+                    if (distToTarget > _attackRange)
+                    {
+                        MoveDirectlyToward(siegeTarget.transform.position);
+                        // 移動中でも射程内の敵が居れば応戦する(集団プッシュ中の遭遇戦)。
+                        if (_nearestEnemy != null && !_nearestEnemy.Model.IsDead)
+                            FaceAndAttack(_nearestEnemy, allowSkills: _nearestEnemyIsChampion, useMicro: false);
+                    }
+                    else
+                    {
+                        // 射程内: 敵チャンピオンが至近なら迎撃を優先し、居なければ構造物を折る。
+                        if (_nearestEnemy != null && _nearestEnemyIsChampion && !_nearestEnemy.Model.IsDead)
+                            FaceAndAttack(_nearestEnemy, allowSkills: true, useMicro: false);
+                        else
+                            FaceAndAttack(siegeTarget, allowSkills: false, useMicro: false);
+                        ApplyMovement(LaneMove.Stop);
                     }
                     return true;
                 }
@@ -534,7 +609,10 @@ namespace Enigma.Character
                 // ただしジャングラーはキャンプ狩り用に最寄り中立モンスターを別枠で拾う。
                 if (tag.Team == TeamId.Neutral)
                 {
-                    if (_farmsNeutralCamps && dist <= NeutralFarmRadius
+                    // 自チーム優勢でのプッシュ合流中、またはボスコミット中は新規キャンプを拾わない
+                    // （閉幕行動を巡回より優先させる。既存ロック中ターゲットは UpdateNeutralFarm 側で
+                    // 別途 Update() の JunglerShouldJoinPush 判定により打ち切られる）。
+                    if (_farmsNeutralCamps && dist <= NeutralFarmRadius && !JunglerShouldJoinPush()
                         && col.GetComponent<Enigma.Minion.JungleMonster>() != null)
                     {
                         var nhc = col.GetComponent<HealthComponent>();
@@ -686,6 +764,80 @@ namespace Enigma.Character
             }
         }
 
+        // 自陣/敵陣の Tower_ + Titan_ を一度だけ収集してキャッシュする(シーン内タワーは静的)。
+        // CloseOutSiege の優劣判定・攻囲先選定に使う。
+        private void BuildAllTowersCache()
+        {
+            _allTowersCacheDone = true;
+            _allTowersOwnSide.Clear();
+            _allTowersEnemySide.Clear();
+
+            TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Red;
+            var allHealth = Object.FindObjectsByType<HealthComponent>(FindObjectsSortMode.None);
+            for (int i = 0; i < allHealth.Length; i++)
+            {
+                var hc = allHealth[i];
+                if (hc == null) continue;
+                bool isTower = hc.name.StartsWith("Tower_");
+                bool isTitan = hc.name.StartsWith("Titan_");
+                if (!isTower && !isTitan) continue;
+
+                var tag = hc.GetComponentInParent<TeamTag>();
+                if (tag == null) continue;
+
+                if (isTitan)
+                {
+                    if (tag.Team == myTeam) _ownTitan = hc; else _enemyTitan = hc;
+                    continue;
+                }
+
+                if (tag.Team == myTeam) _allTowersOwnSide.Add(hc);
+                else _allTowersEnemySide.Add(hc);
+            }
+        }
+
+        // タワー生存数(自陣/敵陣)を TowerAliveCountCacheSeconds 間隔で数え直す。
+        // タイタンは「タワー本数差」の対象外(タイタン破壊=即決着のため優劣判定には無関係)。
+        private void RefreshTowerAliveCounts()
+        {
+            if (!_allTowersCacheDone) BuildAllTowersCache();
+            if (Time.time < _towerAliveCountCacheUntil) return;
+            _towerAliveCountCacheUntil = Time.time + TowerAliveCountCacheSeconds;
+
+            _ownTowersMaxCached   = _allTowersOwnSide.Count;
+            _enemyTowersMaxCached = _allTowersEnemySide.Count;
+            _ownTowersAliveCached   = CountAlive(_allTowersOwnSide);
+            _enemyTowersAliveCached = CountAlive(_allTowersEnemySide);
+        }
+
+        private static int CountAlive(List<HealthComponent> towers)
+        {
+            int n = 0;
+            for (int i = 0; i < towers.Count; i++)
+            {
+                var hc = towers[i];
+                if (hc != null && !hc.Model.IsDead) n++;
+            }
+            return n;
+        }
+
+        // CloseOutSiege の攻囲先: 生存する最寄りの敵タワー、無ければ敵タイタンを返す。
+        private HealthComponent NearestSiegeTarget()
+        {
+            HealthComponent best = null;
+            float bestDist = float.MaxValue;
+            for (int i = 0; i < _allTowersEnemySide.Count; i++)
+            {
+                var hc = _allTowersEnemySide[i];
+                if (hc == null || hc.Model.IsDead) continue;
+                float dist = Vector3.Distance(transform.position, hc.transform.position);
+                if (dist < bestDist) { bestDist = dist; best = hc; }
+            }
+            if (best != null) return best;
+
+            return (_enemyTitan != null && !_enemyTitan.Model.IsDead) ? _enemyTitan : null;
+        }
+
         // BotMacroContext を組み立て、マクロ判断を更新する（Sense と同頻度）。
         // チャンピオン数の集計は全走査だが小規模かつ 0.3s 間隔なのでコスト許容。
         private void UpdateMacro(TeamId myTeam, float nearestTowerDist)
@@ -717,10 +869,20 @@ namespace Enigma.Character
                 ? Vector3.Distance(transform.position, _threatenedTowerPos)
                 : float.MaxValue;
 
+            RefreshTowerAliveCounts();
+
+            var bossHc = director != null ? director.BossHealth : null;
+            float bossHpFraction = (bossHc != null && bossHc.Model.MaxHp > 0f)
+                ? bossHc.Model.CurrentHp / bossHc.Model.MaxHp
+                : 1f;
+
             var ctx = new BotMacroContext(
                 selfHp, allies, enemies, objectiveActiveOrSoon,
                 distToObjective, alliedMinionsPresent, underTowerThreat,
-                ownTowerUnderAttack, distanceToThreatenedTower);
+                ownTowerUnderAttack, distanceToThreatenedTower,
+                bossHpFraction,
+                _ownTowersAliveCached, _enemyTowersAliveCached,
+                _ownTowersMaxCached, _enemyTowersMaxCached);
             _macro = BotMacroDecisionModel.Decide(in ctx);
         }
 

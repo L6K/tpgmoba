@@ -14,11 +14,17 @@ namespace Enigma.Tests
             bool minions = false,
             bool towerThreat = false,
             bool ownTowerUnderAttack = false,
-            float distanceToThreatenedTower = float.MaxValue)
+            float distanceToThreatenedTower = float.MaxValue,
+            float bossHp = 1f,
+            int ownTowersAlive = 0,
+            int enemyTowersAlive = 0,
+            int ownTowersMax = 0,
+            int enemyTowersMax = 0)
         {
             return new BotMacroContext(
                 hp, allies, enemies, objective, objectiveDistance, minions, towerThreat,
-                ownTowerUnderAttack, distanceToThreatenedTower);
+                ownTowerUnderAttack, distanceToThreatenedTower,
+                bossHp, ownTowersAlive, enemyTowersAlive, ownTowersMax, enemyTowersMax);
         }
 
         [Test]
@@ -200,6 +206,122 @@ namespace Enigma.Tests
                   objective: true, objectiveDistance: 10f,
                   ownTowerUnderAttack: true, distanceToThreatenedTower: 20f));
             Assert.AreEqual(BotMacroAction.Defend, action);
+        }
+
+        // ── CloseOutSiege（閉幕プッシュ）── 自チーム優勢判定・優先順位 ──────────────
+
+        [Test]
+        public void TeamAhead_ByExactlyOneTower_SafeHp_ClosesOutSiege()
+        {
+            // enemyLost(2) - ownLost(1) = 1 = CloseOutTowerAdvantage(境界ちょうど)
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3,
+                  ownTowersAlive: 2, ownTowersMax: 3,
+                  enemyTowersAlive: 1, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.CloseOutSiege, action);
+        }
+
+        [Test]
+        public void TeamAhead_ByOneLessThanAdvantage_DoesNotCloseOutSiege()
+        {
+            // enemyLost(1) - ownLost(1) = 0 < CloseOutTowerAdvantage(1) → 押し切り判定なし
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3,
+                  ownTowersAlive: 2, ownTowersMax: 3,
+                  enemyTowersAlive: 2, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.Farm, action);
+        }
+
+        [Test]
+        public void TeamBehind_DoesNotCloseOutSiege()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3,
+                  ownTowersAlive: 1, ownTowersMax: 3,
+                  enemyTowersAlive: 3, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.Farm, action);
+        }
+
+        [Test]
+        public void TeamAhead_BelowSafeHp_DoesNotCloseOutSiege()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: SafeHpBelow, allies: 3, enemies: 3,
+                  ownTowersAlive: 3, ownTowersMax: 3,
+                  enemyTowersAlive: 0, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.Farm, action);
+        }
+
+        [Test]
+        public void NoTowerDataSupplied_DoesNotCloseOutSiege()
+        {
+            // OwnTowersMax/EnemyTowersMax とも既定の0(未供給)なら判定不能として Farm へフォールバック
+            var action = BotMacroDecisionModel.Decide(C(hp: 0.8f, allies: 3, enemies: 3));
+            Assert.AreEqual(BotMacroAction.Farm, action);
+        }
+
+        [Test]
+        public void Retreat_HasPriorityOverCloseOutSiege()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.2f, allies: 2, enemies: 3,
+                  ownTowersAlive: 3, ownTowersMax: 3,
+                  enemyTowersAlive: 0, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.Retreat, action);
+        }
+
+        [Test]
+        public void Defend_HasPriorityOverCloseOutSiege()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3,
+                  ownTowerUnderAttack: true, distanceToThreatenedTower: 20f,
+                  ownTowersAlive: 3, ownTowersMax: 3,
+                  enemyTowersAlive: 0, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.Defend, action);
+        }
+
+        [Test]
+        public void GroupForObjective_HasPriorityOverCloseOutSiege()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3,
+                  objective: true, objectiveDistance: 20f,
+                  ownTowersAlive: 3, ownTowersMax: 3,
+                  enemyTowersAlive: 0, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.GroupForObjective, action);
+        }
+
+        [Test]
+        public void CloseOutSiege_HasPriorityOverPush()
+        {
+            // Push の条件(allies>enemies かつ minions)も同時に満たすが、優勢判定が優先される
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 4, enemies: 2, minions: true,
+                  ownTowersAlive: 3, ownTowersMax: 3,
+                  enemyTowersAlive: 0, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.CloseOutSiege, action);
+        }
+
+        private const float SafeHpBelow = BotMacroDecisionModel.SafeHpFraction - 0.01f;
+
+        // ── ボス討伐コミットライン（BossCommitHpFraction）境界値 ──────────────
+        // Decide 自体は BossHpFraction を分岐に使わない(コミット判定は ApplyMacroOverride 側の
+        // 責務)。ここでは定数の境界値そのものを検証し、回帰(値のドリフト)を防ぐ。
+
+        [Test]
+        public void BossCommitHpFraction_IsAboveObservedDisengageRatio()
+        {
+            // 実測 1000→533 離脱(0.533)より高い値でなければコミットが早すぎず効果が出ない
+            const float observedDisengageRatio = 533f / 1000f;
+            Assert.Greater(BotMacroDecisionModel.BossCommitHpFraction, observedDisengageRatio);
+        }
+
+        [Test]
+        public void BossCommitHpFraction_IsBelowFull()
+        {
+            // 1 以上だと開幕から常時コミット扱いになり敵接近の離脱判定自体が無意味になる
+            Assert.Less(BotMacroDecisionModel.BossCommitHpFraction, 1f);
         }
     }
 }
