@@ -89,7 +89,10 @@ public static partial class BuildAetherRiftMap
         // 立体化(M-A)で地形自体がトレンチ(底-1.2)になったため、川の視覚帯はトレンチ底+0.03=-1.17へ。
         // レーンが川の上を「橋」として通るため、川はレーンより下に置く
         // 川は楕円境界(z半径≈76)とレーン帯(r56〜70)の内側に収めるため z=±58 まで(scale.z 84→116)。
-        PlaceCube("River", new Vector3(0f, -1.17f, 0f), new Vector3(18f, 0.1f, 116f), matRiver);
+        // 中央クレーター(縁r22, 底-2.5)の上に1枚板で被さるとコア下半身が水没して見えるため、
+        // クレーター帯(|z|<22)を開けて南北2枚に分割する(見た目の板のみ、地形は変更しない)。
+        PlaceCube("River_N", new Vector3(0f, -1.17f, 40f), new Vector3(18f, 0.1f, 36f), matRiver);
+        PlaceCube("River_S", new Vector3(0f, -1.17f, -40f), new Vector3(18f, 0.1f, 36f), matRiver);
 
         // レーン色を土色に更新
         matLane.SetColor("_BaseColor", new Color(0.62f, 0.55f, 0.42f));

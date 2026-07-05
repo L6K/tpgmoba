@@ -15,8 +15,8 @@ namespace Enigma.Tests
 
             Assert.AreEqual(1, grants.Count);
             Assert.AreEqual(ObjectiveBuffType.Damage, grants[0].Type);
-            Assert.AreEqual(0.20f, grants[0].Magnitude, Tolerance);
-            Assert.AreEqual(45f, grants[0].Duration, Tolerance);
+            Assert.AreEqual(0.25f, grants[0].Magnitude, Tolerance);
+            Assert.AreEqual(60f, grants[0].Duration, Tolerance);
         }
 
         [Test]
@@ -27,11 +27,11 @@ namespace Enigma.Tests
             Assert.AreEqual(2, grants.Count);
 
             var damage = grants.Single(g => g.Type == ObjectiveBuffType.Damage);
-            Assert.AreEqual(0.20f, damage.Magnitude, Tolerance);
+            Assert.AreEqual(0.25f, damage.Magnitude, Tolerance);
 
             var moveSpeed = grants.Single(g => g.Type == ObjectiveBuffType.MoveSpeed);
             Assert.AreEqual(0.15f, moveSpeed.Magnitude, Tolerance);
-            Assert.AreEqual(45f, moveSpeed.Duration, Tolerance);
+            Assert.AreEqual(60f, moveSpeed.Duration, Tolerance);
         }
 
         [Test]
@@ -42,8 +42,8 @@ namespace Enigma.Tests
             Assert.AreEqual(4, grants.Count);
 
             var damage = grants.Single(g => g.Type == ObjectiveBuffType.Damage);
-            Assert.AreEqual(0.25f, damage.Magnitude, Tolerance);
-            Assert.AreEqual(45f, damage.Duration, Tolerance);
+            Assert.AreEqual(0.30f, damage.Magnitude, Tolerance);
+            Assert.AreEqual(60f, damage.Duration, Tolerance);
 
             var moveSpeed = grants.Single(g => g.Type == ObjectiveBuffType.MoveSpeed);
             Assert.AreEqual(0.15f, moveSpeed.Magnitude, Tolerance);
@@ -54,7 +54,7 @@ namespace Enigma.Tests
 
             var structureDamage = grants.Single(g => g.Type == ObjectiveBuffType.StructureDamage);
             Assert.AreEqual(1.0f, structureDamage.Magnitude, Tolerance);
-            Assert.AreEqual(45f, structureDamage.Duration, Tolerance);
+            Assert.AreEqual(60f, structureDamage.Duration, Tolerance);
         }
 
         [Test]

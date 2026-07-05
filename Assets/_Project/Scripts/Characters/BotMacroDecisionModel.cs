@@ -58,7 +58,8 @@ namespace Enigma.Character
         public const float LowHpFraction      = 0.35f;
         public const float SafeHpFraction     = 0.45f;
         // マップ半径由来の距離しきい値。M-0(平面1.4倍拡張)に合わせて更新(35→49, 45→63)。
-        public const float ObjectiveJoinRange = 49f;
+        // ObjectiveJoinRange はコアを誰も倒しに行かない問題への対策で 49→63 へ再緩和(発動条件緩和)。
+        public const float ObjectiveJoinRange = 63f;
         public const float DefendJoinRange    = 63f;
 
         // ボスの残HPがこの割合を下回ったら「押し切りライン」とみなし、敵接近による
@@ -92,10 +93,20 @@ namespace Enigma.Character
                 return BotMacroAction.Defend;
             }
 
+            // 頭数条件は「同数以上」→「1人差まで参加可」に緩和(誰もコアを取りに行かない対策)。
             if (ctx.ObjectiveActiveOrSoon &&
                 ctx.SelfHpFraction >= SafeHpFraction &&
-                ctx.EnemiesAlive <= ctx.AlliesAlive &&
+                ctx.AlliesAlive >= ctx.EnemiesAlive - 1 &&
                 ctx.DistanceToObjective <= ObjectiveJoinRange)
+            {
+                return BotMacroAction.GroupForObjective;
+            }
+
+            // 膠着時のコア集合: キル差・タワー損失差とも均衡していて動くきっかけが無い試合でも、
+            // オブジェクティブが有効/まもなくなら押し切り不成立でも集合させる。
+            if (ctx.ObjectiveActiveOrSoon &&
+                ctx.SelfHpFraction >= SafeHpFraction &&
+                IsStalemate(ctx))
             {
                 return BotMacroAction.GroupForObjective;
             }
@@ -131,6 +142,19 @@ namespace Enigma.Character
             int ownLost   = ctx.OwnTowersMax   - ctx.OwnTowersAlive;
             int enemyLost = ctx.EnemyTowersMax - ctx.EnemyTowersAlive;
             return enemyLost >= ownLost + CloseOutTowerAdvantage;
+        }
+
+        // 膠着 = キル差0 かつタワー損失差0。タワーデータ未供給(Max<=0 かつ Max<=0)は
+        // IsTeamAhead 同様「判定不能」として除外する(0本ずつ扱いにすると未配線ケースが
+        // すべて膠着扱いになり、頭数条件による絞り込みが無意味になってしまうため)。
+        private static bool IsStalemate(in BotMacroContext ctx)
+        {
+            if (ctx.TeamKillLead != 0) return false;
+            if (ctx.OwnTowersMax <= 0 && ctx.EnemyTowersMax <= 0) return false;
+
+            int ownLost   = ctx.OwnTowersMax   - ctx.OwnTowersAlive;
+            int enemyLost = ctx.EnemyTowersMax - ctx.EnemyTowersAlive;
+            return ownLost == enemyLost;
         }
     }
 }

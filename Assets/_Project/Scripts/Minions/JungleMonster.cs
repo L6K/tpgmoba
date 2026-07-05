@@ -12,7 +12,6 @@ namespace Enigma.Minion
         [SerializeField] private float _attackInterval = 1.5f;
         [SerializeField] private float _moveSpeed      = 4f;
         [SerializeField] private float _attackRange    = 2.2f;
-        [SerializeField] private float _leashDistance  = 12f;
         [SerializeField] private float _respawnDelay   = 60f;
 
         // HPバー Fill（ビルダーが Initialize で結線）
@@ -95,11 +94,11 @@ namespace Enigma.Minion
                 return;
             }
 
-            // キャンプ中心からリーシュ距離超過 → 帰還
+            // キャンプ中心からリーシュ距離超過 → 帰還（新規アグロを取らないよう target を破棄）
             float distFromCamp = Vector3.Distance(
                 new Vector3(transform.position.x, 0f, transform.position.z),
                 new Vector3(_campCenter.x,        0f, _campCenter.z));
-            if (distFromCamp > _leashDistance)
+            if (JungleLeashLogic.ShouldReturn(distFromCamp))
             {
                 _target = null;
                 _state  = State.Return;
@@ -128,7 +127,7 @@ namespace Enigma.Minion
                 new Vector3(transform.position.x, 0f, transform.position.z),
                 new Vector3(_campCenter.x,        0f, _campCenter.z));
 
-            if (dist <= 0.5f)
+            if (JungleLeashLogic.IsReturnComplete(dist))
             {
                 // 帰還完了: スナップして全回復
                 transform.position = new Vector3(_campCenter.x, _fixedY, _campCenter.z);

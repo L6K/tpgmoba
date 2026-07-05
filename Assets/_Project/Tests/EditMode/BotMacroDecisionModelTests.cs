@@ -93,10 +93,20 @@ namespace Enigma.Tests
         }
 
         [Test]
-        public void ObjectiveActive_Outnumbered_DoesNotGroup()
+        public void ObjectiveActive_OneFewerAlly_StillGroups()
         {
+            // 頭数条件は「allies>=enemies」→「allies>=enemies-1」に緩和(1人差まで参加可)
             var action = BotMacroDecisionModel.Decide(
                 C(hp: 0.8f, allies: 2, enemies: 3, objective: true, objectiveDistance: 20f));
+            Assert.AreEqual(BotMacroAction.GroupForObjective, action);
+        }
+
+        [Test]
+        public void ObjectiveActive_TwoFewerAllies_DoesNotGroup()
+        {
+            // 2人差は緩和の対象外(膠着でもない場合は Farm へ)
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 1, enemies: 3, objective: true, objectiveDistance: 20f));
             Assert.AreEqual(BotMacroAction.Farm, action);
         }
 
@@ -397,6 +407,94 @@ namespace Enigma.Tests
 
             var action = BotMacroDecisionModel.Decide(in ctx);
             Assert.AreEqual(BotMacroAction.CloseOutSiege, action);
+        }
+
+        // ── コアの価値付け: ObjectiveJoinRange 緩和・1人差参加・膠着時集合 ──────────────
+
+        [Test]
+        public void ObjectiveJoinRange_Is63()
+        {
+            // 49→63へ再緩和(誰もコアを倒しに行かない対策)。回帰防止のためリテラルで固定する。
+            Assert.AreEqual(63f, BotMacroDecisionModel.ObjectiveJoinRange);
+        }
+
+        [Test]
+        public void ObjectiveActive_AtRelaxedJoinRange_Groups()
+        {
+            // 旧しきい値(49)を超えるが新しきい値(63)以内なら参加できることを確認
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3, objective: true, objectiveDistance: 55f));
+            Assert.AreEqual(BotMacroAction.GroupForObjective, action);
+        }
+
+        [Test]
+        public void ObjectiveActive_OneFewerAlly_AtJoinRangeBoundary_StillGroups()
+        {
+            // 頭数緩和と距離境界を同時に満たす場合の組み合わせ確認
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 2, enemies: 3, objective: true,
+                  objectiveDistance: BotMacroDecisionModel.ObjectiveJoinRange));
+            Assert.AreEqual(BotMacroAction.GroupForObjective, action);
+        }
+
+        [Test]
+        public void Stalemate_KillLeadZero_TowerLossEqual_ObjectiveActive_Groups()
+        {
+            // 膠着(キル差0・タワー損失差0)でも objective active なら押し切り不成立でも集合する
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3, objective: true, objectiveDistance: 999f,
+                  teamKillLead: 0,
+                  ownTowersAlive: 2, ownTowersMax: 3,
+                  enemyTowersAlive: 2, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.GroupForObjective, action);
+        }
+
+        [Test]
+        public void Stalemate_ButObjectiveNotActive_DoesNotGroup()
+        {
+            // 膠着でも objective が有効/まもなくでなければ集合しない
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3, objective: false,
+                  teamKillLead: 0,
+                  ownTowersAlive: 2, ownTowersMax: 3,
+                  enemyTowersAlive: 2, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.Farm, action);
+        }
+
+        [Test]
+        public void Stalemate_ButKillLeadNonZero_DoesNotTriggerStalemateGroup()
+        {
+            // キル差が付いている場合は「膠着」ではない(通常のヘッドカウント条件のみで判定)
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 1, enemies: 5, objective: true, objectiveDistance: 999f,
+                  teamKillLead: 2,
+                  ownTowersAlive: 2, ownTowersMax: 3,
+                  enemyTowersAlive: 2, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.Farm, action);
+        }
+
+        [Test]
+        public void Retreat_HasPriorityOverStalemateGroup()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.2f, allies: 2, enemies: 3, objective: true, objectiveDistance: 999f,
+                  teamKillLead: 0,
+                  ownTowersAlive: 2, ownTowersMax: 3,
+                  enemyTowersAlive: 2, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.Retreat, action);
+        }
+
+        [Test]
+        public void Defend_HasPriorityOverStalemateGroup()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3,
+                  ownTowerUnderAttack: true, distanceToThreatenedTower: 20f,
+                  objective: true, objectiveDistance: 999f,
+                  teamKillLead: 0,
+                  ownTowersAlive: 2, ownTowersMax: 3,
+                  enemyTowersAlive: 2, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.Defend, action);
         }
     }
 }
