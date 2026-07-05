@@ -21,6 +21,9 @@ namespace Enigma.Character
         public readonly int EnemyTowersAlive;
         public readonly int OwnTowersMax;
         public readonly int EnemyTowersMax;
+        // 自チームキル数 - 敵チームキル数。タワー戦線が膠着していてもキルで優勢な場合を
+        // 閉幕トリガーに反映するため（タワー射程強化でタワー損失差が発生しにくくなった対策）。
+        public readonly int TeamKillLead;
 
         public BotMacroContext(
             float selfHpFraction, int alliesAlive, int enemiesAlive,
@@ -29,7 +32,8 @@ namespace Enigma.Character
             bool ownTowerUnderAttack, float distanceToThreatenedTower,
             float bossHpFraction = 1f,
             int ownTowersAlive = 0, int enemyTowersAlive = 0,
-            int ownTowersMax = 0, int enemyTowersMax = 0)
+            int ownTowersMax = 0, int enemyTowersMax = 0,
+            int teamKillLead = 0)
         {
             SelfHpFraction       = selfHpFraction;
             AlliesAlive          = alliesAlive;
@@ -45,6 +49,7 @@ namespace Enigma.Character
             EnemyTowersAlive     = enemyTowersAlive;
             OwnTowersMax         = ownTowersMax;
             EnemyTowersMax       = enemyTowersMax;
+            TeamKillLead         = teamKillLead;
         }
     }
 
@@ -66,6 +71,11 @@ namespace Enigma.Character
         // 敵タワー撃破数 >= 自陣被撃破数 + 1 を「タワー差」で表すと
         // (EnemyTowersMax-EnemyTowersAlive) - (OwnTowersMax-OwnTowersAlive) >= 1。
         public const int CloseOutTowerAdvantage = 1;
+
+        // 「自チーム優勢」とみなすキル差(自チームキル数-敵チームキル数)。タワー射程16強化で
+        // タワーが OT まで落ちなくなり CloseOutTowerAdvantage が一度も成立しない試合が
+        // あったため、タワー戦線と独立にキル優勢だけでも押し切りへ移行できるようにする。
+        public const int CloseOutKillLead = 3;
 
         public static BotMacroAction Decide(in BotMacroContext ctx)
         {
@@ -109,10 +119,13 @@ namespace Enigma.Character
             return BotMacroAction.Farm;
         }
 
-        // 自チーム優勢=敵の破壊済みタワー本数が自陣の破壊済み本数より CloseOutTowerAdvantage 本以上多い。
-        // Max が両方 0(未供給/取得前)なら判定不能として false を返す。
+        // 自チーム優勢 = 「敵の破壊済みタワー本数が自陣より CloseOutTowerAdvantage 本以上多い」
+        // または「キル差が CloseOutKillLead 以上」。タワーが強化されて OT まで落ちない試合でも
+        // キル優勢だけで押し切りへ移行できるようにする(OR条件、どちらかで十分)。
         private static bool IsTeamAhead(in BotMacroContext ctx)
         {
+            if (ctx.TeamKillLead >= CloseOutKillLead) return true;
+
             if (ctx.OwnTowersMax <= 0 && ctx.EnemyTowersMax <= 0) return false;
 
             int ownLost   = ctx.OwnTowersMax   - ctx.OwnTowersAlive;

@@ -17,6 +17,19 @@ namespace Enigma.Learning
             public int Cs;
         }
 
+        // タワー撃破/チャンピオンキルの時刻付きイベント(偏り調査用。試合開始からの経過秒+破壊/キル側チーム名)。
+        private readonly struct TimedTeamEvent
+        {
+            public readonly float Time;
+            public readonly string Team;
+
+            public TimedTeamEvent(float time, string team)
+            {
+                Time = time;
+                Team = team;
+            }
+        }
+
         public int MatchId { get; }
         public int Seed { get; }
 
@@ -25,6 +38,9 @@ namespace Enigma.Learning
         private readonly Dictionary<string, ChampionTally> _perChampion = new();
         // 挿入順を保持して JSON 出力を安定させる（Dictionary の列挙順は非保証のため）。
         private readonly List<string> _championOrder = new();
+
+        private readonly List<TimedTeamEvent> _towerEvents = new();
+        private readonly List<TimedTeamEvent> _killEvents = new();
 
         public float DurationSec { get; private set; }
         public string WinnerTeam { get; private set; } = "timeout";
@@ -70,6 +86,18 @@ namespace Enigma.Learning
         {
             // 最初の1本のみ記録する（firstTower とマッチ勝敗の相関分析に使う）。
             if (string.IsNullOrEmpty(FirstTowerTeam)) FirstTowerTeam = team;
+        }
+
+        /// <summary>タワー撃破イベントを経過秒付きで記録する(偏り調査用の時系列ログ)。既存の RecordTowerDestroyed と並存する。</summary>
+        public void RecordTowerDestroyedAt(float elapsedSec, string team)
+        {
+            _towerEvents.Add(new TimedTeamEvent(elapsedSec, team));
+        }
+
+        /// <summary>チャンピオンキルイベントを経過秒付きで記録する(偏り調査用の時系列ログ)。</summary>
+        public void RecordChampionKillAt(float elapsedSec, string team)
+        {
+            _killEvents.Add(new TimedTeamEvent(elapsedSec, team));
         }
 
         public void RecordCoreCaptured(string team)
@@ -119,9 +147,25 @@ namespace Enigma.Learning
 
             sb.Append("\"firstTowerTeam\":\"").Append(Escape(FirstTowerTeam)).Append("\",");
             sb.Append("\"coreCapturesBlue\":").Append(CoreCapturesBlue).Append(',');
-            sb.Append("\"coreCapturesRed\":").Append(CoreCapturesRed);
+            sb.Append("\"coreCapturesRed\":").Append(CoreCapturesRed).Append(',');
+
+            sb.Append("\"towerEvents\":[").Append(JoinTimedEvents(_towerEvents)).Append("],");
+            sb.Append("\"killEvents\":[").Append(JoinTimedEvents(_killEvents)).Append(']');
 
             sb.Append('}');
+            return sb.ToString();
+        }
+
+        private static string JoinTimedEvents(List<TimedTeamEvent> events)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                var e = events[i];
+                sb.Append("{\"t\":").Append(e.Time.ToString("F1"))
+                  .Append(",\"team\":\"").Append(Escape(e.Team)).Append("\"}");
+            }
             return sb.ToString();
         }
 

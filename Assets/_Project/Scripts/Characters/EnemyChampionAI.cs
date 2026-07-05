@@ -168,6 +168,14 @@ namespace Enigma.Character
         private int _ownTowersAliveCached;
         private int _enemyTowersAliveCached;
 
+        // GameServices.MatchEvents.Events を1秒間隔で走査してチーム別 ChampionKill 数を数える
+        // キャッシュ(タワー損失差が発生しない試合でもキル優勢だけで閉幕へ移行できるようにするため)。
+        // Events は試合ごとに Clear されるため、走査は毎回先頭からで良い(1試合30件程度で軽量)。
+        private const float KillCountCacheSeconds = 1f;
+        private float _killCountCacheUntil;
+        private int _ownTeamKillsCached;
+        private int _enemyTeamKillsCached;
+
         // 自陣タワー被弾の直近記録。OnDied/RespawnRoutine で古い脅威をリセットする。
         private float  _lastTowerDamageTime = float.NegativeInfinity;
         private Vector3 _threatenedTowerPos;
@@ -457,8 +465,16 @@ namespace Enigma.Character
                     // 押し切りラインを下回ったら「コミット」: 敵接近で離脱せず殴り続ける。
                     // 300試合実測で 1000→533(0.533)からの離脱が多発したため、それより高い
                     // BossCommitHpFraction(0.6)を下回ったらコミットし、討伐を完遂させる。
-                    bool committedToBoss = bossHc != null && bossHc.Model.MaxHp > 0f
+                    bool hpBelowCommitLine = bossHc != null && bossHc.Model.MaxHp > 0f
                         && (bossHc.Model.CurrentHp / bossHc.Model.MaxHp) < BotMacroDecisionModel.BossCommitHpFraction;
+
+                    // 頭数コミット: 自分を含む味方チャンピオンが2人以上ボス近傍に居るなら、
+                    // HP ラインを待たず最初から交戦継続する(数的優位があるなら早期リトリートで
+                    // 討伐を逃す方が損失が大きいため)。
+                    bool alliesCommitted = bossHc != null
+                        && CountAlliesNearIncludingSelf(objPos, ObjectiveEngageRange) >= 2;
+
+                    bool committedToBoss = hpBelowCommitLine || alliesCommitted;
 
                     bool enemyChampionNear = !committedToBoss
                         && _nearestEnemy != null && _nearestEnemyIsChampion
@@ -821,6 +837,30 @@ namespace Enigma.Character
             return n;
         }
 
+        // GameServices.MatchEvents.Events を KillCountCacheSeconds 間隔で数え直し、
+        // チーム別 ChampionKill 数をキャッシュする(タワー戦線と独立にキル優勢を検出するため)。
+        private void RefreshKillCounts(TeamId myTeam)
+        {
+            if (Time.time < _killCountCacheUntil) return;
+            _killCountCacheUntil = Time.time + KillCountCacheSeconds;
+
+            _ownTeamKillsCached = 0;
+            _enemyTeamKillsCached = 0;
+
+            var log = GameServices.MatchEvents;
+            if (log == null) return;
+
+            var events = log.Events;
+            for (int i = 0; i < events.Count; i++)
+            {
+                var e = events[i];
+                if (e.Type != MatchEventType.ChampionKill) continue;
+
+                if ((TeamId)e.Team == myTeam) _ownTeamKillsCached++;
+                else if ((TeamId)e.Team != TeamId.Neutral) _enemyTeamKillsCached++;
+            }
+        }
+
         // CloseOutSiege の攻囲先: 生存する最寄りの敵タワー、無ければ敵タイタンを返す。
         private HealthComponent NearestSiegeTarget()
         {
@@ -870,6 +910,7 @@ namespace Enigma.Character
                 : float.MaxValue;
 
             RefreshTowerAliveCounts();
+            RefreshKillCounts(myTeam);
 
             var bossHc = director != null ? director.BossHealth : null;
             float bossHpFraction = (bossHc != null && bossHc.Model.MaxHp > 0f)
@@ -882,7 +923,8 @@ namespace Enigma.Character
                 ownTowerUnderAttack, distanceToThreatenedTower,
                 bossHpFraction,
                 _ownTowersAliveCached, _enemyTowersAliveCached,
-                _ownTowersMaxCached, _enemyTowersMaxCached);
+                _ownTowersMaxCached, _enemyTowersMaxCached,
+                _ownTeamKillsCached - _enemyTeamKillsCached);
             _macro = BotMacroDecisionModel.Decide(in ctx);
         }
 
@@ -1035,6 +1077,39 @@ namespace Enigma.Character
             if (tag == null) return;
             if (tag.Team == myTeam) allies++;
             else if (tag.Team != TeamId.Neutral) enemies++;
+        }
+
+        // pos から range 以内に居る生存中の自チームチャンピオン数(自分自身を含む)を数える。
+        // ボスの頭数コミット判定用(2人以上ならHPラインを待たず交戦継続させる)。
+        private int CountAlliesNearIncludingSelf(Vector3 pos, float range)
+        {
+            TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Red;
+            float rangeSq = range * range;
+            int count = 0;
+
+            if ((transform.position - pos).sqrMagnitude <= rangeSq) count++;
+
+            var players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+            for (int i = 0; i < players.Length; i++)
+                count += TallyNearbyAlly(players[i].gameObject, myTeam, pos, rangeSq);
+
+            var bots = FindObjectsByType<EnemyChampionAI>(FindObjectsSortMode.None);
+            for (int i = 0; i < bots.Length; i++)
+            {
+                if (bots[i] == this) continue; // 自分は上で加算済み
+                count += TallyNearbyAlly(bots[i].gameObject, myTeam, pos, rangeSq);
+            }
+
+            return count;
+        }
+
+        private static int TallyNearbyAlly(GameObject go, TeamId myTeam, Vector3 pos, float rangeSq)
+        {
+            var hc = go.GetComponent<HealthComponent>();
+            if (hc == null || hc.Model == null || hc.Model.IsDead) return 0;
+            var tag = go.GetComponentInParent<TeamTag>();
+            if (tag == null || tag.Team != myTeam) return 0;
+            return (go.transform.position - pos).sqrMagnitude <= rangeSq ? 1 : 0;
         }
 
         private static LaneThreatKind ClassifyTarget(Collider col)

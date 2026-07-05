@@ -126,5 +126,79 @@ namespace Enigma.Tests
             string json = stats.ToJsonLine();
             StringAssert.Contains("\"winnerTeam\":\"timeout\"", json);
         }
+
+        // ── towerEvents / killEvents（偏り調査用の時刻付きイベント列）─────────────
+
+        [Test]
+        public void ToJsonLine_ContainsTowerEventsWithTimeAndTeam()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            stats.RecordTowerDestroyedAt(123.4f, "Blue");
+            stats.RecordTowerDestroyedAt(456.7f, "Red");
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"towerEvents\":[{\"t\":123.4,\"team\":\"Blue\"},{\"t\":456.7,\"team\":\"Red\"}]", json);
+        }
+
+        [Test]
+        public void ToJsonLine_ContainsKillEventsWithTimeAndTeam()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            stats.RecordChampionKillAt(12.3f, "Red");
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"killEvents\":[{\"t\":12.3,\"team\":\"Red\"}]", json);
+        }
+
+        [Test]
+        public void ToJsonLine_EmptyTowerAndKillEvents_ProducesEmptyArrays()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"towerEvents\":[]", json);
+            StringAssert.Contains("\"killEvents\":[]", json);
+        }
+
+        [Test]
+        public void RecordTowerDestroyedAt_DoesNotAffectFirstTowerTeam()
+        {
+            // 時刻付きログは既存の firstTowerTeam(最初の1本のみ)集計と独立して並存する。
+            var stats = new BalanceMatchStats(1, 1);
+            stats.RecordTowerDestroyed("Blue");
+            stats.RecordTowerDestroyedAt(50f, "Red");
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"firstTowerTeam\":\"Blue\"", json);
+            StringAssert.Contains("\"towerEvents\":[{\"t\":50.0,\"team\":\"Red\"}]", json);
+        }
+
+        [Test]
+        public void ToJsonLine_WithTowerAndKillEvents_ProducesParsableJson_BraceAndBracketBalance()
+        {
+            var stats = new BalanceMatchStats(5, 99);
+            stats.RecordTowerDestroyedAt(100f, "Blue");
+            stats.RecordTowerDestroyedAt(200f, "Red");
+            stats.RecordChampionKillAt(30f, "Blue");
+            stats.RecordChampionKillAt(45f, "Red");
+
+            string json = stats.ToJsonLine();
+
+            int openBrace = 0, closeBrace = 0, openBracket = 0, closeBracket = 0;
+            foreach (char c in json)
+            {
+                if (c == '{') openBrace++;
+                else if (c == '}') closeBrace++;
+                else if (c == '[') openBracket++;
+                else if (c == ']') closeBracket++;
+            }
+
+            Assert.AreEqual(openBrace, closeBrace, "brace mismatch: " + json);
+            Assert.AreEqual(openBracket, closeBracket, "bracket mismatch: " + json);
+        }
     }
 }

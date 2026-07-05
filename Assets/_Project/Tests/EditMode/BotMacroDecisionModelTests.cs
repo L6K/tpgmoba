@@ -19,12 +19,14 @@ namespace Enigma.Tests
             int ownTowersAlive = 0,
             int enemyTowersAlive = 0,
             int ownTowersMax = 0,
-            int enemyTowersMax = 0)
+            int enemyTowersMax = 0,
+            int teamKillLead = 0)
         {
             return new BotMacroContext(
                 hp, allies, enemies, objective, objectiveDistance, minions, towerThreat,
                 ownTowerUnderAttack, distanceToThreatenedTower,
-                bossHp, ownTowersAlive, enemyTowersAlive, ownTowersMax, enemyTowersMax);
+                bossHp, ownTowersAlive, enemyTowersAlive, ownTowersMax, enemyTowersMax,
+                teamKillLead);
         }
 
         [Test]
@@ -322,6 +324,79 @@ namespace Enigma.Tests
         {
             // 1 以上だと開幕から常時コミット扱いになり敵接近の離脱判定自体が無意味になる
             Assert.Less(BotMacroDecisionModel.BossCommitHpFraction, 1f);
+        }
+
+        // ── キル差による閉幕トリガー（TeamKillLead）── タワー損失差が発生しない試合への対策 ──
+
+        [Test]
+        public void KillLead_BelowThreshold_DoesNotCloseOutSiege()
+        {
+            // キル差2 < CloseOutKillLead(3)、タワー差も無し → 押し切り判定なし
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3, teamKillLead: 2));
+            Assert.AreEqual(BotMacroAction.Farm, action);
+        }
+
+        [Test]
+        public void KillLead_AtThreshold_ClosesOutSiege()
+        {
+            // キル差3 = CloseOutKillLead(3)、タワー差は無しでも成立する
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3, teamKillLead: 3));
+            Assert.AreEqual(BotMacroAction.CloseOutSiege, action);
+        }
+
+        [Test]
+        public void KillLead_OrTowerAdvantage_EitherAloneIsSufficient()
+        {
+            // タワー差だけ(キル差0)でも従来どおり成立する(OR条件の一方のみでも十分)
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3, teamKillLead: 0,
+                  ownTowersAlive: 2, ownTowersMax: 3,
+                  enemyTowersAlive: 1, enemyTowersMax: 3));
+            Assert.AreEqual(BotMacroAction.CloseOutSiege, action);
+        }
+
+        [Test]
+        public void KillLead_BelowSafeHp_DoesNotCloseOutSiege()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: SafeHpBelow, allies: 3, enemies: 3, teamKillLead: 5));
+            Assert.AreEqual(BotMacroAction.Farm, action);
+        }
+
+        [Test]
+        public void KillLead_Retreat_HasPriorityOverCloseOutSiege()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.2f, allies: 2, enemies: 3, teamKillLead: 10));
+            Assert.AreEqual(BotMacroAction.Retreat, action);
+        }
+
+        [Test]
+        public void KillLead_Defend_HasPriorityOverCloseOutSiege()
+        {
+            var action = BotMacroDecisionModel.Decide(
+                C(hp: 0.8f, allies: 3, enemies: 3, teamKillLead: 10,
+                  ownTowerUnderAttack: true, distanceToThreatenedTower: 20f));
+            Assert.AreEqual(BotMacroAction.Defend, action);
+        }
+
+        [Test]
+        public void OmittedTeamKillLead_DefaultsToZero_BackwardCompatible()
+        {
+            // 新引数を省略した旧呼び出し（デフォルト値0）でも従来どおりタワー差判定のみで動く
+            var ctx = new BotMacroContext(
+                selfHpFraction: 0.8f, alliesAlive: 3, enemiesAlive: 3,
+                objectiveActiveOrSoon: false, distanceToObjective: 999f,
+                alliedMinionsPresent: false, underTowerThreat: false,
+                ownTowerUnderAttack: false, distanceToThreatenedTower: float.MaxValue,
+                bossHpFraction: 1f,
+                ownTowersAlive: 2, enemyTowersAlive: 1,
+                ownTowersMax: 3, enemyTowersMax: 3);
+
+            var action = BotMacroDecisionModel.Decide(in ctx);
+            Assert.AreEqual(BotMacroAction.CloseOutSiege, action);
         }
     }
 }

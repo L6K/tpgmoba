@@ -177,6 +177,8 @@ namespace Enigma.Learning
             {
                 case MatchEventType.ChampionKill:
                     _currentStats.RecordKill(ResolveCharId(e.ActorName));
+                    // 偏り調査用: 先制キル/キルタイミングの Blue-Red 比較に使う時刻付きログ。
+                    _currentStats.RecordChampionKillAt(Time.time - _matchStartTime, TeamName(e.Team));
                     break;
                 case MatchEventType.ChampionDeath:
                     _currentStats.RecordDeath(ResolveCharId(e.ActorName));
@@ -186,6 +188,8 @@ namespace Enigma.Learning
                     break;
                 case MatchEventType.TowerDestroyed:
                     _currentStats.RecordTowerDestroyed(TeamName(e.Team));
+                    // 偏り調査用: OT(900s)前後のタワーレース非対称を時系列で特定するための時刻付きログ。
+                    _currentStats.RecordTowerDestroyedAt(Time.time - _matchStartTime, TeamName(e.Team));
                     break;
                 case MatchEventType.CoreCaptured:
                     _currentStats.RecordCoreCaptured(TeamName(e.Team));
