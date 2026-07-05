@@ -134,6 +134,12 @@ namespace Enigma.Character
         private CentralObjectiveDirector _objectiveDirectorCache;
         private bool _objectiveDirectorLookupDone;
 
+        // GroupForObjective のアンチデッドロック(ObjectiveGiveUpLogic)用の時刻状態。
+        // 壁ジャム等でエンゲージ圏に到達できないまま選択され続けるのを防ぐため、
+        // 未到達継続開始時刻とギブアップ発動時刻を保持する(NaN = 未発生)。
+        private float _objectiveStuckSince = float.NaN;
+        private float _objectiveGiveUpAt   = float.NaN;
+
         // Sense と同頻度で算出するマクロ判断（撤退/中央集合/防衛等）。
         private BotMacroAction _macro = BotMacroAction.Farm;
 
@@ -458,6 +464,12 @@ namespace Enigma.Character
             {
                 case BotMacroAction.GroupForObjective:
                 {
+                    // ギブアップ直後は UpdateMacro が次に走る(最大0.3秒後)まで _macro が
+                    // GroupForObjective のまま残るため、ここでもクールダウンを直接見て
+                    // 通常フローへ落とす(でないと1フレームだけ諦めて即座に再突入してしまう)。
+                    if (ObjectiveGiveUpLogic.IsOnCooldown(_objectiveGiveUpAt, Time.time))
+                        return false;
+
                     var director = ResolveObjectiveDirector();
                     if (director == null || !director.TryGetObjectivePosition(out var objPos))
                         return false; // 位置不明なら通常フローに任せる
@@ -484,6 +496,19 @@ namespace Enigma.Character
                         && !_nearestEnemy.Model.IsDead
                         && Vector3.Distance(transform.position, _nearestEnemy.transform.position) <= BossContestEnemyRange;
 
+                    // アンチデッドロック: ObjectiveEngageRange(コア到達判定)に居るかどうかで
+                    // 未到達継続時間を計測し、壁ジャム等で StuckTimeout 秒到達できなければ
+                    // GiveUpCooldown 秒だけ GroupForObjective を諦めさせる(UpdateMacro 側で参照)。
+                    bool inEngageRange = dist <= ObjectiveEngageRange;
+                    _objectiveStuckSince = ObjectiveGiveUpLogic.NextStuckSince(
+                        _objectiveStuckSince, inEngageRange, Time.time);
+                    if (ObjectiveGiveUpLogic.ShouldGiveUp(_objectiveStuckSince, Time.time))
+                    {
+                        _objectiveGiveUpAt   = Time.time;
+                        _objectiveStuckSince = float.NaN;
+                        return false; // 通常フロー(Farm 相当)へ逃がす
+                    }
+
                     if (dist <= BossEngageRange && !enemyChampionNear)
                     {
                         // 敵チャンピオン不在(またはコミット中): ボスが生存していれば実際に殴る。
@@ -491,8 +516,22 @@ namespace Enigma.Character
                         // ボス不在/Dormant なら従来どおり中央へ寄る（下の距離判定にフォールスルー）。
                         if (bossHc != null)
                         {
-                            FaceAndAttack(bossHc, allowSkills: committedToBoss, useMicro: false);
-                            ApplyMovement(LaneMove.Stop);
+                            // 原因: BossEngageRange(14) は近接キャラの _attackRange(3.5～4)より遥かに
+                            // 広く、「攻撃を試みる」判定は通るのに FaceAndAttack 内部の射程判定
+                            // (dist > _attackRange)で弾かれて何もしないまま Stop するだけになり、
+                            // ピット内Botが棒立ちでボスHPが凍結する実測不具合があった。
+                            // 実射程外なら Stop させず、ボスへ直接接近させて確実に射程内へ入れる。
+                            float distToBoss = Vector3.Distance(transform.position, bossHc.transform.position);
+                            if (distToBoss > _attackRange)
+                            {
+                                MoveDirectlyToward(bossHc.transform.position);
+                                FaceAndAttack(bossHc, allowSkills: committedToBoss, useMicro: false);
+                            }
+                            else
+                            {
+                                FaceAndAttack(bossHc, allowSkills: committedToBoss, useMicro: false);
+                                ApplyMovement(LaneMove.Stop);
+                            }
                             return true;
                         }
                     }
@@ -928,7 +967,18 @@ namespace Enigma.Character
                 _ownTowersAliveCached, _enemyTowersAliveCached,
                 _ownTowersMaxCached, _enemyTowersMaxCached,
                 _ownTeamKillsCached - _enemyTeamKillsCached);
-            _macro = BotMacroDecisionModel.Decide(in ctx);
+            var decided = BotMacroDecisionModel.Decide(in ctx);
+
+            // アンチデッドロック: 壁ジャム等でエンゲージ圏に到達できないまま GroupForObjective を
+            // 選び続けると棒立ちで恒久的に詰む(実測: コアから56m地点の遠方組が壁際で凍結)。
+            // 直近のギブアップからクールダウン中は GroupForObjective を選ばせず Farm へ逃がす。
+            if (decided == BotMacroAction.GroupForObjective
+                && ObjectiveGiveUpLogic.IsOnCooldown(_objectiveGiveUpAt, Time.time))
+            {
+                decided = BotMacroAction.Farm;
+            }
+
+            _macro = decided;
         }
 
         // 自チーム泉中心（Red=+68 / Blue=-68, y=1.1, z=0）。

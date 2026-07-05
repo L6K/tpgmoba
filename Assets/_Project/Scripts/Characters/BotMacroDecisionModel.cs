@@ -58,9 +58,14 @@ namespace Enigma.Character
         public const float LowHpFraction      = 0.35f;
         public const float SafeHpFraction     = 0.45f;
         // マップ半径由来の距離しきい値。M-0(平面1.4倍拡張)に合わせて更新(35→49, 45→63)。
-        // ObjectiveJoinRange はコアを誰も倒しに行かない問題への対策で 49→63 へ再緩和(発動条件緩和)。
-        public const float ObjectiveJoinRange = 63f;
+        // ObjectiveJoinRange は 49→63 の再緩和がコア圏をマップ中央部ほぼ全域まで拡張し、
+        // 頭数条件緩和(allies>=enemies-1)・膠着時集合と重なって全Botが90秒以降 GroupForObjective に
+        // 恒久ロックする実測(1試合ライブ観測+JSONL)を招いたため 49 に巻き戻す。
+        public const float ObjectiveJoinRange = 49f;
         public const float DefendJoinRange    = 63f;
+        // 膠着時集合(IsStalemate)は objective active なら常時発動していたため頭数条件と合わせて
+        // 恒久ロックの主因になった。コア至近の試合のみ発動するよう距離ゲートを追加する。
+        public const float StalemateGroupRange = 40f;
 
         // ボスの残HPがこの割合を下回ったら「押し切りライン」とみなし、敵接近による
         // ボス討伐コミットの離脱を止める(GroupForObjective 自体はこれまで通り継続、
@@ -93,10 +98,11 @@ namespace Enigma.Character
                 return BotMacroAction.Defend;
             }
 
-            // 頭数条件は「同数以上」→「1人差まで参加可」に緩和(誰もコアを取りに行かない対策)。
+            // 頭数条件は「1人差まで参加可」への緩和が、膠着時集合と重なって全Bot恒久ロックを
+            // 招いたため「同数以上」に巻き戻す。
             if (ctx.ObjectiveActiveOrSoon &&
                 ctx.SelfHpFraction >= SafeHpFraction &&
-                ctx.AlliesAlive >= ctx.EnemiesAlive - 1 &&
+                ctx.AlliesAlive >= ctx.EnemiesAlive &&
                 ctx.DistanceToObjective <= ObjectiveJoinRange)
             {
                 return BotMacroAction.GroupForObjective;
@@ -104,8 +110,12 @@ namespace Enigma.Character
 
             // 膠着時のコア集合: キル差・タワー損失差とも均衡していて動くきっかけが無い試合でも、
             // オブジェクティブが有効/まもなくなら押し切り不成立でも集合させる。
+            // ただし距離ゲート無しでは「コアが常時Activeで頭数条件も常に真」の試合において
+            // 遠方のBotまで恒久的に GroupForObjective へ張り付き、ファーム/レーンが全停止する
+            // (実測: 開始~100秒以降全6Botロック)。コア至近の試合のみに限定する。
             if (ctx.ObjectiveActiveOrSoon &&
                 ctx.SelfHpFraction >= SafeHpFraction &&
+                ctx.DistanceToObjective <= StalemateGroupRange &&
                 IsStalemate(ctx))
             {
                 return BotMacroAction.GroupForObjective;
