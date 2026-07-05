@@ -285,7 +285,7 @@
           "windup": 0.2,
           "recovery": 0.35,
           "description": "対象の味方(無ければ自分)に星の輝きを纏わせ、ダメージを吸収する盾を張る",
-          "shieldAmount": 85,
+          "shieldAmount": 77,
           "shieldDuration": 4
         },
         {
@@ -300,8 +300,8 @@
           "windup": 0.4,
           "recovery": 0.5,
           "description": "天頂で星を爆発させ、自チーム全員を回復しシールドを張る(アルティメット・味方全体)",
-          "healAmount": 120,
-          "shieldAmount": 80,
+          "healAmount": 108,
+          "shieldAmount": 72,
           "shieldDuration": 4
         }
       ]
@@ -326,7 +326,7 @@
           "slot": "Q",
           "name": "チェーンフック",
           "targeting": "Directional",
-          "damage": 30,
+          "damage": 33,
           "range": 14,
           "radius": 0,
           "cooldown": 7,
@@ -340,7 +340,7 @@
           "slot": "E",
           "name": "震撃波",
           "targeting": "GroundAoe",
-          "damage": 36,
+          "damage": 40,
           "range": 6,
           "radius": 3.8,
           "cooldown": 8,
