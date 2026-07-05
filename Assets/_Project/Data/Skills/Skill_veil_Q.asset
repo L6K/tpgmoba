@@ -15,7 +15,7 @@ MonoBehaviour:
   SkillName: "\u5F71\u624B\u88CF\u5263"
   Description: "\u9AD8\u901F\u306E\u5F71\u306E\u5203\u3092\u653E\u3064\u3002\u30AF\u30FC\u30EB\u30C0\u30A6\u30F3\u304C\u77ED\u3044"
   Targeting: 0
-  Damage: 28
+  Damage: 31
   Range: 16
   Radius: 0
   CooldownSeconds: 4

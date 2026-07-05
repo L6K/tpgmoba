@@ -26,7 +26,7 @@ MonoBehaviour:
   OwnedByDefault: 0
   RoleLabelRaw: "\u30B8\u30E3\u30F3\u30B0\u30E9\u30FC/\u30D6\u30EB\u30FC\u30B6\u30FC"
   Theme: "\u68EE\u6797\u4FDD\u8B77AI\u304C\u5BBF\u308B\u6A5F\u68B0\u5316\u30CF\u30F3\u30BF\u30FC\u3002\u4FB5\u5165\u8005\u3092\u72E9\u308A\u7D9A\u3051\u308B"
-  BaseHp: 280
+  BaseHp: 308
   HpPerLevel: 24
   MoveSpeed: 5.8
   AttackDamage: 21
