@@ -46,6 +46,9 @@ namespace Enigma.Character
         [SerializeField] private float _attackRange     = 11f;
         [SerializeField] private float _attackDamage    = 16f;
 
+        // 近接ブルーザーの対構造物ボーナス判定(MeleeSiegeLogic)が参照する
+        public float AttackRange => _attackRange;
+
         private const float Gravity     = -20f;
         private const float TurnSpeed   = 10f;
         // タワー等がウェイポイント上に立つことがあるため、コライダー越しでも「到達」と

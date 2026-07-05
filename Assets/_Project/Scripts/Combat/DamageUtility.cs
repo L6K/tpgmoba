@@ -40,7 +40,22 @@ namespace Enigma.Combat
 
             float magnitude = GameServices.ObjectiveBuffs?.GetMagnitude(
                 attackerTag.Team, ObjectiveBuffType.StructureDamage, Time.time) ?? 0f;
-            return dmg * (1f + magnitude);
+            dmg *= 1f + magnitude;
+
+            // 近接ブルーザーの攻城ボーナス(MeleeSiegeLogic 参照)。攻撃者の AA 射程で判定する
+            float range = ResolveAttackRange(attacker);
+            if (range > 0f) dmg *= MeleeSiegeLogic.Multiplier(range);
+
+            return dmg;
+        }
+
+        private static float ResolveAttackRange(GameObject attacker)
+        {
+            var auto = attacker.GetComponentInParent<Enigma.Character.AutoAttack>();
+            if (auto != null) return auto.AttackRange;
+            var bot = attacker.GetComponentInParent<Enigma.Character.EnemyChampionAI>();
+            if (bot != null) return bot.AttackRange;
+            return 0f; // ミニオン/タワー等は対象外
         }
 
         public static float ApplyTeamBuff(float baseDamage, GameObject attacker)
