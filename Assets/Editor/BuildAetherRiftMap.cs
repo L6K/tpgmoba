@@ -331,6 +331,9 @@ public static partial class BuildAetherRiftMap
         ApplyWutheringRamp(matJunglePath);
         PlaceJunglePathsAndCamps(matJunglePath);
 
+        // ---- 回廊奥のジャングルキャンプ6箇所(通路の先にモンスター) ----
+        PlaceCorridorCamps(matJunglePath);
+
         // ---- 森とレーンの間の壁（レーンリング内縁に沿った壁。パス/川口だけ開口）----
         PlaceJungleLaneWalls();
 
@@ -947,6 +950,9 @@ public static partial class BuildAetherRiftMap
         // 16. 境界壁
         CreateOuterBoundary();
 
+        // 16b. クレーターの色アクセント(底ディスク+縁リング、M-C 一部)
+        PlaceCraterAccents();
+
         // 17. シーン保存
         EditorSceneManager.SaveScene(scene, ScenePath);
         AssetDatabase.SaveAssets();
@@ -1034,8 +1040,52 @@ public static partial class BuildAetherRiftMap
         PlaceCornerSeamPatch(parent, "BoundaryEye_CornerL", -cornerX, -patchOuterX, patchOuterZ, TubeHeight, matBoundary);
     }
 
+    /// <summary>
+    /// クレーターの色アクセント(M-C 一部)。
+    /// ・CraterFloorAccent: 底ディスク(半透明の暗紫、r14、y=-2.44=床-2.5の少し上、collider無し)。
+    /// ・CraterRimRing: 縁リング帯(r21.5〜22.5、y=0.06=レーンリングと同高、暗色アクセント)。
+    /// </summary>
+    private static void PlaceCraterAccents()
+    {
+        var parent = new GameObject("CraterAccents");
+        SetStatic(parent);
+
+        // 底ディスク: 半透明の暗紫（URP/Unlit 半透明・collider除去）
+        {
+            var floor = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            floor.name = "CraterFloorAccent";
+            floor.transform.SetParent(parent.transform, false);
+            floor.transform.position   = new Vector3(0f, -2.44f, 0f);
+            floor.transform.localScale = new Vector3(14f, 0.02f, 14f);
+            UseFlatMeshCollider(floor, keepCollider: false);
+            SetStatic(floor);
+            var fmr = floor.GetComponent<MeshRenderer>();
+            fmr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            fmr.receiveShadows    = false;
+            fmr.sharedMaterial    = GetOrCreateTransparentMat("CraterFloorAccent", new Color(0.22f, 0.08f, 0.30f, 0.55f));
+        }
+
+        // 縁リング: CreateRingBandMesh パターン(r21.5〜22.5、y0.06、暗色アクセント)
+        {
+            var rim = new GameObject("CraterRimRing");
+            rim.transform.SetParent(parent.transform, false);
+            rim.transform.position = new Vector3(0f, 0.06f, 0f);
+            var mf = rim.AddComponent<MeshFilter>();
+            mf.sharedMesh = CreateRingBandMesh(21.5f, 22.5f, 96);
+            var mr = rim.AddComponent<MeshRenderer>();
+            mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            mr.receiveShadows    = false;
+            mr.sharedMaterial    = GetOrCreateMat("CraterRimRing", new Color(0.16f, 0.14f, 0.20f));
+            ApplyWutheringRamp(mr.sharedMaterial);
+            SetStatic(rim);
+        }
+    }
+
     // 目尻パッチ。内側の目尻(cornerX,0,0) と 外側2点(outerX, ±zOuter) でできる楔を高さ方向に押し出す。
     // 6頂点(底3 + 天3)、天面1枚 + 上下側面2枚で表面を張る。外周面は Wall band の端面と接して継ぎ目を覆う。
+    // 頂点は OuterBoundary(原点・オフセット無し)の子としてワールド座標そのままなので、
+    // 地形追従は MapHeightModel.Height(x,z) をそのまま各点の底/天に加算すればよい
+    // (コーナーは |x|≈110 でプラトー圏 +2.5 に入るため、そのぶん持ち上がる)。
     private static void PlaceCornerSeamPatch(GameObject parent, string name, float cornerX, float outerX, float zOuter, float height, Material mat)
     {
         // 右側(cornerX>0)は z>0 が上まぶた外端、z<0 が下まぶた外端。左側(cornerX<0)は対称。
@@ -1043,14 +1093,18 @@ public static partial class BuildAetherRiftMap
         float zUp   = +Mathf.Abs(zOuter);
         float zDown = -Mathf.Abs(zOuter);
 
+        float groundInner = MapHeightModel.Height(cornerX, 0f);
+        float groundUp    = MapHeightModel.Height(outerX,  zUp);
+        float groundDown  = MapHeightModel.Height(outerX,  zDown);
+
         var verts = new Vector3[]
         {
-            new Vector3(cornerX,        0f,     0f),     // 0 内側目尻 底
-            new Vector3(outerX,         0f,     zUp),    // 1 上まぶた外端 底
-            new Vector3(outerX,         0f,     zDown),  // 2 下まぶた外端 底
-            new Vector3(cornerX,        height, 0f),     // 3 内側目尻 天
-            new Vector3(outerX,         height, zUp),    // 4 上まぶた外端 天
-            new Vector3(outerX,         height, zDown),  // 5 下まぶた外端 天
+            new Vector3(cornerX,        groundInner,          0f),     // 0 内側目尻 底
+            new Vector3(outerX,         groundUp,             zUp),    // 1 上まぶた外端 底
+            new Vector3(outerX,         groundDown,           zDown),  // 2 下まぶた外端 底
+            new Vector3(cornerX,        groundInner + height, 0f),     // 3 内側目尻 天
+            new Vector3(outerX,         groundUp + height,    zUp),    // 4 上まぶた外端 天
+            new Vector3(outerX,         groundDown + height,  zDown),  // 5 下まぶた外端 天
         };
 
         // 天面: +Y を向く CCW を sgn で切り替える(右側と左側で巻き向きが反転)
@@ -1109,7 +1163,7 @@ public static partial class BuildAetherRiftMap
         var go = new GameObject(name);
         go.transform.position = center;
         var mf = go.AddComponent<MeshFilter>();
-        mf.sharedMesh = CreateWallBandMesh(innerR, outerR, height, segments, startDeg, endDeg);
+        mf.sharedMesh = CreateWallBandMesh(innerR, outerR, height, segments, startDeg, endDeg, center);
         var mc = go.AddComponent<MeshCollider>();
         mc.sharedMesh = mf.sharedMesh;
         SetStatic(go);
@@ -1118,7 +1172,7 @@ public static partial class BuildAetherRiftMap
         var visual = new GameObject("Visual");
         visual.transform.SetParent(go.transform, false);
         var vmf = visual.AddComponent<MeshFilter>();
-        vmf.sharedMesh = CreateWallBandRenderMesh(innerR, outerR, height, segments, visualStartDeg, visualEndDeg);
+        vmf.sharedMesh = CreateWallBandRenderMesh(innerR, outerR, height, segments, visualStartDeg, visualEndDeg, center);
         var vmr = visual.AddComponent<MeshRenderer>();
         vmr.sharedMaterial = mat;
         SetStatic(visual);
@@ -3368,6 +3422,70 @@ public static partial class BuildAetherRiftMap
     }
 
     /// <summary>
+    /// 回廊奥のジャングルキャンプ6箇所(ユーザー要望「通路の先にモンスター」)。
+    /// 既存4キャンプ(対角パス上 r42、θ=45/135/225/315°)とは独立に、
+    /// 迷路壁(PlaceJungleMaze)の袋小路・ポケットへ配置する。
+    /// ・基地軸の奥ポケット×2: Polar(0°,36)/(180°,36)。内周弧(r30〜31.5)と
+    ///   放射チョーク(r42〜54)の間の袋小路。各2体(通常キャンプより濃い報酬感)。
+    /// ・川岸ポケット×4: Polar(63°,25)/(117°,25)/(243°,25)/(297°,25)。
+    ///   クレーター縁(r22)と川岸内周弧(r28〜29.5)の間のポケット。各1体。
+    /// 地形はいずれも平坦 y0(クレーター r&gt;=22・川 |x|&gt;9・プラトー |x|&lt;86 のため
+    /// MapHeightModel.Height の全分岐が0を返す設計検証済み)。
+    /// </summary>
+    private static void PlaceCorridorCamps(Material matJunglePath)
+    {
+        // 基地軸の奥ポケット×2(各2体)。袋小路のためクリアリングは小さめ(半径3.5、
+        // 内周弧r31.5との隙間4.5mに収まる)。
+        (string name, float deg, float r)[] axisPockets =
+        {
+            ("Ax0",   0f,   36f),
+            ("Ax180", 180f, 36f),
+        };
+
+        foreach (var (name, deg, r) in axisPockets)
+        {
+            float rad = deg * Mathf.Deg2Rad;
+            var center = new Vector3(r * Mathf.Cos(rad), 0f, r * Mathf.Sin(rad));
+            PlaceCorridorClearing($"CampClearing_{name}", center, 3.5f, matJunglePath);
+            CreateSlime($"Slime_{name}_a", center + new Vector3(1.1f, 0f, 0.6f));
+            CreateSlime($"Slime_{name}_b", center + new Vector3(-1.1f, 0f, -0.6f));
+        }
+
+        // 川岸ポケット×4(各1体)。クレーター縁(r22)と川岸内周弧(r28〜29.5)の間は
+        // 片側3mずつの狭いポケットのため、クリアリングは半径2.4に抑える。
+        (string name, float deg)[] riverPockets =
+        {
+            ("Rv63",  63f),
+            ("Rv117", 117f),
+            ("Rv243", 243f),
+            ("Rv297", 297f),
+        };
+
+        foreach (var (name, deg) in riverPockets)
+        {
+            float rad = deg * Mathf.Deg2Rad;
+            var center = new Vector3(25f * Mathf.Cos(rad), 0f, 25f * Mathf.Sin(rad));
+            PlaceCorridorClearing($"CampClearing_{name}", center, 2.4f, matJunglePath);
+            CreateSlime($"Slime_{name}", center);
+        }
+    }
+
+    /// <summary>
+    /// 回廊奥キャンプの足元空き地(コライダーなし・小径版)。既存4キャンプのクリアリング
+    /// (半径4.5)より狭いポケットへ収めるため半径をパラメータ化した版。
+    /// </summary>
+    private static void PlaceCorridorClearing(string name, Vector3 center, float radius, Material mat)
+    {
+        var clearing = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        clearing.name = name;
+        clearing.transform.position   = new Vector3(center.x, 0.025f, center.z);
+        clearing.transform.localScale = new Vector3(radius * 2f, 0.04f, radius * 2f);
+        UseFlatMeshCollider(clearing, keepCollider: false);
+        SetStatic(clearing);
+        SetMat(clearing, mat);
+    }
+
+    /// <summary>
     /// スライムモンスターをプロシージャルに合成してキャンプ中心に配置する。
     /// </summary>
     private static void CreateSlime(string name, Vector3 campCenter)
@@ -4212,7 +4330,7 @@ public static partial class BuildAetherRiftMap
     /// 角度は度・CCW、円弧は origin 中心の XZ 平面上に置く（GO 位置でベース中心へ移す）。
     /// </summary>
     private static Mesh CreateWallBandMesh(float innerR, float outerR, float height,
-        int segments, float startDeg, float endDeg)
+        int segments, float startDeg, float endDeg, Vector3 center = default)
     {
         if (segments < 1) segments = 1;
 
@@ -4220,6 +4338,9 @@ public static partial class BuildAetherRiftMap
         int rings = segments + 1;
 
         // 各角度ステップで 4 頂点: 0=内下 1=内上 2=外下 3=外上
+        // 地形追従(境界チューブのプラトー区間対策): y はワールド座標(center+ローカル)で
+        // MapHeightModel.Height を評価し、従来の 0/height オフセットへ加算する。
+        // クレーター/川/ジャングル高台ブロブ帯では Height=0 のため見た目は不変。
         var verts = new Vector3[rings * 4];
         for (int i = 0; i < rings; i++)
         {
@@ -4229,11 +4350,16 @@ public static partial class BuildAetherRiftMap
             float c   = Mathf.Cos(rad);
             float s   = Mathf.Sin(rad);
 
+            float innerX = innerR * c, innerZ = innerR * s;
+            float outerX = outerR * c, outerZ = outerR * s;
+            float innerGroundY = MapHeightModel.Height(center.x + innerX, center.z + innerZ);
+            float outerGroundY = MapHeightModel.Height(center.x + outerX, center.z + outerZ);
+
             int b = i * 4;
-            verts[b + 0] = new Vector3(innerR * c, 0f,     innerR * s); // 内下
-            verts[b + 1] = new Vector3(innerR * c, height, innerR * s); // 内上
-            verts[b + 2] = new Vector3(outerR * c, 0f,     outerR * s); // 外下
-            verts[b + 3] = new Vector3(outerR * c, height, outerR * s); // 外上
+            verts[b + 0] = new Vector3(innerX, innerGroundY,          innerZ); // 内下
+            verts[b + 1] = new Vector3(innerX, innerGroundY + height, innerZ); // 内上
+            verts[b + 2] = new Vector3(outerX, outerGroundY,          outerZ); // 外下
+            verts[b + 3] = new Vector3(outerX, outerGroundY + height, outerZ); // 外上
         }
 
         var tris = new List<int>();
@@ -4276,7 +4402,7 @@ public static partial class BuildAetherRiftMap
     /// 内周面=中心向き / 外周面=外向き / 上面=+Y / 端面=弧の外向き。
     /// </summary>
     private static Mesh CreateWallBandRenderMesh(float innerR, float outerR, float height,
-        int segments, float startDeg, float endDeg)
+        int segments, float startDeg, float endDeg, Vector3 center = default)
     {
         if (segments < 1) segments = 1;
 
@@ -4284,10 +4410,15 @@ public static partial class BuildAetherRiftMap
         var verts = new List<Vector3>();
         var tris  = new List<int>();
 
+        // 地形追従: y はローカルオフセット(0/height)に加え、ワールド座標での
+        // MapHeightModel.Height を足し込む(CreateWallBandMesh と同じ方式)。
         Vector3 P(float deg, float r, float y)
         {
             float rad = deg * Mathf.Deg2Rad;
-            return new Vector3(r * Mathf.Cos(rad), y, r * Mathf.Sin(rad));
+            float x = r * Mathf.Cos(rad);
+            float z = r * Mathf.Sin(rad);
+            float groundY = MapHeightModel.Height(center.x + x, center.z + z);
+            return new Vector3(x, groundY + y, z);
         }
 
         // 4 頂点を新規追加して 2 三角形を張る(頂点非共有=フラット法線)
