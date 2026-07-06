@@ -3425,49 +3425,89 @@ public static partial class BuildAetherRiftMap
     /// 回廊奥のジャングルキャンプ6箇所(ユーザー要望「通路の先にモンスター」)。
     /// 既存4キャンプ(対角パス上 r42、θ=45/135/225/315°)とは独立に、
     /// 迷路壁(PlaceJungleMaze)の袋小路・ポケットへ配置する。
-    /// ・基地軸の奥ポケット×2: Polar(0°,36)/(180°,36)。内周弧(r30〜31.5)と
+    /// ・基地軸の奥ポケット×2: 原点 Polar(0°,36)/(180°,36) から半径方向に+1.5m
+    ///   外側へシフトした Polar(0°,37.5)/(180°,37.5)。内周弧(r30〜31.5)と
     ///   放射チョーク(r42〜54)の間の袋小路。各2体(通常キャンプより濃い報酬感)。
-    /// ・川岸ポケット×4: Polar(63°,25)/(117°,25)/(243°,25)/(297°,25)。
-    ///   クレーター縁(r22)と川岸内周弧(r28〜29.5)の間のポケット。各1体。
-    /// 地形はいずれも平坦 y0(クレーター r&gt;=22・川 |x|&gt;9・プラトー |x|&lt;86 のため
-    /// MapHeightModel.Height の全分岐が0を返す設計検証済み)。
+    /// ・川岸ポケット×4: 原点 Polar(63/117/243/297°,25) から半径方向に-2.0m
+    ///   内側(クレーター側)へシフトした同角度 r=23。クレーター縁(r22)と
+    ///   川岸内周弧(r28〜29.5)の間のポケット。各1体。
+    /// シフトは「小部屋(PlaceCampRoom)」の外径6mが既存迷路壁と重なるのを避けるための
+    /// 平行移動(ユーザー許容の最大2m以内)。地形はいずれも平坦 y0(クレーター r&gt;=22・
+    /// 川 |x|&gt;9・プラトー |x|&lt;86 のため MapHeightModel.Height の全分岐が0を返す設計検証済み)。
     /// </summary>
     private static void PlaceCorridorCamps(Material matJunglePath)
     {
-        // 基地軸の奥ポケット×2(各2体)。袋小路のためクリアリングは小さめ(半径3.5、
-        // 内周弧r31.5との隙間4.5mに収まる)。
-        (string name, float deg, float r)[] axisPockets =
+        var matWall = GetOrCreateMat("JungleLaneWall", new Color(0.46f, 0.50f, 0.40f));
+
+        // 基地軸の奥ポケット×2(各2体)。原点から半径+1.5mシフトして小部屋外径5.85mを
+        // 内周弧(r30〜31.5)・放射チョーク(r42〜54)の両方から避ける。
+        // 開口はマップ中心向き(Ax0→180°方向、Ax180→0°方向=回廊側)。
+        (string name, float deg, float shiftR, float openingDeg)[] axisPockets =
         {
-            ("Ax0",   0f,   36f),
-            ("Ax180", 180f, 36f),
+            ("Ax0",   0f,   1.5f, 180f),
+            ("Ax180", 180f, 1.5f, 0f),
         };
 
-        foreach (var (name, deg, r) in axisPockets)
+        foreach (var (name, deg, shiftR, openingDeg) in axisPockets)
         {
-            float rad = deg * Mathf.Deg2Rad;
-            var center = new Vector3(r * Mathf.Cos(rad), 0f, r * Mathf.Sin(rad));
-            PlaceCorridorClearing($"CampClearing_{name}", center, 3.5f, matJunglePath);
+            float rad    = deg * Mathf.Deg2Rad;
+            float r      = 36f + shiftR;
+            var   center = new Vector3(r * Mathf.Cos(rad), 0f, r * Mathf.Sin(rad));
+
+            PlaceCampRoom($"CampRoom_{name}", center, openingDeg, 4.5f, 5.85f, matWall);
+            PlaceCorridorClearing($"CampClearing_{name}", center, 4.4f, matJunglePath);
             CreateSlime($"Slime_{name}_a", center + new Vector3(1.1f, 0f, 0.6f));
             CreateSlime($"Slime_{name}_b", center + new Vector3(-1.1f, 0f, -0.6f));
         }
 
-        // 川岸ポケット×4(各1体)。クレーター縁(r22)と川岸内周弧(r28〜29.5)の間は
-        // 片側3mずつの狭いポケットのため、クリアリングは半径2.4に抑える。
-        (string name, float deg)[] riverPockets =
+        // 川岸ポケット×4(各1体)。原点から半径-2.0m(クレーター側)シフトして
+        // 小部屋外径4.90mを内周弧(r28〜29.5)から避ける。
+        // 開口は川側(63°→243°、117°→297°、243°→63°、297°→117°=概ね180°反対=回廊側)。
+        (string name, float deg, float openingDeg)[] riverPockets =
         {
-            ("Rv63",  63f),
-            ("Rv117", 117f),
-            ("Rv243", 243f),
-            ("Rv297", 297f),
+            ("Rv63",  63f,  243f),
+            ("Rv117", 117f, 297f),
+            ("Rv243", 243f, 63f),
+            ("Rv297", 297f, 117f),
         };
 
-        foreach (var (name, deg) in riverPockets)
+        foreach (var (name, deg, openingDeg) in riverPockets)
         {
-            float rad = deg * Mathf.Deg2Rad;
-            var center = new Vector3(25f * Mathf.Cos(rad), 0f, 25f * Mathf.Sin(rad));
-            PlaceCorridorClearing($"CampClearing_{name}", center, 2.4f, matJunglePath);
+            float rad    = deg * Mathf.Deg2Rad;
+            const float r = 25f - 2.0f;
+            var   center  = new Vector3(r * Mathf.Cos(rad), 0f, r * Mathf.Sin(rad));
+
+            PlaceCampRoom($"CampRoom_{name}", center, openingDeg, 4.5f, 4.90f, matWall);
+            PlaceCorridorClearing($"CampClearing_{name}", center, 4.4f, matJunglePath);
             CreateSlime($"Slime_{name}", center);
         }
+    }
+
+    /// <summary>
+    /// キャンプ中心を囲う「小部屋」の C 字型囲い壁を生成する(LoL 風の壁ポケット)。
+    /// 円弧帯 [innerR, outerR]・高さ2.5 を openingDeg 方向に120°(±60°)だけ開けて残り240°を塞ぐ。
+    /// 既存の迷路壁(PlaceJungleMaze/PlaceJungleLaneWalls)と同一の PlaceWallBandAt/マテリアルを
+    /// center オフセット付きで使うため、見た目・衝突・視界遮蔽(VisionBlockerTag)の扱いが揃う。
+    /// </summary>
+    private static void PlaceCampRoom(string name, Vector3 center, float openingDeg,
+        float innerR, float outerR, Material mat)
+    {
+        var parent = new GameObject(name);
+        SetStatic(parent);
+
+        const float height  = 2.5f;
+        const float stepDeg = 3.75f;
+        const float halfOpening = 60f; // 開口120°の半分
+
+        // 壁弧: openingDeg+60° から openingDeg+300°(=openingDeg-60°を一周超えて到達)まで。
+        // 開口(openingDeg±60°)を除いた240°分を1本の連続弧として表現する。
+        float start = openingDeg + halfOpening;
+        float end   = openingDeg + 360f - halfOpening;
+
+        int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
+        var wallGo = PlaceWallBandAt(parent, $"{name}_Wall", center,
+            innerR, outerR, height, segs, start, end, mat);
+        wallGo.AddComponent<Enigma.Vision.VisionBlockerTag>();
     }
 
     /// <summary>
@@ -3529,10 +3569,14 @@ public static partial class BuildAetherRiftMap
 
                 Physics.SyncTransforms();
 
-                // 接地補正: スケール後に再計測して最下端を親の足元(y=0)に合わせる
+                // 接地補正: スケール後に再計測し、Visual の最下端をワールド地面(y=0、
+                // MapHeightModel 上は campCenter.y = 常に0)へ一致させる。
+                // 旧実装は親の位置(y=0.8、クリック用コライダーの中心オフセット)を
+                // 地面基準と誤認しており、その結果スライムが地面に0.8m埋まって見えていた。
                 var b2 = rends[0].bounds;
                 for (int i = 1; i < rends.Length; i++) b2.Encapsulate(rends[i].bounds);
-                float footOffset = b2.min.y - parent.transform.position.y;
+                float groundY    = campCenter.y;
+                float footOffset = b2.min.y - groundY;
                 visual.transform.localPosition -= new Vector3(0f, footOffset, 0f);
             }
 
