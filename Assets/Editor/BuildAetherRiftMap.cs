@@ -350,6 +350,12 @@ public static partial class BuildAetherRiftMap
         // ---- 茂みゾーン(スライスM-B)。視界ルール適用は次スライスM-Vで実施 ----
         PlaceBrushZones();
 
+        // ---- 壁と重なった散布プロップの除去(最終ポストパス) ----
+        // 散布(木/岩)は壁より先に走るため配置時の物理チェックが効かない。生成順に依存しない
+        // よう、全配置が終わった後に壁コライダーと重なるプロップを削除する(ユーザー報告:
+        // 迷路壁・キャンプ小部屋に木がめり込む)。
+        RemovePropsOverlappingWalls();
+
         // リスポーンパッド: 各チームの色付き円盤は「リスポーン地点だけ」を示す小さな目印にする
         // (LoL の召喚士の祭壇)。場外境界(±56 中心の TubePocket 内径17.4)は不変で、その内側の
         // 大部分はメイン地面が見える。パッドは ±68 中心・半径6・薄板(地面とほぼ同高)。
@@ -3680,6 +3686,66 @@ public static partial class BuildAetherRiftMap
     /// 除外: レーン帯（半径40〜50）・川（中央 |x|<8 の帯）・ベイスン（半径<18）・
     /// ジャングルパス近傍・ベース周辺（±56 付近半径12）。
     /// </summary>
+    /// <summary>
+    /// 壁(迷路/レーン壁/外周壁/キャンプ小部屋)と重なる散布プロップ(木/岩/草/小石)を削除する。
+    /// 幹周辺の箱(±1.0, 高さ3)で判定し、樹冠が壁上に少し掛かる程度は許容する。
+    /// あわせてキャンプ小部屋の内側(空き地)に生えたプロップも除去する。
+    /// </summary>
+    private static void RemovePropsOverlappingWalls()
+    {
+        Physics.SyncTransforms();
+
+        string[] wallPrefixes =
+        {
+            "JungleLaneWall", "JungleMazeArc", "JungleMazeRadial", "JungleMaze2",
+            "OuterLaneWall", "OuterLaneCap", "CampRoom",
+        };
+        string[] propPrefixes = { "Tree_Q", "Rock_Q", "GrassTuft_", "Pebble_" };
+
+        // キャンプ空き地(小部屋の内側)の中心。プロップ除去半径は空き地(4.4)+余白
+        var clearings = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
+            .Where(t => t.name.StartsWith("CampClearing"))
+            .Select(t => t.position)
+            .ToArray();
+
+        var hits = new Collider[16];
+        int removed = 0;
+        foreach (var root in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
+                     .Where(t => t.parent != null && propPrefixes.Any(p => t.name.StartsWith(p))
+                                 || t.parent == null && propPrefixes.Any(p => t.name.StartsWith(p)))
+                     .Select(t => t.root)
+                     .Where(r => propPrefixes.Any(p => r.name.StartsWith(p)))
+                     .Distinct()
+                     .ToArray())
+        {
+            var pos = root.position;
+            bool overlapsWall = false;
+            int n = Physics.OverlapBoxNonAlloc(pos + Vector3.up * 1.5f,
+                new Vector3(1.0f, 1.5f, 1.0f), hits, Quaternion.identity);
+            for (int i = 0; i < n; i++)
+            {
+                var hitRoot = hits[i].transform;
+                if (wallPrefixes.Any(w => hitRoot.name.StartsWith(w))
+                    || (hitRoot.parent != null && wallPrefixes.Any(w => hitRoot.parent.name.StartsWith(w))))
+                {
+                    overlapsWall = true;
+                    break;
+                }
+            }
+
+            bool inClearing = clearings.Any(c =>
+                Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(c.x, c.z)) < 5.0f);
+
+            if (overlapsWall || inClearing)
+            {
+                Object.DestroyImmediate(root.gameObject);
+                removed++;
+            }
+        }
+
+        Debug.Log($"[BuildAetherRiftMap] 壁/空き地と重なる散布プロップを {removed} 個除去しました。");
+    }
+
     private static bool IsExcludedFromScatter(Vector3 p)
     {
         // 川（中央の縦帯）(8f×1.4)
