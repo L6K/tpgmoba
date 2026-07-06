@@ -28,6 +28,10 @@ public static partial class BuildAetherRiftMap
 
     public static void Execute()
     {
+        // 壁レジストリ(散布プロップ除去用)をクリア。static のためドメイン内の再実行で蓄積する
+        s_wallArcs.Clear();
+        s_wallBoxes.Clear();
+
         // ディレクトリ確保
         EnsureDir(MatDir);
         EnsureDir(PrefabDir);
@@ -1159,12 +1163,22 @@ public static partial class BuildAetherRiftMap
     // visualStartDeg/visualEndDeg を NaN にすると衝突弧（startDeg/endDeg）と同じ範囲で描画する。
     // ベースポケット壁のみ、すり抜け防止の 5° 延長を衝突には残しつつ描画弧だけ延長前範囲を渡すことで
     // リング壁内側への出っ張りを解消する。
+    // 散布プロップ除去(RemovePropsOverlappingWalls)用の壁レジストリ。
+    // OverlapBox 等の物理クエリは凹型 MeshCollider(壁バンド)との重なりを検出できないため、
+    // 壁の定義を配置時に記録して数学的に判定する。Execute の冒頭でクリアする。
+    private static readonly System.Collections.Generic.List<(Vector3 center, float innerR, float outerR, float startDeg, float endDeg)>
+        s_wallArcs = new();
+    private static readonly System.Collections.Generic.List<(Vector3 center, float halfLen, float halfThick, float yawDeg)>
+        s_wallBoxes = new();
+
     private static GameObject PlaceWallBandAt(GameObject parent, string name, Vector3 center,
         float innerR, float outerR, float height, int segments, float startDeg, float endDeg, Material mat,
         float visualStartDeg = float.NaN, float visualEndDeg = float.NaN)
     {
         if (float.IsNaN(visualStartDeg)) visualStartDeg = startDeg;
         if (float.IsNaN(visualEndDeg))   visualEndDeg   = endDeg;
+
+        s_wallArcs.Add((center, innerR, outerR, startDeg, endDeg));
 
         var go = new GameObject(name);
         go.transform.position = center;
@@ -3298,6 +3312,7 @@ public static partial class BuildAetherRiftMap
         // ローカルX(長軸)を θ 方向へ: Unity の +Y 回転は +X を -Z に倒すため yaw=-θ
         go.transform.rotation = Quaternion.Euler(0f, -deg, 0f);
         go.transform.SetParent(parent.transform, true);
+        s_wallBoxes.Add((center, (outerR - innerR) * 0.5f, 0.75f, deg));
         return go;
     }
 
@@ -3344,6 +3359,7 @@ public static partial class BuildAetherRiftMap
             go.transform.rotation = Quaternion.Euler(0f, -deg, 0f);
             go.transform.SetParent(parent.transform, true);
             go.AddComponent<Enigma.Vision.VisionBlockerTag>();
+            s_wallBoxes.Add((center, length * 0.5f, 0.75f, deg));
         }
     }
 
@@ -3352,6 +3368,7 @@ public static partial class BuildAetherRiftMap
     {
         var go = PlaceCube(name, center, new Vector3(10f, 2.5f, 1.5f), mat);
         go.transform.SetParent(parent.transform, true);
+        s_wallBoxes.Add((center, 5f, 0.75f, 0f));
         // 視界2.0(M-V): 放射壁も地形遮蔽の対象
         go.AddComponent<Enigma.Vision.VisionBlockerTag>();
     }
@@ -3693,50 +3710,26 @@ public static partial class BuildAetherRiftMap
     /// </summary>
     private static void RemovePropsOverlappingWalls()
     {
-        Physics.SyncTransforms();
+        // 幹まわりの許容マージン。樹冠が壁上に少し掛かる程度は許容する
+        const float Margin = 1.2f;
 
-        string[] wallPrefixes =
-        {
-            "JungleLaneWall", "JungleMazeArc", "JungleMazeRadial", "JungleMaze2",
-            "OuterLaneWall", "OuterLaneCap", "CampRoom",
-        };
-        string[] propPrefixes = { "Tree_Q", "Rock_Q", "GrassTuft_", "Pebble_" };
-
-        // キャンプ空き地(小部屋の内側)の中心。プロップ除去半径は空き地(4.4)+余白
         var clearings = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
             .Where(t => t.name.StartsWith("CampClearing"))
             .Select(t => t.position)
             .ToArray();
 
-        var hits = new Collider[16];
+        string[] propPrefixes = { "Tree_Q", "Rock_Q", "GrassTuft_", "Pebble_" };
         int removed = 0;
         foreach (var root in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None)
-                     .Where(t => t.parent != null && propPrefixes.Any(p => t.name.StartsWith(p))
-                                 || t.parent == null && propPrefixes.Any(p => t.name.StartsWith(p)))
-                     .Select(t => t.root)
-                     .Where(r => propPrefixes.Any(p => r.name.StartsWith(p)))
-                     .Distinct()
+                     .Where(t => t == t.root && propPrefixes.Any(p => t.name.StartsWith(p)))
                      .ToArray())
         {
             var pos = root.position;
-            bool overlapsWall = false;
-            int n = Physics.OverlapBoxNonAlloc(pos + Vector3.up * 1.5f,
-                new Vector3(1.0f, 1.5f, 1.0f), hits, Quaternion.identity);
-            for (int i = 0; i < n; i++)
-            {
-                var hitRoot = hits[i].transform;
-                if (wallPrefixes.Any(w => hitRoot.name.StartsWith(w))
-                    || (hitRoot.parent != null && wallPrefixes.Any(w => hitRoot.parent.name.StartsWith(w))))
-                {
-                    overlapsWall = true;
-                    break;
-                }
-            }
+            bool overlaps = OverlapsAnyWall(pos, Margin)
+                || clearings.Any(c => Vector2.Distance(
+                       new Vector2(pos.x, pos.z), new Vector2(c.x, c.z)) < 5.0f);
 
-            bool inClearing = clearings.Any(c =>
-                Vector2.Distance(new Vector2(pos.x, pos.z), new Vector2(c.x, c.z)) < 5.0f);
-
-            if (overlapsWall || inClearing)
+            if (overlaps)
             {
                 Object.DestroyImmediate(root.gameObject);
                 removed++;
@@ -3744,6 +3737,36 @@ public static partial class BuildAetherRiftMap
         }
 
         Debug.Log($"[BuildAetherRiftMap] 壁/空き地と重なる散布プロップを {removed} 個除去しました。");
+    }
+
+    private static bool OverlapsAnyWall(Vector3 pos, float margin)
+    {
+        foreach (var (center, innerR, outerR, startDeg, endDeg) in s_wallArcs)
+        {
+            float dx = pos.x - center.x;
+            float dz = pos.z - center.z;
+            float r  = Mathf.Sqrt(dx * dx + dz * dz);
+            if (r < innerR - margin || r > outerR + margin) continue;
+
+            // 角度は壁定義が 360 を跨ぐ場合(例 337〜383)があるため ±360 で照合する
+            float theta     = Mathf.Atan2(dz, dx) * Mathf.Rad2Deg;
+            float angMargin = margin / Mathf.Max(r, 1f) * Mathf.Rad2Deg;
+            for (int k = -1; k <= 1; k++)
+            {
+                float t = theta + 360f * k;
+                if (t >= startDeg - angMargin && t <= endDeg + angMargin) return true;
+            }
+        }
+
+        foreach (var (center, halfLen, halfThick, yawDeg) in s_wallBoxes)
+        {
+            // Cube は Euler(0,-yaw,0) で回転済み → ワールド→ローカルは Euler(0,-yaw,0) の逆
+            var local = Quaternion.Euler(0f, yawDeg, 0f) * (pos - center);
+            if (Mathf.Abs(local.x) <= halfLen + margin && Mathf.Abs(local.z) <= halfThick + margin)
+                return true;
+        }
+
+        return false;
     }
 
     private static bool IsExcludedFromScatter(Vector3 p)
