@@ -3195,6 +3195,50 @@ public static partial class BuildAetherRiftMap
         // 放射壁2本: 赤側(35,1.25,0)/青側(-35,1.25,0)。長軸をX軸方向に、r30〜40を塞ぐ
         PlaceRadialWall(parent, "JungleMazeRadial_Red",  new Vector3(35f, 1.25f, 0f), mat);
         PlaceRadialWall(parent, "JungleMazeRadial_Blue", new Vector3(-35f, 1.25f, 0f), mat);
+
+        // ---- 迷路ジャングル第2段(回廊化、追加のみ) ----
+        // 弧6本: 基地軸(0°/180°)寄りの内周弧(r30〜31.5)+川4象限寄りの内周弧(r28〜29.5)。
+        // 既存弧(r38〜41.5系)より内側に配置し、ジャングラー13点経路(r18〜48)を回廊状に分断する。
+        (float start, float end, float innerR, float outerR)[] arc2Defs =
+        {
+            (350f, 370f, 30.0f, 31.5f),   // 赤基地軸(0°)±10°の内周弧
+            (170f, 190f, 30.0f, 31.5f),   // 青側対称
+            ( 56f,  70f, 28.0f, 29.5f),   // 川北東の内周弧
+            (110f, 124f, 28.0f, 29.5f),   // 川北西
+            (236f, 250f, 28.0f, 29.5f),   // 川南西
+            (290f, 304f, 28.0f, 29.5f),   // 川南東
+        };
+
+        int ai2 = 0;
+        foreach (var (start, end, innerR, outerR) in arc2Defs)
+        {
+            int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
+            var arcGo = PlaceWallBandAt(parent, $"JungleMaze2Arc_{ai2:D2}", Vector3.zero,
+                innerR, outerR, height, segs, start, end, mat);
+            arcGo.AddComponent<Enigma.Vision.VisionBlockerTag>();
+            ai2++;
+        }
+
+        // 放射チョーク4本: 基地側象限(15°/345°/165°/195°)のみ、r42〜54を塞いで回廊を折り曲げる。
+        foreach (float deg in new[] { 15f, 345f, 165f, 195f })
+        {
+            var radGo = PlaceRadialWallAt(parent, $"JungleMaze2Radial_{deg:F0}", deg, 42f, 54f, mat);
+            radGo.AddComponent<Enigma.Vision.VisionBlockerTag>();
+        }
+    }
+
+    // 放射壁1本(角度指定、Cubeを θ 方向へ回転して配置)。innerR〜outerR を θ 方向に塞ぐ。
+    private static GameObject PlaceRadialWallAt(GameObject parent, string name, float deg,
+        float innerR, float outerR, Material mat)
+    {
+        float rad  = deg * Mathf.Deg2Rad;
+        float midR = (innerR + outerR) * 0.5f;
+        var center = new Vector3(midR * Mathf.Cos(rad), 1.25f, midR * Mathf.Sin(rad));
+        var go = PlaceCube(name, center, new Vector3(outerR - innerR, 2.5f, 1.5f), mat);
+        // ローカルX(長軸)を θ 方向へ: Unity の +Y 回転は +X を -Z に倒すため yaw=-θ
+        go.transform.rotation = Quaternion.Euler(0f, -deg, 0f);
+        go.transform.SetParent(parent.transform, true);
+        return go;
     }
 
     /// <summary>
