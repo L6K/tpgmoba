@@ -14,13 +14,15 @@ namespace Enigma.Minion
         [SerializeField] private float _attackRange    = 2.2f;
         [SerializeField] private float _respawnDelay   = 60f;
 
-        // HPバー Fill（ビルダーが Initialize で結線）
-        private Transform _barFill;
+        // HPバー Fill とキャンプ中心はシーンに永続化する必要がある。
+        // ビルダーがエディタ時に Initialize で非シリアライズフィールドへ書いても
+        // シーン保存で消える(全スライムの campCenter が実行時 (0,0,0) になっていた実測バグ)。
+        [SerializeField] private Transform _barFill;
+        [SerializeField] private Vector3   _campCenter;
 
         private HealthComponent _health;
         private AttackCooldown  _attackCooldown;
 
-        private Vector3          _campCenter;
         private HealthComponent  _target;
 
         private enum State { Idle, Combat, Return }
@@ -35,16 +37,14 @@ namespace Enigma.Minion
             _attackCooldown = new AttackCooldown(_attackInterval);
         }
 
-        /// <summary>ビルダーから呼び出す初期化エントリポイント。</summary>
-        public void Initialize(Vector3 campCenter, Transform barFill)
-        {
-            _campCenter = campCenter;
-            _barFill    = barFill;
-        }
-
         private void Start()
         {
             _fixedY = transform.position.y;
+
+            // 自己修復: 何らかの理由で campCenter が未結線(ゼロ)なら初期位置をキャンプとみなす。
+            // 原点にキャンプは存在しないためゼロ判定で安全
+            if (_campCenter == Vector3.zero)
+                _campCenter = new Vector3(transform.position.x, 0f, transform.position.z);
 
             // 被弾検知: HP が減ったら攻撃者をターゲット化する
             _health.Model.Changed += OnHealthChanged;

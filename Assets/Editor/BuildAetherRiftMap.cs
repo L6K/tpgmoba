@@ -3590,9 +3590,13 @@ public static partial class BuildAetherRiftMap
         var matBarRed = GetOrCreateBarMat("BarRed", new Color(0.92f, 0.30f, 0.25f));
         var wrapper   = CreateWorldHealthBar(parent.transform, 1.2f, 1.6f, matBarRed, 120f);
 
-        // JungleMonster コンポーネント: Initialize で campCenter と barFill（FillWrapper）を渡す
+        // JungleMonster コンポーネント: エディタ時の結線は SerializedObject 経由でないと
+        // シーン保存に乗らない(Initialize の非シリアライズ書き込みは実行時に消えていた実測バグ)
         var jm = parent.AddComponent<JungleMonster>();
-        jm.Initialize(campCenter, wrapper);
+        var soJm = new SerializedObject(jm);
+        soJm.FindProperty("_campCenter").vector3Value = campCenter;
+        soJm.FindProperty("_barFill").objectReferenceValue = wrapper;
+        soJm.ApplyModifiedPropertiesWithoutUndo();
 
         // 死亡演出: 倒れる。リスポーン型なので破棄しない（見た目は Visual 子）
         AddDeathPresenter(parent, mode: 0, destroyWhenDone: false, visualRoot: parent.transform.Find("Visual"));
