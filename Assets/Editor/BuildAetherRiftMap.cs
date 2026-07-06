@@ -3224,8 +3224,9 @@ public static partial class BuildAetherRiftMap
 
     /// <summary>
     /// 迷路ジャングル壁(スライスM-B)の疎な第一段。基地側象限(赤=0°/青=180°)と川側象限(90°/270°)に
-    /// 円弧帯+放射壁を配置し、回廊幅≥12mを保ったままジャングル内の見通しを分断する。
+    /// 円弧帯を配置し、回廊幅≥12mを保ったままジャングル内の見通しを分断する。
     /// キャンプ(対角パス、開口±8°)とガンク口(±26°等、開口±3°)へは干渉しない半径・角度で設計済み。
+    /// (旧第一段の軸上放射壁2本は基地軸キャンプ貫通のため2026-07-06撤去、下記コメント参照)
     /// </summary>
     private static void PlaceJungleMaze()
     {
@@ -3266,9 +3267,10 @@ public static partial class BuildAetherRiftMap
             ai++;
         }
 
-        // 放射壁2本: 赤側(35,1.25,0)/青側(-35,1.25,0)。長軸をX軸方向に、r30〜40を塞ぐ
-        PlaceRadialWall(parent, "JungleMazeRadial_Red",  new Vector3(35f, 1.25f, 0f), mat);
-        PlaceRadialWall(parent, "JungleMazeRadial_Blue", new Vector3(-35f, 1.25f, 0f), mat);
+        // 旧M-Bの軸上放射壁(JungleMazeRadial_Red/Blue、x±30〜40)は2026-07-06に撤去。
+        // 基地軸キャンプ(Polar(0°/180°,37.5))のポケットを貫通しスライムが壁にめり込んで
+        // いたため(ユーザー報告「狩り場に壁が突っ込んでいる」)。内側アプローチ分断の役割は
+        // 第2段(内周弧r30〜31.5+放射チョークr42〜54)が代替済み。
 
         // ---- 迷路ジャングル第2段(回廊化、追加のみ) ----
         // 弧6本: 基地軸(0°/180°)寄りの内周弧(r30〜31.5)+川4象限寄りの内周弧(r28〜29.5)。
@@ -3363,16 +3365,6 @@ public static partial class BuildAetherRiftMap
         }
     }
 
-    // 放射壁1本(直方体、長軸をワールドX方向に向けた Cube)を生成する。
-    private static void PlaceRadialWall(GameObject parent, string name, Vector3 center, Material mat)
-    {
-        var go = PlaceCube(name, center, new Vector3(10f, 2.5f, 1.5f), mat);
-        go.transform.SetParent(parent.transform, true);
-        s_wallBoxes.Add((center, 5f, 0.75f, 0f));
-        // 視界2.0(M-V): 放射壁も地形遮蔽の対象
-        go.AddComponent<Enigma.Vision.VisionBlockerTag>();
-    }
-
     /// <summary>
     /// コア3回目報酬(StructureDamage)の対構造物バフ判定用に、タワー8基とタイタン2体へ
     /// StructureTag を付与する(合計10)。
@@ -3454,83 +3446,53 @@ public static partial class BuildAetherRiftMap
     /// ・川岸ポケット×4: 原点 Polar(63/117/243/297°,25) から半径方向に-2.0m
     ///   内側(クレーター側)へシフトした同角度 r=23。クレーター縁(r22)と
     ///   川岸内周弧(r28〜29.5)の間のポケット。各1体。
-    /// シフトは「小部屋(PlaceCampRoom)」の外径6mが既存迷路壁と重なるのを避けるための
-    /// 平行移動(ユーザー許容の最大2m以内)。地形はいずれも平坦 y0(クレーター r&gt;=22・
-    /// 川 |x|&gt;9・プラトー |x|&lt;86 のため MapHeightModel.Height の全分岐が0を返す設計検証済み)。
+    /// 追加の囲い壁(旧 PlaceCampRoom による C字リング)は不評だったため2026-07-06に撤去。
+    /// キャンプは既存迷路壁が自然に作る袋小路の中にそのまま置く方針(ユーザー指示)。
+    /// 地形はいずれも平坦 y0(クレーター r&gt;=22・川 |x|&gt;9・プラトー |x|&lt;86 のため
+    /// MapHeightModel.Height の全分岐が0を返す設計検証済み)。
     /// </summary>
     private static void PlaceCorridorCamps(Material matJunglePath)
     {
-        var matWall = GetOrCreateMat("JungleLaneWall", new Color(0.46f, 0.50f, 0.40f));
-
-        // 基地軸の奥ポケット×2(各2体)。原点から半径+1.5mシフトして小部屋外径5.85mを
-        // 内周弧(r30〜31.5)・放射チョーク(r42〜54)の両方から避ける。
-        // 開口はマップ中心向き(Ax0→180°方向、Ax180→0°方向=回廊側)。
-        (string name, float deg, float shiftR, float openingDeg)[] axisPockets =
+        // 基地軸の奥ポケット×2(各2体)。原点から半径+1.5mシフトして既存迷路壁
+        // (内周弧r30〜31.5・放射チョークr42〜54)が形成する袋小路に収める。
+        // 追加の囲い壁(旧C字リング)は2026-07-06にユーザー指示で撤去済み。
+        (string name, float deg, float shiftR)[] axisPockets =
         {
-            ("Ax0",   0f,   1.5f, 180f),
-            ("Ax180", 180f, 1.5f, 0f),
+            ("Ax0",   0f,   1.5f),
+            ("Ax180", 180f, 1.5f),
         };
 
-        foreach (var (name, deg, shiftR, openingDeg) in axisPockets)
+        foreach (var (name, deg, shiftR) in axisPockets)
         {
             float rad    = deg * Mathf.Deg2Rad;
             float r      = 36f + shiftR;
             var   center = new Vector3(r * Mathf.Cos(rad), 0f, r * Mathf.Sin(rad));
 
-            PlaceCampRoom($"CampRoom_{name}", center, openingDeg, 4.5f, 5.85f, matWall);
             PlaceCorridorClearing($"CampClearing_{name}", center, 4.4f, matJunglePath);
             CreateSlime($"Slime_{name}_a", center + new Vector3(1.1f, 0f, 0.6f));
             CreateSlime($"Slime_{name}_b", center + new Vector3(-1.1f, 0f, -0.6f));
         }
 
         // 川岸ポケット×4(各1体)。原点から半径-2.0m(クレーター側)シフトして
-        // 小部屋外径4.90mを内周弧(r28〜29.5)から避ける。
-        // 開口は川側(63°→243°、117°→297°、243°→63°、297°→117°=概ね180°反対=回廊側)。
-        (string name, float deg, float openingDeg)[] riverPockets =
+        // 既存迷路壁(内周弧r28〜29.5)が形成するポケットに収める。
+        // 追加の囲い壁(旧C字リング)は2026-07-06にユーザー指示で撤去済み。
+        (string name, float deg)[] riverPockets =
         {
-            ("Rv63",  63f,  243f),
-            ("Rv117", 117f, 297f),
-            ("Rv243", 243f, 63f),
-            ("Rv297", 297f, 117f),
+            ("Rv63",  63f),
+            ("Rv117", 117f),
+            ("Rv243", 243f),
+            ("Rv297", 297f),
         };
 
-        foreach (var (name, deg, openingDeg) in riverPockets)
+        foreach (var (name, deg) in riverPockets)
         {
             float rad    = deg * Mathf.Deg2Rad;
             const float r = 25f - 2.0f;
             var   center  = new Vector3(r * Mathf.Cos(rad), 0f, r * Mathf.Sin(rad));
 
-            PlaceCampRoom($"CampRoom_{name}", center, openingDeg, 4.5f, 4.90f, matWall);
             PlaceCorridorClearing($"CampClearing_{name}", center, 4.4f, matJunglePath);
             CreateSlime($"Slime_{name}", center);
         }
-    }
-
-    /// <summary>
-    /// キャンプ中心を囲う「小部屋」の C 字型囲い壁を生成する(LoL 風の壁ポケット)。
-    /// 円弧帯 [innerR, outerR]・高さ2.5 を openingDeg 方向に120°(±60°)だけ開けて残り240°を塞ぐ。
-    /// 既存の迷路壁(PlaceJungleMaze/PlaceJungleLaneWalls)と同一の PlaceWallBandAt/マテリアルを
-    /// center オフセット付きで使うため、見た目・衝突・視界遮蔽(VisionBlockerTag)の扱いが揃う。
-    /// </summary>
-    private static void PlaceCampRoom(string name, Vector3 center, float openingDeg,
-        float innerR, float outerR, Material mat)
-    {
-        var parent = new GameObject(name);
-        SetStatic(parent);
-
-        const float height  = 2.5f;
-        const float stepDeg = 3.75f;
-        const float halfOpening = 60f; // 開口120°の半分
-
-        // 壁弧: openingDeg+60° から openingDeg+300°(=openingDeg-60°を一周超えて到達)まで。
-        // 開口(openingDeg±60°)を除いた240°分を1本の連続弧として表現する。
-        float start = openingDeg + halfOpening;
-        float end   = openingDeg + 360f - halfOpening;
-
-        int segs = Mathf.Max(1, Mathf.RoundToInt((end - start) / stepDeg));
-        var wallGo = PlaceWallBandAt(parent, $"{name}_Wall", center,
-            innerR, outerR, height, segs, start, end, mat);
-        wallGo.AddComponent<Enigma.Vision.VisionBlockerTag>();
     }
 
     /// <summary>
@@ -3704,9 +3666,10 @@ public static partial class BuildAetherRiftMap
     /// ジャングルパス近傍・ベース周辺（±56 付近半径12）。
     /// </summary>
     /// <summary>
-    /// 壁(迷路/レーン壁/外周壁/キャンプ小部屋)と重なる散布プロップ(木/岩/草/小石)を削除する。
+    /// 壁(迷路/レーン壁/外周壁)と重なる散布プロップ(木/岩/草/小石)を削除する。
     /// 幹周辺の箱(±1.0, 高さ3)で判定し、樹冠が壁上に少し掛かる程度は許容する。
-    /// あわせてキャンプ小部屋の内側(空き地)に生えたプロップも除去する。
+    /// あわせてキャンプ空き地(CampClearing)周辺7.0m以内に生えたプロップも除去する
+    /// (2026-07-06: ユーザー報告「空き地の上と周辺の木・草が残っている」を受け 5.0→7.0 に拡大)。
     /// </summary>
     private static void RemovePropsOverlappingWalls()
     {
@@ -3727,7 +3690,7 @@ public static partial class BuildAetherRiftMap
             var pos = root.position;
             bool overlaps = OverlapsAnyWall(pos, Margin)
                 || clearings.Any(c => Vector2.Distance(
-                       new Vector2(pos.x, pos.z), new Vector2(c.x, c.z)) < 5.0f);
+                       new Vector2(pos.x, pos.z), new Vector2(c.x, c.z)) < 7.0f);
 
             if (overlaps)
             {
