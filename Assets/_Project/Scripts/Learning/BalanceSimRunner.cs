@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -7,6 +8,7 @@ using Enigma.Character;
 using Enigma.Combat;
 using Enigma.Core;
 using Enigma.GameMode;
+using Debug = UnityEngine.Debug;
 
 namespace Enigma.Learning
 {
@@ -36,6 +38,7 @@ namespace Enigma.Learning
         {
             public int matches = 1;
             public float timeScale = 1f;
+            public bool mirror = false;
         }
 
         private SimRequest _request;
@@ -50,6 +53,15 @@ namespace Enigma.Learning
         private bool _rosterCaptured;
         private string[] _capturedBlue = Array.Empty<string>();
         private string[] _capturedRed = Array.Empty<string>();
+
+        // ミラー実験用: ペア(通常/入れ替え)は同一 rosterSeed を共有する。
+        // ペアの1試合目は matchIndex を seed に使い、2試合目(mirrored)はペア相手と同じ seed を使い回す。
+        private int _currentRosterSeed;
+        private bool _currentMirrored;
+
+        // 結果への実装バージョン記録用。エディタ起動中に1回だけ取得してキャッシュする（プロセス起動は重いため）。
+        private static string s_gitHashCache;
+        private static bool s_gitHashResolved;
 
         // GameObject 名（例: "BlueBot_Top"）→ CharId の解決テーブル。試合開始ごとに再構築する。
         private readonly Dictionary<string, string> _nameToCharId = new();
@@ -113,8 +125,31 @@ namespace Enigma.Learning
 
             Time.timeScale = _request.timeScale;
 
-            // シムモードのロースール割当は試合番号を seed にする（Bootstrap.Start() 実行前に設定必須）。
-            BotChampionBootstrap.SetSimSeed(_matchIndex);
+            // ミラー実験: 試合をペア(通常/入れ替え)で実行する。ペア内の2試合は同一 rosterSeed を
+            // 共有する — 奇数番目(ペア先頭)は新しい seed(=ペアインデックス)を採番、偶数番目
+            // (ペア相方)は直前の seed を使い回し、Blue/Red 入れ替え版を割り当てる。
+            if (_request.mirror)
+            {
+                bool isSecondOfPair = _matchIndex % 2 == 1;
+                if (isSecondOfPair)
+                {
+                    _currentMirrored = true; // rosterSeed は前試合のものを維持
+                }
+                else
+                {
+                    _currentRosterSeed = _matchIndex / 2;
+                    _currentMirrored = false;
+                }
+            }
+            else
+            {
+                _currentRosterSeed = _matchIndex;
+                _currentMirrored = false;
+            }
+
+            // シムモードのロースール割当は rosterSeed を seed にする（Bootstrap.Start() 実行前に設定必須）。
+            BotChampionBootstrap.SetSimSeed(_currentRosterSeed);
+            BotChampionBootstrap.SetSimMirrored(_currentMirrored);
 
             var player = GameObject.Find("Player");
             if (player != null) player.SetActive(false);
@@ -149,7 +184,41 @@ namespace Enigma.Learning
             SubscribeMatchEvents();
 
             _currentStats = new BalanceMatchStats(_matchIndex, _matchIndex);
+            _currentStats.SetGitHash(GetGitHash());
+            _currentStats.SetRosterInfo(_currentRosterSeed, _currentMirrored);
             _rosterCaptured = false;
+        }
+
+        // 結果への実装バージョン記録用。git rev-parse --short HEAD をエディタ起動中に1回だけ実行して
+        // キャッシュする(以降は同じ Unity セッション内で使い回す)。失敗時は "unknown" にフォールバックする。
+        private static string GetGitHash()
+        {
+            if (s_gitHashResolved) return s_gitHashCache;
+            s_gitHashResolved = true;
+
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "git",
+                    Arguments = "rev-parse --short HEAD",
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WorkingDirectory = Application.dataPath,
+                };
+                using var proc = Process.Start(psi);
+                string output = proc.StandardOutput.ReadToEnd().Trim();
+                proc.WaitForExit(5000);
+                s_gitHashCache = string.IsNullOrEmpty(output) ? "unknown" : output;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"[BalanceSimRunner] git rev-parse failed, using \"unknown\": {e.Message}");
+                s_gitHashCache = "unknown";
+            }
+
+            return s_gitHashCache;
         }
 
         private void SubscribeMatchEvents()

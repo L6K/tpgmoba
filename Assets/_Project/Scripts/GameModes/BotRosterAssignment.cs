@@ -81,6 +81,24 @@ namespace Enigma.GameMode
             return result;
         }
 
+        /// <summary>
+        /// ミラー実験用: 同一 seed の AssignPerTeam 結果を求めた上で、青枠(先頭 teamSize)と
+        /// 赤枠(後続 teamSize)を丸ごと入れ替えて返す。キャラ構成は完全に同一のまま
+        /// サイド(Blue/Red)だけを反転させるため、先制キル/先制タワー等の非対称が
+        /// キャラ性能由来かサイド由来かを切り分けるペア実験に使う。
+        /// </summary>
+        public static string[] AssignPerTeamMirrored(IReadOnlyList<string> allIds, int seed, int teamSize)
+        {
+            var normal = AssignPerTeam(allIds, seed, teamSize);
+            var mirrored = new string[normal.Length];
+            for (int i = 0; i < teamSize; i++)
+            {
+                mirrored[i] = normal[teamSize + i];       // 元Red → 新Blue
+                mirrored[teamSize + i] = normal[i];        // 元Blue → 新Red
+            }
+            return mirrored;
+        }
+
         // Fisher-Yates シャッフル。System.Random(seed) で決定的に並べ替える。
         private static void Shuffle(List<string> list, int seed)
         {

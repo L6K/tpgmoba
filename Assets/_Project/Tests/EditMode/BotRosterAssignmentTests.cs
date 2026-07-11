@@ -145,5 +145,46 @@ namespace Enigma.Tests
             Assert.AreEqual(4, result.Length);
             Assert.IsFalse(result.Any(string.IsNullOrEmpty));
         }
+
+        // ── AssignPerTeamMirrored（ミラー実験用: Blue/Red 入れ替え）─────────────
+
+        [Test]
+        public void AssignPerTeamMirrored_SwapsBlueAndRedBlocks()
+        {
+            var normal = BotRosterAssignment.AssignPerTeam(AllSix, seed: 55, teamSize: 2);
+            var mirrored = BotRosterAssignment.AssignPerTeamMirrored(AllSix, seed: 55, teamSize: 2);
+
+            var normalBlue = normal.Take(2).ToArray();
+            var normalRed = normal.Skip(2).Take(2).ToArray();
+            var mirroredBlue = mirrored.Take(2).ToArray();
+            var mirroredRed = mirrored.Skip(2).Take(2).ToArray();
+
+            CollectionAssert.AreEqual(normalRed, mirroredBlue);
+            CollectionAssert.AreEqual(normalBlue, mirroredRed);
+        }
+
+        [Test]
+        public void AssignPerTeamMirrored_IsDeterministic_SameSeedSameResult()
+        {
+            var a = BotRosterAssignment.AssignPerTeamMirrored(AllSix, seed: 21, teamSize: 2);
+            var b = BotRosterAssignment.AssignPerTeamMirrored(AllSix, seed: 21, teamSize: 2);
+            CollectionAssert.AreEqual(a, b);
+        }
+
+        [Test]
+        public void AssignPerTeamMirrored_PreservesTotalRosterComposition()
+        {
+            // サイドを入れ替えてもキャラ構成の集合自体は完全一致するはず（切り分けの前提）。
+            var normal = BotRosterAssignment.AssignPerTeam(AllSix, seed: 12, teamSize: 3);
+            var mirrored = BotRosterAssignment.AssignPerTeamMirrored(AllSix, seed: 12, teamSize: 3);
+            CollectionAssert.AreEquivalent(normal, mirrored);
+        }
+
+        [Test]
+        public void AssignPerTeamMirrored_ReturnsRequestedLength()
+        {
+            var result = BotRosterAssignment.AssignPerTeamMirrored(AllSix, seed: 4, teamSize: 3);
+            Assert.AreEqual(6, result.Length);
+        }
     }
 }

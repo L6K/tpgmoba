@@ -177,6 +177,53 @@ namespace Enigma.Tests
             StringAssert.Contains("\"towerEvents\":[{\"t\":50.0,\"team\":\"Red\"}]", json);
         }
 
+        // ── gitHash / rosterSeed / mirrored（計測ガードレール第1弾）─────────────
+
+        [Test]
+        public void ToJsonLine_DefaultsGitHashToUnknown_AndRosterSeedToConstructorSeed()
+        {
+            var stats = new BalanceMatchStats(matchId: 2, seed: 77);
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"gitHash\":\"unknown\"", json);
+            StringAssert.Contains("\"rosterSeed\":77", json);
+            StringAssert.Contains("\"mirrored\":false", json);
+        }
+
+        [Test]
+        public void SetGitHash_IsReflectedInJson()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            stats.SetGitHash("abc1234");
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"gitHash\":\"abc1234\"", json);
+        }
+
+        [Test]
+        public void SetGitHash_NullOrEmpty_FallsBackToUnknown()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            stats.SetGitHash(null);
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"gitHash\":\"unknown\"", json);
+        }
+
+        [Test]
+        public void SetRosterInfo_OverridesRosterSeedAndMirrored()
+        {
+            var stats = new BalanceMatchStats(matchId: 1, seed: 5);
+            stats.SetRosterInfo(rosterSeed: 5, mirrored: true);
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"rosterSeed\":5", json);
+            StringAssert.Contains("\"mirrored\":true", json);
+        }
+
         [Test]
         public void ToJsonLine_WithTowerAndKillEvents_ProducesParsableJson_BraceAndBracketBalance()
         {

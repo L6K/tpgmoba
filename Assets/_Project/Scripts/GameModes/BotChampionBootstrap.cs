@@ -27,6 +27,10 @@ namespace Enigma.GameMode
         // Start より前にシーンロード直後の一瞬で設定する必要があるため static（Runner が単一起動前提）。
         private static int? s_seedOverride;
 
+        // ミラー実験用: true の間は AssignPerTeam の代わりに AssignPerTeamMirrored を使う
+        // （Blue/Red のキャラ割当を入れ替える）。Runner がペアの2試合目にのみ立てる。
+        private static bool s_mirrored;
+
         /// <summary>
         /// バランスシム用: 次回 Start 時に使うシードを指定する。指定するとチーム別シャッフル
         /// （AssignPerTeam: 同チーム内重複なし、青赤間の重複は許可）になり、Player 除外は行わない
@@ -37,10 +41,20 @@ namespace Enigma.GameMode
             s_seedOverride = seed;
         }
 
+        /// <summary>
+        /// ミラー実験用: 次回 Start 時のチーム割当を Blue/Red 入れ替え版にするかどうかを指定する。
+        /// SetSimSeed と組み合わせて使う（1試合限りの override、Runner が毎試合明示的に設定し直す）。
+        /// </summary>
+        public static void SetSimMirrored(bool mirrored)
+        {
+            s_mirrored = mirrored;
+        }
+
         /// <summary>バランスシム終了後、通常プレイの固定シードへ戻す。</summary>
         public static void ClearSimOverride()
         {
             s_seedOverride = null;
+            s_mirrored = false;
         }
 
         // 直近の Start で確定したロースター（bots[i] に対応する CharId）。BalanceSimRunner が読み取る。
@@ -76,7 +90,9 @@ namespace Enigma.GameMode
                 }
                 int teamSize = Mathf.Max(blueCount, redCount);
 
-                var perTeam = BotRosterAssignment.AssignPerTeam(allIds, s_seedOverride.Value, teamSize);
+                var perTeam = s_mirrored
+                    ? BotRosterAssignment.AssignPerTeamMirrored(allIds, s_seedOverride.Value, teamSize)
+                    : BotRosterAssignment.AssignPerTeam(allIds, s_seedOverride.Value, teamSize);
                 assignment = new string[_bots.Length];
 
                 int blueIdx = 0, redIdx = 0;

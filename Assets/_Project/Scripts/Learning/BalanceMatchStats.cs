@@ -48,10 +48,29 @@ namespace Enigma.Learning
         public int CoreCapturesBlue { get; private set; }
         public int CoreCapturesRed { get; private set; }
 
+        // 計測ガードレール第1弾: 結果に実装バージョンとミラー実験のペア照合キーを記録する。
+        public string GitHash { get; private set; } = "unknown";
+        public int RosterSeed { get; private set; }
+        public bool Mirrored { get; private set; }
+
         public BalanceMatchStats(int matchId, int seed)
         {
             MatchId = matchId;
             Seed = seed;
+            RosterSeed = seed;
+        }
+
+        /// <summary>結果への実装バージョン記録用。gitHash は呼び側(Runner)が1回だけ取得してキャッシュしたものを渡す。</summary>
+        public void SetGitHash(string gitHash)
+        {
+            GitHash = string.IsNullOrEmpty(gitHash) ? "unknown" : gitHash;
+        }
+
+        /// <summary>ミラー実験用: 実際にロースター割当に使った seed とミラー有無を記録する（ペアの照合キー）。</summary>
+        public void SetRosterInfo(int rosterSeed, bool mirrored)
+        {
+            RosterSeed = rosterSeed;
+            Mirrored = mirrored;
         }
 
         public void SetRosters(string[] blueRoster, string[] redRoster)
@@ -127,6 +146,9 @@ namespace Enigma.Learning
             sb.Append("\"seed\":").Append(Seed).Append(',');
             sb.Append("\"durationSec\":").Append(DurationSec.ToString("F1")).Append(',');
             sb.Append("\"winnerTeam\":\"").Append(Escape(WinnerTeam)).Append("\",");
+            sb.Append("\"gitHash\":\"").Append(Escape(GitHash)).Append("\",");
+            sb.Append("\"rosterSeed\":").Append(RosterSeed).Append(',');
+            sb.Append("\"mirrored\":").Append(Mirrored ? "true" : "false").Append(',');
 
             sb.Append("\"blueRoster\":[").Append(JoinQuoted(_blueRoster)).Append("],");
             sb.Append("\"redRoster\":[").Append(JoinQuoted(_redRoster)).Append("],");
