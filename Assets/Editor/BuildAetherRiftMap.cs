@@ -1200,45 +1200,90 @@ public static partial class BuildAetherRiftMap
         return go;
     }
 
+    // 意図された開口（現行仕様、2026-07-12 更新）。レイヤーごとに担当する開口が異なる:
+    //   - JungleLaneWalls（ジャングル⇔レーン、r54〜55.5）: パス口・川口・ガンク口が開口、基地正面は封鎖済み
+    //   - OuterLaneWalls（レーン⇔外周、r70.5〜72）: 基地正面±30°のみ開口、他は閉
+    //   - OuterBoundary（最終防壁、目形）: 開口なし（全周閉）
+    // 旧 BaseOpenHalf=11f（基地正面±11°のみ開口、単一レイヤー想定）はこの多層構成と食い違い、
+    // パス口/川口/ガンク口を軒並み偽 GAP 扱いしていた。
+    // レイヤーを問わず「他層に頼らずそのレイヤー単体で継ぎ目が塞がっているか」を検証するため、
+    // 各レイヤーは自分が名前に含む壁だけを対象にレイキャストし、自分の意図開口だけをスキップする
+    // （全層合成で判定すると、他層の壁が偶然その角度をカバーしているだけで単体レイヤーの
+    // 継ぎ目破損を見逃す偽陰性が生じるため）。
+    private static readonly (string label, float centerDeg, float halfDeg)[] s_jungleLaneOpenings =
+    {
+        ("JunglePath_045", 45f,  8f),
+        ("JunglePath_135", 135f, 8f),
+        ("JunglePath_225", 225f, 8f),
+        ("JunglePath_315", 315f, 8f),
+        ("RiverGap_090",   90f,  13f),
+        ("RiverGap_270",   270f, 13f),
+        ("GankGap_026",    26f,  3f),
+        ("GankGap_154",    154f, 3f),
+        ("GankGap_206",    206f, 3f),
+        ("GankGap_334",    334f, 3f),
+    };
+
+    private static readonly (string label, float centerDeg, float halfDeg)[] s_outerLaneOpenings =
+    {
+        ("BaseFront_000", 0f,   30f),
+        ("BaseFront_180", 180f, 30f),
+    };
+
+    private static readonly (string label, float centerDeg, float halfDeg)[] s_boundaryOpenings =
+    {
+        // OuterBoundary（目形の最終防壁）は開口なし（全周閉）
+    };
+
     /// <summary>
-    /// 境界壁の連続性を検証する。
-    /// 中心 (0, 0.75, 0) から 0.5° 刻み 720 本の水平レイ（半径 67.2 起点、外向き長さ 6）を飛ばし、
-    /// "Boundary" を名前に含む壁に当たらず かつ ベース開口（0°/180° ±11°）でもない角度を列挙する。
-    /// 素通り角度がなければ "OK" を返す。
+    /// 境界壁の連続性を検証する。レイヤー（JungleLaneWalls / OuterLaneWalls / OuterBoundary）ごとに、
+    /// 中心 (0, 0.75, 0) から 0.5° 刻み 720 本の水平レイ（長さ 200）を飛ばし、
+    /// そのレイヤー自身の名前を含む壁に当たらず、かつそのレイヤーの意図された開口でもない
+    /// 角度（＝そのレイヤー単体の継ぎ目 GAP）を列挙する。他レイヤーによる偶然の補完に
+    /// 紛れないよう、レイヤーごとに独立して判定する。素通り角度がなければ "OK" を返す。
     /// </summary>
     public static string VerifyBoundary()
     {
-        const float RayOriginR  = 67.2f;
-        const float RayLength   = 6f;
-        const float StepDeg     = 0.5f;
-        const float BaseOpenHalf = 11f;
+        var sb = new System.Text.StringBuilder();
+
+        AppendLayerGaps(sb, "JungleLaneWalls", "JungleLaneWall", s_jungleLaneOpenings);
+        AppendLayerGaps(sb, "OuterLaneWalls",  "OuterLaneWall",  s_outerLaneOpenings);
+        AppendLayerGaps(sb, "OuterBoundary",   "Boundary",       s_boundaryOpenings);
+
+        return sb.Length == 0 ? "OK" : sb.ToString();
+    }
+
+    private static void AppendLayerGaps(System.Text.StringBuilder sb, string layerLabel,
+        string nameFilter, (string label, float centerDeg, float halfDeg)[] intendedOpenings)
+    {
+        const float RayLength = 200f;
+        const float StepDeg   = 0.5f;
         var origin = new Vector3(0f, 0.75f, 0f);
-        var gaps = new System.Text.StringBuilder();
 
         // エディタモードでは生成直後のコライダーが物理ワールド未反映のことがある
         Physics.SyncTransforms();
+
+        var gaps = new System.Text.StringBuilder();
 
         for (int i = 0; i < 720; i++)
         {
             float angleDeg = i * StepDeg;
 
-            // ベース開口（0° / 180° ±11°）はスキップ
-            float diff0   = Mathf.Abs(Mathf.DeltaAngle(angleDeg, 0f));
-            float diff180 = Mathf.Abs(Mathf.DeltaAngle(angleDeg, 180f));
-            if (diff0 <= BaseOpenHalf || diff180 <= BaseOpenHalf) continue;
+            // このレイヤーの意図開口はスキップ
+            bool inIntendedOpening = false;
+            foreach (var (_, centerDeg, halfDeg) in intendedOpenings)
+            {
+                if (Mathf.Abs(Mathf.DeltaAngle(angleDeg, centerDeg)) <= halfDeg) { inIntendedOpening = true; break; }
+            }
+            if (inIntendedOpening) continue;
 
             float rad = angleDeg * Mathf.Deg2Rad;
             var dir   = new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad));
-            var start = origin + dir * RayOriginR;
 
             bool hit = false;
-            foreach (var h in Physics.RaycastAll(start, dir, RayLength))
+            foreach (var h in Physics.RaycastAll(origin, dir, RayLength))
             {
-                if (h.collider.gameObject.name.Contains("Boundary"))
-                {
-                    hit = true;
-                    break;
-                }
+                if (h.collider.gameObject.name.Contains(nameFilter)) { hit = true; break; }
             }
             if (!hit)
             {
@@ -1247,14 +1292,21 @@ public static partial class BuildAetherRiftMap
             }
         }
 
-        return gaps.Length == 0 ? "OK" : "GAP at: " + gaps;
+        if (gaps.Length > 0)
+        {
+            if (sb.Length > 0) sb.Append(" | ");
+            sb.Append(layerLabel).Append(" GAP at: ").Append(gaps);
+        }
     }
 
     /// <summary>
     /// 場外脱出が不可能であることを検証する（エディタ用）。
-    /// VerifyBoundary（放射レイ）に加え、開口端付近で接線スリットを検査する:
-    /// 開口端の各角度で半径 71.3 の点から接線方向（両回り）に長さ 4 のレイを飛ばし、
-    /// "Boundary" 非ヒットで素通りする角度を列挙する。全て塞がっていれば "OK"。
+    /// VerifyBoundary（レイヤー別放射レイ、0.5°刻み）に加え、各レイヤーの意図開口の境界線（肩）
+    /// ぴったりの角度を 0.05°刻みの高解像度で再検査する。壁弧は開口の肩で隣の壁と隙間なく
+    /// 接続している設計のため、肩の内側（開口側）ではヒットせず、外側（壁側）では
+    /// そのレイヤー自身の壁に必ずヒットするはずである。肩の外側 0.3° 以内でヒットしない
+    /// 角度があれば、壁同士の継ぎ目に「すり抜け可能な薄いスリット」が生じていることを意味する。
+    /// 全て塞がっていれば "OK"。
     /// </summary>
     public static string VerifyEscapeProof()
     {
@@ -1264,39 +1316,9 @@ public static partial class BuildAetherRiftMap
         var radial = VerifyBoundary();
         var slits  = new System.Text.StringBuilder();
 
-        // 開口端付近の検査帯（度）: 各開口の両肩を 0.5° 刻みで走査
-        var ranges = new (float from, float to)[]
-        {
-            (9f, 15f), (165f, 171f), (189f, 195f), (345f, 351f),
-        };
-
-        const float ProbeR    = 71.3f;
-        const float TangentLen = 4f;
-
-        foreach (var (from, to) in ranges)
-        {
-            for (float a = from; a <= to + 1e-4f; a += 0.5f)
-            {
-                float rad = a * Mathf.Deg2Rad;
-                var pt = new Vector3(ProbeR * Mathf.Cos(rad), 1.0f, ProbeR * Mathf.Sin(rad));
-                // 接線方向（半径方向に直交）。両回りを走査する
-                var tangent = new Vector3(-Mathf.Sin(rad), 0f, Mathf.Cos(rad));
-
-                foreach (var dir in new[] { tangent, -tangent })
-                {
-                    bool hit = false;
-                    foreach (var h in Physics.RaycastAll(pt, dir, TangentLen))
-                    {
-                        if (h.collider.gameObject.name.Contains("Boundary")) { hit = true; break; }
-                    }
-                    if (!hit)
-                    {
-                        if (slits.Length > 0) slits.Append(", ");
-                        slits.Append(a.ToString("F1") + "°" + (dir == tangent ? "+" : "-"));
-                    }
-                }
-            }
-        }
+        AppendLayerShoulderSlits(slits, "JungleLaneWalls", "JungleLaneWall", s_jungleLaneOpenings);
+        AppendLayerShoulderSlits(slits, "OuterLaneWalls",  "OuterLaneWall",  s_outerLaneOpenings);
+        AppendLayerShoulderSlits(slits, "OuterBoundary",   "Boundary",       s_boundaryOpenings);
 
         if (radial == "OK" && slits.Length == 0) return "OK";
 
@@ -1305,9 +1327,48 @@ public static partial class BuildAetherRiftMap
         if (slits.Length > 0)
         {
             if (sb.Length > 0) sb.Append(" | ");
-            sb.Append("TANGENT SLIT at: ").Append(slits);
+            sb.Append("SHOULDER SLIT at: ").Append(slits);
         }
         return sb.ToString();
+    }
+
+    // レイヤー単体の意図開口の肩（境界線）ぴったりの角度を高解像度で再検査し、
+    // 肩のすぐ外側（壁があるべき側）でそのレイヤー自身の壁にヒットしない角度を slits に追記する。
+    private static void AppendLayerShoulderSlits(System.Text.StringBuilder slits, string layerLabel,
+        string nameFilter, (string label, float centerDeg, float halfDeg)[] intendedOpenings)
+    {
+        var origin = new Vector3(0f, 0.75f, 0f);
+        const float RayLength = 200f;
+        const float FineStepDeg = 0.05f;
+        const float ShoulderBand = 0.3f; // 肩の外側だけを検査する帯幅
+
+        foreach (var (label, centerDeg, halfDeg) in intendedOpenings)
+        {
+            foreach (float shoulderDeg in new[] { centerDeg - halfDeg, centerDeg + halfDeg })
+            {
+                // 肩の外側（壁があるべき側）へ向かう符号: 開口中心から離れる方向
+                float outwardSign = Mathf.Sign(shoulderDeg - centerDeg);
+                if (outwardSign == 0f) outwardSign = 1f;
+
+                for (float d = FineStepDeg; d <= ShoulderBand + 1e-4f; d += FineStepDeg)
+                {
+                    float angleDeg = shoulderDeg + outwardSign * d;
+                    float rad = angleDeg * Mathf.Deg2Rad;
+                    var dir = new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad));
+
+                    bool hit = false;
+                    foreach (var h in Physics.RaycastAll(origin, dir, RayLength))
+                    {
+                        if (h.collider.gameObject.name.Contains(nameFilter)) { hit = true; break; }
+                    }
+                    if (!hit)
+                    {
+                        if (slits.Length > 0) slits.Append(", ");
+                        slits.Append(angleDeg.ToString("F2") + "°[" + layerLabel + "/" + label + " shoulder]");
+                    }
+                }
+            }
+        }
     }
 
     // ---- ヘルパー ----
