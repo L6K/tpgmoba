@@ -72,7 +72,7 @@ namespace Enigma.Minion
 
             // 膠着防止: 試合経過に応じて HP と攻撃力を底上げする。
             // System.DateTime は使わず Time.timeSinceLevelLoad を試合経過時間とする。
-            instance.ApplyTimeScaling(MinionScaling.MultiplierAt(Time.timeSinceLevelLoad));
+            instance.ApplyTimeScaling(MinionGrowthLogic.Multiplier(Time.timeSinceLevelLoad));
         }
 
         private List<Vector3> BuildWaypointList()

@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using Enigma.Combat;
+using Enigma.GameModes;
 
 namespace Enigma.Character
 {
@@ -36,7 +37,8 @@ namespace Enigma.Character
 
         private IEnumerator RespawnRoutine()
         {
-            yield return new WaitForSeconds(5f);
+            // 膠着防止: 試合経過に応じてデスタイマーを伸ばす（固定5秒から逓増へ）。
+            yield return new WaitForSeconds(RespawnTimerLogic.Delay(Time.timeSinceLevelLoad));
 
             // CharacterController を無効化してからワープ（有効時はコライダー解決が阻害するため）
             if (_cc != null) _cc.enabled = false;

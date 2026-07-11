@@ -74,8 +74,6 @@ namespace Enigma.Character
         // ApplyCharacter で割り当てられたキャラ ID。BalanceSimRunner の per-champion 集計キーに使う。
         public string CharId { get; private set; } = "";
 
-        private const float RespawnDelay = 5f;
-
         // 中立キャンプ狩りの探索半径と射程（その場で殴れる近さ）。
         // キャンプ空き地(木なし半径4.5)+余裕。これより遠くで採用すると経路外の
         // 直線接近になり森でスタックする(キャンプはルートのウェイポイントなので、
@@ -1809,7 +1807,8 @@ namespace Enigma.Character
 
         private IEnumerator RespawnRoutine()
         {
-            yield return new WaitForSeconds(RespawnDelay);
+            // 膠着防止: 試合経過に応じてデスタイマーを伸ばす（固定5秒から逓増へ）。
+            yield return new WaitForSeconds(RespawnTimerLogic.Delay(Time.timeSinceLevelLoad));
 
             // 物理移動前に CharacterController を切ってからテレポートする
             transform.position = _respawnPos;
