@@ -8,14 +8,16 @@ namespace Enigma.Minion
         public const float GraceSeconds = 300f;
 
         // 猶予経過後、1 分ごとに加算する倍率。
-        public const float PerMinuteBonus = 0.08f;
+        // 旧 MinionScaling(180s/+8%/上限3.0、OT時点≒1.96倍)でも自然決着ゼロだった実測を受け、
+        // 「閉じる圧力」として意味を持つ値に引き上げ(OT突入時点=900sで2.5倍)。
+        public const float PerMinuteBonus = 0.15f;
 
-        // 上限倍率（+80%）。
-        public const float MaxMultiplier = 1.8f;
+        // 上限倍率（+150%）。
+        public const float MaxMultiplier = 2.5f;
 
         /// <summary>
         /// 経過秒数に対する強化倍率を返す。
-        /// 300 秒まで 1.0、以降 1 分ごとに +8%、上限 1.8。負値は等倍として安全に扱う。
+        /// 300 秒まで 1.0、以降 1 分ごとに +15%、上限 2.5。負値は等倍として安全に扱う。
         /// </summary>
         public static float Multiplier(float timeSec)
         {
