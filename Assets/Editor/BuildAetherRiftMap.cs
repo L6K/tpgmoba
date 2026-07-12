@@ -1049,81 +1049,10 @@ public static partial class BuildAetherRiftMap
         PlaceCornerSeamPatch(parent, "BoundaryEye_CornerR", +cornerX, +patchOuterX, patchOuterZ, TubeHeight, matBoundary);
         PlaceCornerSeamPatch(parent, "BoundaryEye_CornerL", -cornerX, -patchOuterX, patchOuterZ, TubeHeight, matBoundary);
 
-        // 目尻扇形パッチ(実測 RaycastAll で判明した実在の穴の是正、2026-07-12):
-        // 目尻付近(ワールド角度 0°±約19.5°、180°±約19.5°)は基地プラトー(y=2.5)圏に入り、
-        // 壁バンド(PlaceWallBandAt)・上記楔パッチとも底を地形高さに合わせているため、
-        // y=0〜2.5 の帯にコライダーが存在しない。Ground メッシュもこの鋭角コーナーでは
-        // グリッドセルの量子化で欠落する。原点(0,0,0)を要とし、目尻の内角
-        // (ワールド角度 -cornerDeg〜+cornerDeg、半径 0〜EyeOuterR)を扇形に y=0 から
-        // height 分立ち上げて塞ぐ。壁バンド内周(半径 EyeInnerR)と重なる形で継ぎ目も覆う。
-        PlaceCornerFanPatch(parent, "BoundaryEye_FanR", cornerDeg, EyeOuterR, TubeHeight, matBoundary);
-        PlaceCornerFanPatch(parent, "BoundaryEye_FanL", cornerDeg, EyeOuterR, TubeHeight, matBoundary, mirrorX: true);
+        // 目尻の y0〜2.5 帯はプラトー地形の内部(到達不能)であり物理パッチは不要
+        // (2026-07-12 の扇形パッチは基地を飲み込む中実くさびとなり撤去。検証は2高度レイで対応)。
     }
 
-    /// <summary>
-    /// 原点を要とする扇形パッチ。ワールド角度 [-halfAngleDeg, +halfAngleDeg]、半径 [0, outerR] を
-    /// y=0 から height 分立ち上げた「くさび形の柱」で、目尻付近の低空(プラトー地形と壁バンドの
-    /// 間に生じる y=0〜地形高さの隙間)を絶対座標ベースで塞ぐ。mirrorX で反対側の目尻(x&lt;0)用に反転する。
-    /// </summary>
-    private static void PlaceCornerFanPatch(GameObject parent, string name, float halfAngleDeg, float outerR,
-        float height, Material mat, bool mirrorX = false)
-    {
-        const int fanSegs = 8;
-        float sign = mirrorX ? -1f : 1f;
-
-        var verts = new System.Collections.Generic.List<Vector3>();
-        var tris  = new System.Collections.Generic.List<int>();
-
-        // 中心(底/天)は原点。扇の弧側は [-halfAngleDeg, +halfAngleDeg] を fanSegs 分割。
-        int centerBottom = 0;
-        int centerTop    = 1;
-        verts.Add(new Vector3(0f, 0f,      0f));
-        verts.Add(new Vector3(0f, height,  0f));
-
-        int arcStart = verts.Count;
-        for (int i = 0; i <= fanSegs; i++)
-        {
-            float t   = (float)i / fanSegs;
-            float deg = Mathf.Lerp(-halfAngleDeg, halfAngleDeg, t);
-            float rad = deg * Mathf.Deg2Rad;
-            float x   = sign * outerR * Mathf.Cos(rad);
-            float z   = outerR * Mathf.Sin(rad);
-            verts.Add(new Vector3(x, 0f,     z)); // 底
-            verts.Add(new Vector3(x, height, z)); // 天
-        }
-
-        for (int i = 0; i < fanSegs; i++)
-        {
-            int b0 = arcStart + i * 2;
-            int b1 = arcStart + (i + 1) * 2;
-
-            // 底面(中心→弧、-Y向き)・天面(中心→弧、+Y向き)・外周面(両面)
-            if (!mirrorX)
-            {
-                tris.AddRange(new[] { centerBottom, b1 + 0, b0 + 0 });
-                tris.AddRange(new[] { centerTop,    b0 + 1, b1 + 1 });
-            }
-            else
-            {
-                tris.AddRange(new[] { centerBottom, b0 + 0, b1 + 0 });
-                tris.AddRange(new[] { centerTop,    b1 + 1, b0 + 1 });
-            }
-            AddQuadDoubleSided(tris, b0 + 0, b0 + 1, b1 + 1, b1 + 0);
-        }
-
-        var mesh = new Mesh { name = name + "Mesh" };
-        mesh.SetVertices(verts);
-        mesh.SetTriangles(tris, 0);
-        mesh.RecalculateNormals();
-        mesh.RecalculateBounds();
-
-        var go = new GameObject(name);
-        go.transform.SetParent(parent.transform, false);
-        var mf = go.AddComponent<MeshFilter>(); mf.sharedMesh = mesh;
-        var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat;
-        var mc = go.AddComponent<MeshCollider>(); mc.sharedMesh = mesh;
-        SetStatic(go);
-    }
 
     /// <summary>
     /// クレーターの色アクセント(M-C 一部)。
@@ -1361,11 +1290,12 @@ public static partial class BuildAetherRiftMap
             float rad = angleDeg * Mathf.Deg2Rad;
             var dir   = new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad));
 
-            bool hit = false;
-            foreach (var h in Physics.RaycastAll(origin, dir, RayLength))
-            {
-                if (h.collider.gameObject.name.Contains(nameFilter)) { hit = true; break; }
-            }
+            // 3高度方式: 平地(壁y0〜)は低レイ、ランプ帯(壁y0.75〜2.0〜)は中レイ、プラトー圏(壁y2.5〜)は高レイが捉える。
+            // どちらかがヒットすれば遮蔽扱い。y0.75固定だと基地プラトーの地中(到達不能空間)を
+            // 「穴」と誤報告する(2026-07-12 の扇形パッチ事故の教訓)
+            bool hit = LayerHitAtHeight(origin, dir, RayLength, nameFilter)
+                    || LayerHitAtHeight(new Vector3(0f, 2.0f, 0f), dir, RayLength, nameFilter)
+                    || LayerHitAtHeight(new Vector3(0f, 3.25f, 0f), dir, RayLength, nameFilter);
             if (!hit)
             {
                 if (gaps.Length > 0) gaps.Append(", ");
@@ -1378,6 +1308,15 @@ public static partial class BuildAetherRiftMap
             if (sb.Length > 0) sb.Append(" | ");
             sb.Append(layerLabel).Append(" GAP at: ").Append(gaps);
         }
+    }
+
+    private static bool LayerHitAtHeight(Vector3 origin, Vector3 dir, float rayLength, string nameFilter)
+    {
+        foreach (var h in Physics.RaycastAll(origin, dir, rayLength))
+        {
+            if (h.collider.gameObject.name.Contains(nameFilter)) return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -1437,11 +1376,9 @@ public static partial class BuildAetherRiftMap
                     float rad = angleDeg * Mathf.Deg2Rad;
                     var dir = new Vector3(Mathf.Cos(rad), 0f, Mathf.Sin(rad));
 
-                    bool hit = false;
-                    foreach (var h in Physics.RaycastAll(origin, dir, RayLength))
-                    {
-                        if (h.collider.gameObject.name.Contains(nameFilter)) { hit = true; break; }
-                    }
+                    bool hit = LayerHitAtHeight(origin, dir, RayLength, nameFilter)
+                            || LayerHitAtHeight(new Vector3(0f, 2.0f, 0f), dir, RayLength, nameFilter)
+                            || LayerHitAtHeight(new Vector3(0f, 3.25f, 0f), dir, RayLength, nameFilter);
                     if (!hit)
                     {
                         if (slits.Length > 0) slits.Append(", ");
