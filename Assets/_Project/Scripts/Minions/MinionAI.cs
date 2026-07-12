@@ -220,6 +220,12 @@ namespace Enigma.Minion
                     float finalDamage = DamageUtility.ApplyTeamBuff(_attackDamage, gameObject, _currentTarget.gameObject);
                     finalDamage *= 1f + (GameServices.ObjectiveBuffs != null
                         ? GameServices.ObjectiveBuffs.GetMagnitude(_teamTag.Team, ObjectiveBuffType.MinionPower, Time.time) : 0f);
+
+                    // ミニオンの対構造物ダメージ倍率(タワーが落ちないボトルネックの是正)。
+                    // MeleeSiegeLogic はチャンピオン専用のためミニオンには適用されない経路。
+                    bool targetIsStructure = _currentTarget.GetComponentInParent<StructureTag>() != null;
+                    finalDamage *= MinionSiegeLogic.Multiplier(targetIsStructure);
+
                     _currentTarget.TakeDamage(finalDamage, gameObject);
                 }
             }
