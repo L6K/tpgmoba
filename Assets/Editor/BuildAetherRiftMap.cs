@@ -1048,6 +1048,81 @@ public static partial class BuildAetherRiftMap
         float patchOuterZ = EyeOuterR * Mathf.Sin(cornerRad) - EyeB; // 上まぶた弧の +z 側端
         PlaceCornerSeamPatch(parent, "BoundaryEye_CornerR", +cornerX, +patchOuterX, patchOuterZ, TubeHeight, matBoundary);
         PlaceCornerSeamPatch(parent, "BoundaryEye_CornerL", -cornerX, -patchOuterX, patchOuterZ, TubeHeight, matBoundary);
+
+        // 目尻扇形パッチ(実測 RaycastAll で判明した実在の穴の是正、2026-07-12):
+        // 目尻付近(ワールド角度 0°±約19.5°、180°±約19.5°)は基地プラトー(y=2.5)圏に入り、
+        // 壁バンド(PlaceWallBandAt)・上記楔パッチとも底を地形高さに合わせているため、
+        // y=0〜2.5 の帯にコライダーが存在しない。Ground メッシュもこの鋭角コーナーでは
+        // グリッドセルの量子化で欠落する。原点(0,0,0)を要とし、目尻の内角
+        // (ワールド角度 -cornerDeg〜+cornerDeg、半径 0〜EyeOuterR)を扇形に y=0 から
+        // height 分立ち上げて塞ぐ。壁バンド内周(半径 EyeInnerR)と重なる形で継ぎ目も覆う。
+        PlaceCornerFanPatch(parent, "BoundaryEye_FanR", cornerDeg, EyeOuterR, TubeHeight, matBoundary);
+        PlaceCornerFanPatch(parent, "BoundaryEye_FanL", cornerDeg, EyeOuterR, TubeHeight, matBoundary, mirrorX: true);
+    }
+
+    /// <summary>
+    /// 原点を要とする扇形パッチ。ワールド角度 [-halfAngleDeg, +halfAngleDeg]、半径 [0, outerR] を
+    /// y=0 から height 分立ち上げた「くさび形の柱」で、目尻付近の低空(プラトー地形と壁バンドの
+    /// 間に生じる y=0〜地形高さの隙間)を絶対座標ベースで塞ぐ。mirrorX で反対側の目尻(x&lt;0)用に反転する。
+    /// </summary>
+    private static void PlaceCornerFanPatch(GameObject parent, string name, float halfAngleDeg, float outerR,
+        float height, Material mat, bool mirrorX = false)
+    {
+        const int fanSegs = 8;
+        float sign = mirrorX ? -1f : 1f;
+
+        var verts = new System.Collections.Generic.List<Vector3>();
+        var tris  = new System.Collections.Generic.List<int>();
+
+        // 中心(底/天)は原点。扇の弧側は [-halfAngleDeg, +halfAngleDeg] を fanSegs 分割。
+        int centerBottom = 0;
+        int centerTop    = 1;
+        verts.Add(new Vector3(0f, 0f,      0f));
+        verts.Add(new Vector3(0f, height,  0f));
+
+        int arcStart = verts.Count;
+        for (int i = 0; i <= fanSegs; i++)
+        {
+            float t   = (float)i / fanSegs;
+            float deg = Mathf.Lerp(-halfAngleDeg, halfAngleDeg, t);
+            float rad = deg * Mathf.Deg2Rad;
+            float x   = sign * outerR * Mathf.Cos(rad);
+            float z   = outerR * Mathf.Sin(rad);
+            verts.Add(new Vector3(x, 0f,     z)); // 底
+            verts.Add(new Vector3(x, height, z)); // 天
+        }
+
+        for (int i = 0; i < fanSegs; i++)
+        {
+            int b0 = arcStart + i * 2;
+            int b1 = arcStart + (i + 1) * 2;
+
+            // 底面(中心→弧、-Y向き)・天面(中心→弧、+Y向き)・外周面(両面)
+            if (!mirrorX)
+            {
+                tris.AddRange(new[] { centerBottom, b1 + 0, b0 + 0 });
+                tris.AddRange(new[] { centerTop,    b0 + 1, b1 + 1 });
+            }
+            else
+            {
+                tris.AddRange(new[] { centerBottom, b0 + 0, b1 + 0 });
+                tris.AddRange(new[] { centerTop,    b1 + 1, b0 + 1 });
+            }
+            AddQuadDoubleSided(tris, b0 + 0, b0 + 1, b1 + 1, b1 + 0);
+        }
+
+        var mesh = new Mesh { name = name + "Mesh" };
+        mesh.SetVertices(verts);
+        mesh.SetTriangles(tris, 0);
+        mesh.RecalculateNormals();
+        mesh.RecalculateBounds();
+
+        var go = new GameObject(name);
+        go.transform.SetParent(parent.transform, false);
+        var mf = go.AddComponent<MeshFilter>(); mf.sharedMesh = mesh;
+        var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat;
+        var mc = go.AddComponent<MeshCollider>(); mc.sharedMesh = mesh;
+        SetStatic(go);
     }
 
     /// <summary>
@@ -1107,11 +1182,17 @@ public static partial class BuildAetherRiftMap
         float groundUp    = MapHeightModel.Height(outerX,  zUp);
         float groundDown  = MapHeightModel.Height(outerX,  zDown);
 
+        // 実測(RaycastAll)で判明: 目尻付近は基地プラトー(y=2.5)圏に入るため、底を地形高さに
+        // 合わせると y=0〜2.5 の帯にコライダーが存在しない「実在の穴」になる
+        // (Ground メッシュ自体もこの鋭角コーナーではグリッドセルが量子化で欠落し、
+        // y=0 側を塞ぐものが何もない)。パッチの底は常に絶対 y=0 まで下げて隙間なく塞ぐ。
+        const float baseY = 0f;
+
         var verts = new Vector3[]
         {
-            new Vector3(cornerX,        groundInner,          0f),     // 0 内側目尻 底
-            new Vector3(outerX,         groundUp,             zUp),    // 1 上まぶた外端 底
-            new Vector3(outerX,         groundDown,           zDown),  // 2 下まぶた外端 底
+            new Vector3(cornerX,        baseY,                0f),     // 0 内側目尻 底
+            new Vector3(outerX,         baseY,                zUp),    // 1 上まぶた外端 底
+            new Vector3(outerX,         baseY,                zDown),  // 2 下まぶた外端 底
             new Vector3(cornerX,        groundInner + height, 0f),     // 3 内側目尻 天
             new Vector3(outerX,         groundUp + height,    zUp),    // 4 上まぶた外端 天
             new Vector3(outerX,         groundDown + height,  zDown),  // 5 下まぶた外端 天
