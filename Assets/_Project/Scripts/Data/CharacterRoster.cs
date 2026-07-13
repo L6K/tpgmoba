@@ -58,6 +58,9 @@ namespace Enigma.Data
             public float shieldDuration;
             public float healAmount;
             public float dashDistance;
+            public float pullDistance;
+            public float healPerChampionHit;
+            public float healPerMinionHit;
         }
 
         private static readonly string[] _validSlots = { "Q", "E", "R" };

@@ -96,6 +96,9 @@ namespace Enigma.EditorTools
                     skill.ShieldDuration  = sk.shieldDuration;
                     skill.HealAmount      = sk.healAmount;
                     skill.DashDistance    = sk.dashDistance;
+                    skill.PullDistance        = sk.pullDistance;
+                    skill.HealPerChampionHit  = sk.healPerChampionHit;
+                    skill.HealPerMinionHit    = sk.healPerMinionHit;
 
                     if (isNewSkill)
                     {

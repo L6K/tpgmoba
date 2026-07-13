@@ -14,6 +14,10 @@ namespace Enigma.Character
         private GameObject _owner;
         private float _lifeTimer;
         private float _stun, _root, _slowStrength, _slowDuration;
+        private float _pullDistance;
+
+        // プル時のめり込み防止の最小離隔(m)。発射者の目の前まで詰めさせない。
+        private const float MinPullSeparation = 2f;
 
         // 着弾時のネオン演出色（キャラ別）。SetImpactColors で結線したときのみ発動する。
         private bool _impactColorsSet;
@@ -66,6 +70,12 @@ namespace Enigma.Character
             _slowDuration = slowDuration;
         }
 
+        /// <summary>命中した敵を発射者側へ引き寄せる距離(m)を設定する（thorne Q 等）。0以下=なし。</summary>
+        public void SetPullDistance(float pullDistance)
+        {
+            _pullDistance = pullDistance;
+        }
+
         private void Update()
         {
             _lifeTimer += Time.deltaTime;
@@ -102,6 +112,7 @@ namespace Enigma.Character
                 if (damageable is HealthComponent hc)
                 {
                     hc.TakeDamage(finalDamage, _owner);
+                    ApplyPullTo(hc.gameObject);
                     ApplyStatusTo(hc.gameObject);
 
                     // 操作プレイヤーが当てた一撃だけ手応え演出(微シェイク+大技ヒットストップ)
@@ -128,6 +139,26 @@ namespace Enigma.Character
                 Enigma.Vfx.NeonImpactEffect.Spawn(transform.position, _impactPrimary, _impactSecondary);
 
             Destroy(gameObject);
+        }
+
+        // 命中した敵を発射者側へ _pullDistance だけ引き寄せる(thorne Q チェーンフック等)。
+        // y は変位させず、対象自身の CharacterController.Move に水平移動のみを渡すことで、
+        // 起伏・重力の解決を既存の移動システム(CC+重力)に任せる(テレポート的な y 直指定はしない)。
+        private void ApplyPullTo(GameObject go)
+        {
+            if (_pullDistance <= 0f || _owner == null) return;
+
+            var cc = go.GetComponent<CharacterController>();
+            if (cc == null) return;
+
+            Vector3 targetPos = go.transform.position;
+            Vector3 newPos = Enigma.Combat.PullDisplacementLogic.PullTarget(
+                _owner.transform.position, targetPos, _pullDistance, MinPullSeparation);
+
+            Vector3 delta = newPos - targetPos;
+            delta.y = 0f;
+            if (delta.sqrMagnitude > 0.0001f)
+                cc.Move(delta);
         }
 
         private void ApplyStatusTo(GameObject go)

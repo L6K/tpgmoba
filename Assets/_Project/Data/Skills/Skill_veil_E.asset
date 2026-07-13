@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: Skill_veil_E
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u6697\u6BBA\u523B\u5370"
-  Description: "\u5BFE\u8C61\u306E\u6575\u5358\u4F53\u306B\u546A\u8A5B\u3092\u304B\u3051\u3001\u78BA\u5B9A\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u308B\u3002"
+  Description: "\u5BFE\u8C61\u306B\u6B7B\u306E\u523B\u5370\u3092\u523B\u3080\u3002\u5358\u4F53\u3078\u306E\u6700\u5927\u706B\u529B"
   Targeting: 2
   Damage: 140
   Range: 10
   Radius: 0
   CooldownSeconds: 70
   ProjectileSpeed: 0
-  WindupSeconds: 0.15
-  RecoverySeconds: 0.3
+  WindupSeconds: 0.3
+  RecoverySeconds: 0.45
   StunDuration: 0
   RootDuration: 0
   SlowStrength: 0
@@ -30,3 +30,6 @@ MonoBehaviour:
   ShieldDuration: 0
   HealAmount: 0
   DashDistance: 5
+  PullDistance: 0
+  HealPerChampionHit: 0
+  HealPerMinionHit: 0

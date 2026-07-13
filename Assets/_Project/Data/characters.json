@@ -334,7 +334,8 @@
           "windup": 0.25,
           "recovery": 0.4,
           "description": "機械鎖を射出して敵を捉える",
-          "rootDuration": 0.8
+          "rootDuration": 0.4,
+          "pullDistance": 4
         },
         {
           "slot": "E",
@@ -347,7 +348,9 @@
           "projectileSpeed": 0,
           "windup": 0.25,
           "recovery": 0.35,
-          "description": "地面に拳を叩きつけ、周囲に衝撃波を放つ"
+          "description": "地面に拳を叩きつけ、周囲に衝撃波を放つ",
+          "healPerChampionHit": 14,
+          "healPerMinionHit": 4
         },
         {
           "slot": "R",
@@ -356,7 +359,7 @@
           "damage": 135,
           "range": 10,
           "radius": 0,
-          "cooldown": 55,
+          "cooldown": 42,
           "projectileSpeed": 0,
           "windup": 0.3,
           "recovery": 0.5,

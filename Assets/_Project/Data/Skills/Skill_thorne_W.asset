@@ -30,3 +30,6 @@ MonoBehaviour:
   ShieldDuration: 0
   HealAmount: 0
   DashDistance: 0
+  PullDistance: 0
+  HealPerChampionHit: 14
+  HealPerMinionHit: 4

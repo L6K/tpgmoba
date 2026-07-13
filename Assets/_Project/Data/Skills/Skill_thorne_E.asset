@@ -18,7 +18,7 @@ MonoBehaviour:
   Damage: 135
   Range: 10
   Radius: 0
-  CooldownSeconds: 55
+  CooldownSeconds: 42
   ProjectileSpeed: 0
   WindupSeconds: 0.3
   RecoverySeconds: 0.5
@@ -30,3 +30,6 @@ MonoBehaviour:
   ShieldDuration: 0
   HealAmount: 90
   DashDistance: 7
+  PullDistance: 0
+  HealPerChampionHit: 0
+  HealPerMinionHit: 0

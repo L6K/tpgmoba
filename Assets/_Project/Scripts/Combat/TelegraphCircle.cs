@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using Enigma.Ability;
 using Enigma.Audio;
+using Enigma.Character;
+using Enigma.Minion;
 
 namespace Enigma.Combat
 {
@@ -13,6 +15,9 @@ namespace Enigma.Combat
         private float      _radius;
         private GameObject _owner;
         private float      _stun, _root, _slowStrength, _slowDuration;
+        // 汎用フィールド: 命中した敵チャンピオン/ミニオン1体につき発射者へ回復するHP量。
+        // 0=無効（thorne E 震撃波以外は既定で未使用）。
+        private float      _healPerChampionHit, _healPerMinionHit;
 
         // 予兆演出の状態
         private MeshRenderer          _bodyRenderer;
@@ -49,6 +54,13 @@ namespace Enigma.Combat
             _root         = root;
             _slowStrength = slowStrength;
             _slowDuration = slowDuration;
+        }
+
+        /// <summary>命中した敵チャンピオン/ミニオン1体あたりの発射者への回復量を設定する（thorne E 等）。0以下=なし。</summary>
+        public void SetHealOnHit(float healPerChampionHit, float healPerMinionHit)
+        {
+            _healPerChampionHit = healPerChampionHit;
+            _healPerMinionHit   = healPerMinionHit;
         }
 
         private void ApplyStatusTo(GameObject go)
@@ -168,6 +180,8 @@ namespace Enigma.Combat
             // 多重ヒットしないよう IDamageable 単位で重複排除する
             var hits = Physics.OverlapSphere(transform.position, _radius);
             var damaged = new HashSet<IDamageable>();
+            int championHits = 0;
+            int minionHits = 0;
             foreach (var col in hits)
             {
                 if (_owner != null && col.gameObject == _owner) continue;
@@ -186,13 +200,37 @@ namespace Enigma.Combat
                         damageable.TakeDamage(finalDamage);
 
                     if (damageable is HealthComponent hcTarget)
+                    {
                         ApplyStatusTo(hcTarget.gameObject);
+
+                        if (hcTarget.GetComponentInParent<PlayerController>() != null
+                            || hcTarget.GetComponentInParent<EnemyChampionAI>() != null)
+                            championHits++;
+                        else if (hcTarget.GetComponentInParent<MinionAI>() != null)
+                            minionHits++;
+                    }
                 }
             }
+
+            ApplyHealOnHit(championHits, minionHits);
 
             // 演出のために少し待ってから消滅
             yield return new WaitForSeconds(0.15f);
             Destroy(gameObject);
+        }
+
+        // 命中した敵チャンピオン/ミニオン数に応じて発射者(_owner)を回復する(thorne E 震撃波等)。
+        // 汎用フィールドのため他スキルは既定 0 で無効。
+        private void ApplyHealOnHit(int championHits, int minionHits)
+        {
+            if (_owner == null) return;
+            if (_healPerChampionHit <= 0f && _healPerMinionHit <= 0f) return;
+
+            float healAmount = championHits * _healPerChampionHit + minionHits * _healPerMinionHit;
+            if (healAmount <= 0f) return;
+
+            var ownerHc = _owner.GetComponent<HealthComponent>();
+            ownerHc?.Model.Heal(healAmount);
         }
 
         // TeamTag が無い側は中立扱い（誰にでも当たる）。

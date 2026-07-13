@@ -463,6 +463,7 @@ namespace Enigma.Ability
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.identity);
             proj.Init(dir, def.ProjectileSpeed, def.Damage * scale, gameObject, lifetime);
             proj.SetStatusEffects(def.StunDuration, def.RootDuration, def.SlowStrength, def.SlowDuration);
+            proj.SetPullDistance(def.PullDistance);
 
             // 発光コア + トレイル + 二段バースト（白コア小 + スロット色大）
             var color = SlotColor(slot);
@@ -490,6 +491,7 @@ namespace Enigma.Ability
             var telegraph = Instantiate(_telegraphPrefab, pos, Quaternion.identity);
             telegraph.Init(def.Radius, 0.8f, def.Damage * scale, gameObject);
             telegraph.SetStatusEffects(def.StunDuration, def.RootDuration, def.SlowStrength, def.SlowDuration);
+            telegraph.SetHealOnHit(def.HealPerChampionHit, def.HealPerMinionHit);
 
             // マズルバースト + 着弾地点に大きめバースト
             var color = SlotColor(slot);

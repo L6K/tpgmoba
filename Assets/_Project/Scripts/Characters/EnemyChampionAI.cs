@@ -1664,6 +1664,7 @@ namespace Enigma.Character
             var proj = Instantiate(_projectilePrefab, _muzzle.position, Quaternion.LookRotation(dir));
             proj.Init(dir, def.ProjectileSpeed, def.Damage, gameObject, lifetime);
             proj.SetStatusEffects(def.StunDuration, def.RootDuration, def.SlowStrength, def.SlowDuration);
+            proj.SetPullDistance(def.PullDistance);
 
             // 発光コア + トレイル + 二段バースト（プレイヤー側と共通化）
             var color = SkillSlotColor(slot);
@@ -1682,6 +1683,7 @@ namespace Enigma.Character
             var telegraph = Instantiate(_telegraphPrefab, pos, Quaternion.identity);
             telegraph.Init(def.Radius, 0.8f, def.Damage, gameObject);
             telegraph.SetStatusEffects(def.StunDuration, def.RootDuration, def.SlowStrength, def.SlowDuration);
+            telegraph.SetHealOnHit(def.HealPerChampionHit, def.HealPerMinionHit);
 
             var color = SkillSlotColor(slot);
             SkillVfx.SpawnBurst(_muzzle != null ? _muzzle.position : transform.position, color, 0.3f, 1.2f, 0.25f);

@@ -36,5 +36,11 @@ namespace Enigma.Ability
         public float HealAmount;
         // ダッシュ距離(m)。0=なし
         public float DashDistance;
+        // 命中した敵を発射者側へ引き寄せる距離(m)。Directional のみ使用。0=なし
+        public float PullDistance;
+        // 命中した敵チャンピオン1体につき発射者へ回復するHP量。0=なし
+        public float HealPerChampionHit;
+        // 命中した敵ミニオン1体につき発射者へ回復するHP量。0=なし
+        public float HealPerMinionHit;
     }
 }
