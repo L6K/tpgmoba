@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Skill_nova_Q
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u30B9\u30BF\u30FC\u30EC\u30A4"
-  Description: "\u661F\u5149\u306E\u77E2\u3092\u653E\u3064\u3002\u5F3E\u901F\u304C\u901F\u304F\u5F53\u3066\u3084\u3059\u3044"
+  Description: "\u6307\u5B9A\u65B9\u5411\u3078\u30A8\u30CD\u30EB\u30AE\u30FC\u6CE2\u3092\u653E\u3061\u3001\u76F4\u7DDA\u4E0A\u306E\u6575\u306B\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u308B\u3002"
   Targeting: 0
   Damage: 30
   Range: 19
@@ -21,7 +21,7 @@ MonoBehaviour:
   CooldownSeconds: 5
   ProjectileSpeed: 36
   WindupSeconds: 0.2
-  RecoverySeconds: 0.35
+  RecoverySeconds: 0.3
   StunDuration: 0
   RootDuration: 0
   SlowStrength: 0

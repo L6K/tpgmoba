@@ -13,15 +13,15 @@ MonoBehaviour:
   m_Name: Skill_Chase
   m_EditorClassIdentifier: Enigma::Enigma.Ability.SkillDefinition
   SkillName: "\u30E1\u30C6\u30AA\u30D5\u30A9\u30FC\u30EB"
-  Description: "\u6307\u5B9A\u5730\u70B9\u3078\u5DE8\u5927\u306A\u9B54\u5C0E\u9695\u77F3\u3092\u843D\u3068\u3057\u3001\u5E83\u7BC4\u56F2\u3092\u713C\u304D\u5C3D\u304F\u3059(\u30A2\u30EB\u30C6\u30A3\u30E1\u30C3\u30C8)"
+  Description: "\u5BFE\u8C61\u306E\u6575\u5358\u4F53\u3078\u77AC\u6642\u306B\u8FFD\u6483\u3092\u52A0\u3048\u3001\u78BA\u5B9A\u30C0\u30E1\u30FC\u30B8\u3092\u4E0E\u3048\u308B\u3002"
   Targeting: 1
   Damage: 130
   Range: 16
   Radius: 4
   CooldownSeconds: 48
   ProjectileSpeed: 0
-  WindupSeconds: 0.4
-  RecoverySeconds: 0.55
+  WindupSeconds: 0.15
+  RecoverySeconds: 0.3
   StunDuration: 0
   RootDuration: 0
   SlowStrength: 0.4

@@ -1020,27 +1020,39 @@ public static partial class BuildAetherRiftMap
         const float EyeStepDeg = 3.75f;
 
         // 目尻の角度: 中心(0,0,-EyeB)から目尻(sqrt(R²-B²),0)へ atan2(B, sqrt(R²-B²))
-        // 上下まぶたは目尻 (±cornerX, 0) でちょうど一点で接続する(弧の延長はしない=Ground 外には出ない)。
-        // 接続点の継ぎ目は別途、目尻にコーナーキャップ(細い円柱)を1本ずつ立てて隠す。
         float cornerDeg = Mathf.Atan2(EyeB, Mathf.Sqrt(EyeR * EyeR - EyeB * EyeB)) * Mathf.Rad2Deg;
         float cornerX   = Mathf.Sqrt(EyeR * EyeR - EyeB * EyeB);
-        float upperStart = cornerDeg;
-        float upperEnd   = 180f - cornerDeg;
-        float lowerStart = 180f + cornerDeg;
-        float lowerEnd   = 360f - cornerDeg;
+
+        // 目尻の一点接触は構造的な継ぎ目になる(2026-07-13 実測: 原点→+X の低レイが素通り)ため、
+        // 衝突弧だけを目尻の先へ CornerOverlapDeg 延長し、上下弧を目尻で X 字に交差させて封鎖する
+        // (ベースポケット壁の PocketEndExtendDeg と同じ食い込み手法)。延長部は目形の外側
+        // (もう一方の円の外)へ出るためプレイアブル領域には一切食い込まない。
+        // 描画弧は従来の目尻〜目尻範囲のままにして、見た目に延長の角が生えないようにする。
+        const float CornerOverlapDeg = 5f;
+        float upperStart = cornerDeg        - CornerOverlapDeg;
+        float upperEnd   = 180f - cornerDeg + CornerOverlapDeg;
+        float lowerStart = 180f + cornerDeg - CornerOverlapDeg;
+        float lowerEnd   = 360f - cornerDeg + CornerOverlapDeg;
         int upperSegs = Mathf.Max(1, Mathf.RoundToInt((upperEnd - upperStart) / EyeStepDeg));
         int lowerSegs = Mathf.Max(1, Mathf.RoundToInt((lowerEnd - lowerStart) / EyeStepDeg));
 
+        // floorAtZero: 目尻付近(|x|>=92)は基地プラトー圏で地形追従の底が y=2.5 に浮き、
+        // y=0〜2.5 の帯が実在の穴になる(2026-07-13 実測: (100,0.75,0)→+X のレイが 0 ヒット)。
+        // 最終防壁は全周で底を絶対 y=0 まで下げたカーテンにする(プラトー外は地形が y=0 なので不変、
+        // プラトー圏では地中に沈むだけで見た目への影響もない)。
         PlaceWallBandAt(parent, "BoundaryEye_UpperLid", new Vector3(0f, 0f, -EyeB),
-            EyeInnerR, EyeOuterR, TubeHeight, upperSegs, upperStart, upperEnd, matBoundary);
+            EyeInnerR, EyeOuterR, TubeHeight, upperSegs, upperStart, upperEnd, matBoundary,
+            visualStartDeg: cornerDeg, visualEndDeg: 180f - cornerDeg, floorAtZero: true);
         PlaceWallBandAt(parent, "BoundaryEye_LowerLid", new Vector3(0f, 0f,  EyeB),
-            EyeInnerR, EyeOuterR, TubeHeight, lowerSegs, lowerStart, lowerEnd, matBoundary);
+            EyeInnerR, EyeOuterR, TubeHeight, lowerSegs, lowerStart, lowerEnd, matBoundary,
+            visualStartDeg: 180f + cornerDeg, visualEndDeg: 360f - cornerDeg, floorAtZero: true);
 
         // 目尻のコーナーシーム・パッチ:
         //   上まぶた弧の右端 外周 = (EyeOuterR·cos(cornerDeg), 0, -EyeB + EyeOuterR·sin(cornerDeg))
         //   下まぶた弧の右端 外周 = (EyeOuterR·cos(cornerDeg), 0, +EyeB - EyeOuterR·sin(cornerDeg))
         //   内側の目尻 = (cornerX, 0, 0)
-        // この3点(と高さ方向の対応点)で楔形のパッチを張って、上下弧の端面の継ぎ目を覆う。
+        // この3点(と高さ方向の対応点)で楔形のパッチを張り、描画弧(目尻止まり)同士の端面の
+        // 継ぎ目を視覚的に覆う。衝突面では上の CornerOverlapDeg 延長交差が主封鎖で、パッチは冗長系。
         // パッチの外側端 x = EyeOuterR·cos(cornerDeg) ≈ 111.8 で、Ground の外には出るが
         // Wall band の外周と完全に同じ x なので「壁の外に出た」ようには見えない。
         float cornerRad = cornerDeg * Mathf.Deg2Rad;
@@ -1049,8 +1061,10 @@ public static partial class BuildAetherRiftMap
         PlaceCornerSeamPatch(parent, "BoundaryEye_CornerR", +cornerX, +patchOuterX, patchOuterZ, TubeHeight, matBoundary);
         PlaceCornerSeamPatch(parent, "BoundaryEye_CornerL", -cornerX, -patchOuterX, patchOuterZ, TubeHeight, matBoundary);
 
-        // 目尻の y0〜2.5 帯はプラトー地形の内部(到達不能)であり物理パッチは不要
-        // (2026-07-12 の扇形パッチは基地を飲み込む中実くさびとなり撤去。検証は2高度レイで対応)。
+        // 目尻の y0〜2.5 帯は「プラトー地中で到達不能」と2026-07-12時点で判断していたが、
+        // 実測(2026-07-13)で Ground メッシュの量子化欠けから到達可能な実在の穴と判明。
+        // 現在はまぶた弧自体の floorAtZero(底 y=0 カーテン)で全周を封鎖している
+        // (原点中心の扇形パッチは基地を飲み込む中実くさびになるため使わない)。
     }
 
 
@@ -1181,9 +1195,11 @@ public static partial class BuildAetherRiftMap
     private static readonly System.Collections.Generic.List<(Vector3 center, float halfLen, float halfThick, float yawDeg)>
         s_wallBoxes = new();
 
+    // floorAtZero: true にすると帯の底を地形追従でなく絶対 y=0 まで下げる(壁天面は地形+height のまま)。
+    // 地形が持ち上がる区間(基地プラトー等)で「壁の下の空洞」が生じない最終防壁用。
     private static GameObject PlaceWallBandAt(GameObject parent, string name, Vector3 center,
         float innerR, float outerR, float height, int segments, float startDeg, float endDeg, Material mat,
-        float visualStartDeg = float.NaN, float visualEndDeg = float.NaN)
+        float visualStartDeg = float.NaN, float visualEndDeg = float.NaN, bool floorAtZero = false)
     {
         if (float.IsNaN(visualStartDeg)) visualStartDeg = startDeg;
         if (float.IsNaN(visualEndDeg))   visualEndDeg   = endDeg;
@@ -1193,7 +1209,7 @@ public static partial class BuildAetherRiftMap
         var go = new GameObject(name);
         go.transform.position = center;
         var mf = go.AddComponent<MeshFilter>();
-        mf.sharedMesh = CreateWallBandMesh(innerR, outerR, height, segments, startDeg, endDeg, center);
+        mf.sharedMesh = CreateWallBandMesh(innerR, outerR, height, segments, startDeg, endDeg, center, floorAtZero);
         var mc = go.AddComponent<MeshCollider>();
         mc.sharedMesh = mf.sharedMesh;
         SetStatic(go);
@@ -1202,7 +1218,7 @@ public static partial class BuildAetherRiftMap
         var visual = new GameObject("Visual");
         visual.transform.SetParent(go.transform, false);
         var vmf = visual.AddComponent<MeshFilter>();
-        vmf.sharedMesh = CreateWallBandRenderMesh(innerR, outerR, height, segments, visualStartDeg, visualEndDeg, center);
+        vmf.sharedMesh = CreateWallBandRenderMesh(innerR, outerR, height, segments, visualStartDeg, visualEndDeg, center, floorAtZero);
         var vmr = visual.AddComponent<MeshRenderer>();
         vmr.sharedMaterial = mat;
         SetStatic(visual);
@@ -1258,13 +1274,17 @@ public static partial class BuildAetherRiftMap
 
         AppendLayerGaps(sb, "JungleLaneWalls", "JungleLaneWall", s_jungleLaneOpenings);
         AppendLayerGaps(sb, "OuterLaneWalls",  "OuterLaneWall",  s_outerLaneOpenings);
-        AppendLayerGaps(sb, "OuterBoundary",   "Boundary",       s_boundaryOpenings);
+        // 最終防壁は底を絶対 y=0 まで下げたカーテン設計(floorAtZero)のため、低レイ(y=0.75)単独で
+        // 全周ヒットを要求する。3高度 OR だと「プラトー上に浮いた壁+壁下の実在空洞」を高レイの
+        // ヒットで塞がっている扱いにする偽陰性が生じる(2026-07-13 の目尻脱出穴を見逃した実績)。
+        AppendLayerGaps(sb, "OuterBoundary",   "Boundary",       s_boundaryOpenings, requireGroundLevelHit: true);
 
         return sb.Length == 0 ? "OK" : sb.ToString();
     }
 
     private static void AppendLayerGaps(System.Text.StringBuilder sb, string layerLabel,
-        string nameFilter, (string label, float centerDeg, float halfDeg)[] intendedOpenings)
+        string nameFilter, (string label, float centerDeg, float halfDeg)[] intendedOpenings,
+        bool requireGroundLevelHit = false)
     {
         const float RayLength = 200f;
         const float StepDeg   = 0.5f;
@@ -1292,8 +1312,11 @@ public static partial class BuildAetherRiftMap
 
             // 3高度方式: 平地(壁y0〜)は低レイ、ランプ帯(壁y0.75〜2.0〜)は中レイ、プラトー圏(壁y2.5〜)は高レイが捉える。
             // どちらかがヒットすれば遮蔽扱い。y0.75固定だと基地プラトーの地中(到達不能空間)を
-            // 「穴」と誤報告する(2026-07-12 の扇形パッチ事故の教訓)
-            bool hit = LayerHitAtHeight(origin, dir, RayLength, nameFilter)
+            // 「穴」と誤報告する(2026-07-12 の扇形パッチ事故の教訓)。
+            // requireGroundLevelHit(最終防壁): 壁が底 y=0 カーテン設計のため低レイ単独ヒットを要求する。
+            bool hit = requireGroundLevelHit
+                ? LayerHitAtHeight(origin, dir, RayLength, nameFilter)
+                : LayerHitAtHeight(origin, dir, RayLength, nameFilter)
                     || LayerHitAtHeight(new Vector3(0f, 2.0f, 0f), dir, RayLength, nameFilter)
                     || LayerHitAtHeight(new Vector3(0f, 3.25f, 0f), dir, RayLength, nameFilter);
             if (!hit)
@@ -4509,7 +4532,7 @@ public static partial class BuildAetherRiftMap
     /// 角度は度・CCW、円弧は origin 中心の XZ 平面上に置く（GO 位置でベース中心へ移す）。
     /// </summary>
     private static Mesh CreateWallBandMesh(float innerR, float outerR, float height,
-        int segments, float startDeg, float endDeg, Vector3 center = default)
+        int segments, float startDeg, float endDeg, Vector3 center = default, bool floorAtZero = false)
     {
         if (segments < 1) segments = 1;
 
@@ -4520,6 +4543,7 @@ public static partial class BuildAetherRiftMap
         // 地形追従(境界チューブのプラトー区間対策): y はワールド座標(center+ローカル)で
         // MapHeightModel.Height を評価し、従来の 0/height オフセットへ加算する。
         // クレーター/川/ジャングル高台ブロブ帯では Height=0 のため見た目は不変。
+        // floorAtZero 指定時は底のみ絶対 y=0 まで下げる(地形が持ち上がる区間の壁下空洞を封鎖)。
         var verts = new Vector3[rings * 4];
         for (int i = 0; i < rings; i++)
         {
@@ -4533,11 +4557,13 @@ public static partial class BuildAetherRiftMap
             float outerX = outerR * c, outerZ = outerR * s;
             float innerGroundY = MapHeightModel.Height(center.x + innerX, center.z + innerZ);
             float outerGroundY = MapHeightModel.Height(center.x + outerX, center.z + outerZ);
+            float innerBaseY   = floorAtZero ? Mathf.Min(0f, innerGroundY) : innerGroundY;
+            float outerBaseY   = floorAtZero ? Mathf.Min(0f, outerGroundY) : outerGroundY;
 
             int b = i * 4;
-            verts[b + 0] = new Vector3(innerX, innerGroundY,          innerZ); // 内下
+            verts[b + 0] = new Vector3(innerX, innerBaseY,            innerZ); // 内下
             verts[b + 1] = new Vector3(innerX, innerGroundY + height, innerZ); // 内上
-            verts[b + 2] = new Vector3(outerX, outerGroundY,          outerZ); // 外下
+            verts[b + 2] = new Vector3(outerX, outerBaseY,            outerZ); // 外下
             verts[b + 3] = new Vector3(outerX, outerGroundY + height, outerZ); // 外上
         }
 
@@ -4581,7 +4607,7 @@ public static partial class BuildAetherRiftMap
     /// 内周面=中心向き / 外周面=外向き / 上面=+Y / 端面=弧の外向き。
     /// </summary>
     private static Mesh CreateWallBandRenderMesh(float innerR, float outerR, float height,
-        int segments, float startDeg, float endDeg, Vector3 center = default)
+        int segments, float startDeg, float endDeg, Vector3 center = default, bool floorAtZero = false)
     {
         if (segments < 1) segments = 1;
 
@@ -4591,13 +4617,16 @@ public static partial class BuildAetherRiftMap
 
         // 地形追従: y はローカルオフセット(0/height)に加え、ワールド座標での
         // MapHeightModel.Height を足し込む(CreateWallBandMesh と同じ方式)。
+        // floorAtZero 指定時は底(y=0 オフセット)のみ絶対 y=0 まで下げる(衝突メッシュと一致させ、
+        // 地形メッシュの量子化欠けから壁下の空洞が覗いても壁面で塞がって見えるようにする)。
         Vector3 P(float deg, float r, float y)
         {
             float rad = deg * Mathf.Deg2Rad;
             float x = r * Mathf.Cos(rad);
             float z = r * Mathf.Sin(rad);
             float groundY = MapHeightModel.Height(center.x + x, center.z + z);
-            return new Vector3(x, groundY + y, z);
+            float baseY   = floorAtZero ? Mathf.Min(0f, groundY) : groundY;
+            return new Vector3(x, y <= 0f ? baseY : groundY + y, z);
         }
 
         // 4 頂点を新規追加して 2 三角形を張る(頂点非共有=フラット法線)
