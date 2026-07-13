@@ -91,6 +91,11 @@ namespace Enigma.Character
         private TeamTag _teamTag;
         private StatusEffectController _statusEffects;
 
+        // 方向指定スキルのリード照準用: 対象の速度推定（CharacterController が無い場合の前フレーム差分フォールバック）
+        private Transform _velTrackedTarget;
+        private Vector3   _velTrackedLastPos;
+        private Vector3   _trackedTargetVelocity;
+
         private LaneBotState _state = LaneBotState.Push;
         private int _waypointIndex;
         private float _verticalVelocity;
@@ -1514,6 +1519,8 @@ namespace Enigma.Character
             if (_statusEffects != null && !_statusEffects.CanAct) return false;
             if (target == null) return false;
 
+            _trackedTargetVelocity = EstimateTargetVelocity(target);
+
             var to = target.transform.position - transform.position;
             to.y = 0f;
             if (to.sqrMagnitude > 0.0001f)
@@ -1650,11 +1657,31 @@ namespace Enigma.Character
 
         // ── スキルキャスト（SkillCaster の3経路を最小限ミラー） ─────────────
 
+        // 対象の速度推定: CharacterController.velocity があればそれを使い、
+        // 無ければ前フレームの記録位置との差分から推定する（対象が切り替わった場合はゼロから開始）。
+        private Vector3 EstimateTargetVelocity(HealthComponent target)
+        {
+            var cc = target.GetComponent<CharacterController>();
+            if (cc != null) return cc.velocity;
+
+            Vector3 velocity = Vector3.zero;
+            if (_velTrackedTarget == target.transform && Time.deltaTime > 0f)
+                velocity = (target.transform.position - _velTrackedLastPos) / Time.deltaTime;
+
+            _velTrackedTarget  = target.transform;
+            _velTrackedLastPos = target.transform.position;
+            return velocity;
+        }
+
         private void CastBotDirectional(int slot, SkillDefinition def, HealthComponent target)
         {
             if (_projectilePrefab == null || _muzzle == null) return;
 
-            var dir = target.transform.position - _muzzle.position;
+            // リード照準: 対象の移動を見越して現在位置ではなく予測着弾点へ向けて撃つ
+            var aimPoint = AimLeadLogic.PredictAimPoint(
+                _muzzle.position, target.transform.position, _trackedTargetVelocity, def.ProjectileSpeed);
+
+            var dir = aimPoint - _muzzle.position;
             dir.y   = 0f;
             if (dir.sqrMagnitude < 0.001f) dir = transform.forward;
             dir.Normalize();
