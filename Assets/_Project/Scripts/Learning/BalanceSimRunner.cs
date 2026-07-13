@@ -87,6 +87,10 @@ namespace Enigma.Learning
             if (_request.matches <= 0) _request.matches = 1;
             if (_request.timeScale <= 0f) _request.timeScale = 1f;
 
+            // gitHash はバッチごとに取り直す(エディタセッション内キャッシュだと
+            // 途中コミット後のバッチに古いハッシュが記録される — 2026-07-12 実測)
+            s_gitHashResolved = false;
+
             _startedAt = DateTime.Now;
             Directory.CreateDirectory(RunsDir);
             _batchPath = $"{RunsDir}/batch_{_startedAt:yyyyMMdd_HHmm}.jsonl";

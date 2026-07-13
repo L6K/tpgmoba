@@ -11,14 +11,14 @@ namespace Enigma.GameModes
         public const float BaseDelay = 5f;
 
         // 猶予経過後、1 分ごとに加算する遅延（秒）。
-        public const float PerMinuteBonus = 1.5f;
+        public const float PerMinuteBonus = 3.0f;
 
         // 上限遅延（秒）。
-        public const float MaxDelay = 20f;
+        public const float MaxDelay = 30f;
 
         /// <summary>
         /// 経過秒数に対するリスポーン遅延を返す。
-        /// 300 秒まで 5.0、以降 1 分ごとに +1.5、上限 20.0。負値は基本遅延として安全に扱う。
+        /// 300 秒まで 5.0、以降 1 分ごとに +3.0、上限 30.0。負値は基本遅延として安全に扱う。
         /// </summary>
         public static float Delay(float timeSec)
         {
