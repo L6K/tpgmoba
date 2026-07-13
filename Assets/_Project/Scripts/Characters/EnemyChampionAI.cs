@@ -164,6 +164,10 @@ namespace Enigma.Character
         // 静的なので毎フレーム走査する必要はない。CloseOutSiege の優劣判定・攻囲先選定に使う)。
         private readonly List<HealthComponent> _allTowersOwnSide  = new();
         private readonly List<HealthComponent> _allTowersEnemySide = new();
+        // _allTowersEnemySide と同じ並びで各タワーの所属レーンIDを保持する(レーン開通判定用)。
+        private readonly List<int> _allTowersEnemySideLaneId = new();
+        // IsEnemyTitanExposed() 呼び出しごとの一時バッファ(GC回避のため使い回す)。
+        private readonly List<(bool isAlive, int laneId)> _towerExposureBuffer = new();
         private HealthComponent _ownTitan;
         private HealthComponent _enemyTitan;
         private bool _allTowersCacheDone;
@@ -827,6 +831,7 @@ namespace Enigma.Character
             _allTowersCacheDone = true;
             _allTowersOwnSide.Clear();
             _allTowersEnemySide.Clear();
+            _allTowersEnemySideLaneId.Clear();
 
             TeamId myTeam = _teamTag != null ? _teamTag.Team : TeamId.Red;
             var allHealth = Object.FindObjectsByType<HealthComponent>(FindObjectsSortMode.None);
@@ -847,9 +852,26 @@ namespace Enigma.Character
                     continue;
                 }
 
-                if (tag.Team == myTeam) _allTowersOwnSide.Add(hc);
-                else _allTowersEnemySide.Add(hc);
+                if (tag.Team == myTeam)
+                {
+                    _allTowersOwnSide.Add(hc);
+                }
+                else
+                {
+                    _allTowersEnemySide.Add(hc);
+                    _allTowersEnemySideLaneId.Add(TowerLaneId(hc.name));
+                }
             }
+        }
+
+        // タワー名からレーンIDを判定する(命名規則: Tower_[B|R][Top|Bot][Inner|Outer])。
+        // 未知の命名は名前のハッシュを負値レーンIDにして単独レーン扱いにし、
+        // 誤って他レーンと同一グループ化しない(安全側)。
+        private static int TowerLaneId(string towerName)
+        {
+            if (towerName.Contains("Top")) return 0;
+            if (towerName.Contains("Bot")) return 1;
+            return -(Mathf.Abs(towerName.GetHashCode()) + 1);
         }
 
         // タワー生存数(自陣/敵陣)を TowerAliveCountCacheSeconds 間隔で数え直す。
@@ -901,7 +923,9 @@ namespace Enigma.Character
             }
         }
 
-        // CloseOutSiege の攻囲先: 生存する最寄りの敵タワー、無ければ敵タイタンを返す。
+        // CloseOutSiege の攻囲先: 生存する最寄りの敵タワー。
+        // レーン開通(そのレーンの両タワーが破壊済み)ならタイタンも候補に加える
+        // (全レーン全滅時のみタイタンへフォールバックする従来挙動を自然に包含する)。
         private HealthComponent NearestSiegeTarget()
         {
             HealthComponent best = null;
@@ -913,9 +937,27 @@ namespace Enigma.Character
                 float dist = Vector3.Distance(transform.position, hc.transform.position);
                 if (dist < bestDist) { bestDist = dist; best = hc; }
             }
-            if (best != null) return best;
 
-            return (_enemyTitan != null && !_enemyTitan.Model.IsDead) ? _enemyTitan : null;
+            if (_enemyTitan != null && !_enemyTitan.Model.IsDead && IsEnemyTitanExposed())
+            {
+                float dist = Vector3.Distance(transform.position, _enemyTitan.transform.position);
+                if (dist < bestDist) { bestDist = dist; best = _enemyTitan; }
+            }
+
+            return best;
+        }
+
+        // 敵タワーの生死+レーンIDから TitanExposureLogic でレーン開通を判定する。
+        private bool IsEnemyTitanExposed()
+        {
+            _towerExposureBuffer.Clear();
+            for (int i = 0; i < _allTowersEnemySide.Count; i++)
+            {
+                var hc = _allTowersEnemySide[i];
+                bool isAlive = hc != null && !hc.Model.IsDead;
+                _towerExposureBuffer.Add((isAlive, _allTowersEnemySideLaneId[i]));
+            }
+            return TitanExposureLogic.IsTitanExposed(_towerExposureBuffer);
         }
 
         // BotMacroContext を組み立て、マクロ判断を更新する（Sense と同頻度）。
