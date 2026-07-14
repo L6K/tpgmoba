@@ -131,6 +131,9 @@ namespace Enigma.Character
         // スロット毎の次回使用可能時刻（Time.time 基準）。初回は試合開始からずらして撃つ。
         private readonly float[] _skillReadyAt = new float[SkillSlotCount];
 
+        // EffectiveEngageRange 計算用の一時バッファ(GC回避のため使い回す)。EngageRangeLogic.Effective に渡す。
+        private readonly List<(bool ready, float range)> _engageRangeSkillsBuffer = new();
+
         // 中立キャンプ狩り対象（_farmsNeutralCamps のときのみ採用）。
         private HealthComponent _neutralTarget;
         // CentralObjectiveDirector.Instance が未生成のフレーム用の遅延1回キャッシュ（GroupForObjective のボス攻撃で使用）。
@@ -764,7 +767,8 @@ namespace Enigma.Character
                 _attackerChampion != null,
                 attackerDist,
                 towerDist,
-                _allyMinionNearby);
+                _allyMinionNearby,
+                ComputeEffectiveEngageRange());
 
             UpdateMacro(myTeam, towerDist);
         }
@@ -1644,6 +1648,19 @@ namespace Enigma.Character
             // スキル発射でも攻撃モーションを再生する
             _clipSwitcher?.PlayAttack(0.45f);
             return true;
+        }
+
+        // チャンピオン対面の交戦開始半径 = max(AA射程, CD明けスキルの最大射程)(EngageRangeLogic 参照)。
+        // Sense の都度呼び、LaneBotPerception.ChampionEngageRange として LaneBotLogic へ渡す。
+        private float ComputeEffectiveEngageRange()
+        {
+            _engageRangeSkillsBuffer.Clear();
+            for (int slot = 0; slot < SkillSlotCount; slot++)
+            {
+                var s = SlotStateOf(slot);
+                _engageRangeSkillsBuffer.Add((s.Ready, s.Range));
+            }
+            return EngageRangeLogic.Effective(_attackRange, _engageRangeSkillsBuffer);
         }
 
         // スロットの選択用状態（CD 準備済みか + 射程）を組み立てる。未結線スロットは未準備扱い。

@@ -29,6 +29,10 @@ namespace Enigma.Character
         // 味方ミニオンが近くにいるか（タワーダイブの可否判定に使う）
         public readonly bool AllyMinionNearby;
 
+        // チャンピオン対面時の交戦開始半径（= max(AA射程, CD明けスキルの最大射程)。
+        // EngageRangeLogic.Effective で算出した値を呼び側が渡す。ミニオン/タワー判定には使わない。
+        public readonly float ChampionEngageRange;
+
         public LaneBotPerception(
             float hpRatio,
             float nearestEnemyDistance,
@@ -36,7 +40,8 @@ namespace Enigma.Character
             bool hasAttackerChampion,
             float attackerChampionDistance,
             float enemyTowerDistance,
-            bool allyMinionNearby)
+            bool allyMinionNearby,
+            float championEngageRange)
         {
             HpRatio                  = hpRatio;
             NearestEnemyDistance     = nearestEnemyDistance;
@@ -45,6 +50,7 @@ namespace Enigma.Character
             AttackerChampionDistance = attackerChampionDistance;
             EnemyTowerDistance       = enemyTowerDistance;
             AllyMinionNearby         = allyMinionNearby;
+            ChampionEngageRange      = championEngageRange;
         }
     }
 
@@ -144,8 +150,15 @@ namespace Enigma.Character
 
             // タワーゾーン規律は Decide 冒頭で処理済み(ここに来る時点でゾーン外 or 味方ミニオンあり)
 
+            // チャンピオン対面のみ ChampionEngageRange(= max(AA射程, CD明けスキルの最大射程))を使う。
+            // 近接キャラの AA 射程は短く、固定 AttackRange のままだと CD明けスキルの射程まで
+            // 近づく前に戦闘モードへ入れない非対称が生じるため。ミニオン/タワーは従来どおり
+            // 固定 AttackRange のまま(ファーム挙動を変えない)。
+            bool targetIsChampion = targetIsAttacker || p.NearestEnemyKind == LaneThreatKind.Champion;
+            float engageRange = targetIsChampion ? p.ChampionEngageRange : AttackRange;
+
             // 射程内なら停止して攻撃、射程外なら接近
-            if (targetDist <= AttackRange)
+            if (targetDist <= engageRange)
                 return new LaneBotDecision(LaneBotState.Engage, LaneMove.Stop, true, targetIsAttacker);
 
             return new LaneBotDecision(LaneBotState.Engage, LaneMove.Forward, false, targetIsAttacker);

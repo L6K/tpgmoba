@@ -7,16 +7,17 @@ namespace Enigma.Tests
     {
         // --- ヘルパー: よく使う知覚を簡潔に組み立てる ---
         private static LaneBotPerception P(
-            float hp                = 1f,
-            float nearDist          = 999f,
-            LaneThreatKind nearKind = LaneThreatKind.None,
-            bool attacker           = false,
-            float attackerDist      = 999f,
-            float towerDist         = float.MaxValue,
-            bool allyMinion         = false)
+            float hp                  = 1f,
+            float nearDist            = 999f,
+            LaneThreatKind nearKind   = LaneThreatKind.None,
+            bool attacker             = false,
+            float attackerDist        = 999f,
+            float towerDist           = float.MaxValue,
+            bool allyMinion           = false,
+            float championEngageRange = LaneBotLogic.AttackRange)
         {
             return new LaneBotPerception(
-                hp, nearDist, nearKind, attacker, attackerDist, towerDist, allyMinion);
+                hp, nearDist, nearKind, attacker, attackerDist, towerDist, allyMinion, championEngageRange);
         }
 
         // --- Push 状態 ---
@@ -160,6 +161,61 @@ namespace Enigma.Tests
                   towerDist: 30f, allyMinion: false));
             Assert.AreEqual(LaneBotState.Engage, d.State);
             Assert.IsTrue(d.HasAttackTarget);
+        }
+
+        // --- チャンピオン対面の交戦開始半径(ChampionEngageRange = EngageRangeLogic.Effective) ---
+
+        [Test]
+        public void Engage_ChampionBeyondFixedAttackRangeButInEngageRange_StopsAndAttacks()
+        {
+            // 固定 AttackRange(11)より遠いが、CD明けスキル射程(14)分の ChampionEngageRange 内 → 攻撃
+            var d = LaneBotLogic.Decide(LaneBotState.Engage,
+                P(nearDist: 12.5f, nearKind: LaneThreatKind.Champion, championEngageRange: 14f));
+            Assert.AreEqual(LaneBotState.Engage, d.State);
+            Assert.AreEqual(LaneMove.Stop, d.Move);
+            Assert.IsTrue(d.HasAttackTarget);
+        }
+
+        [Test]
+        public void Engage_ChampionOutsideEngageRange_Approaches()
+        {
+            // ChampionEngageRange(14)外なら接近を継続
+            var d = LaneBotLogic.Decide(LaneBotState.Engage,
+                P(nearDist: 14.5f, nearKind: LaneThreatKind.Champion, championEngageRange: 14f));
+            Assert.AreEqual(LaneMove.Forward, d.Move);
+            Assert.IsFalse(d.HasAttackTarget);
+        }
+
+        [Test]
+        public void Engage_ChampionEngageRangeBelowFixedAttackRange_UsesSmallerRange()
+        {
+            // 全スキル CD 中で ChampionEngageRange が AA射程(3.5)まで縮む場合、固定 AttackRange(11)より
+            // 狭くなる。8m はその範囲外なので接近を継続する(固定 11 のままなら攻撃していたはず)。
+            var d = LaneBotLogic.Decide(LaneBotState.Engage,
+                P(nearDist: 8f, nearKind: LaneThreatKind.Champion, championEngageRange: 3.5f));
+            Assert.AreEqual(LaneMove.Forward, d.Move);
+            Assert.IsFalse(d.HasAttackTarget);
+        }
+
+        [Test]
+        public void Engage_AttackerChampionUsesEngageRangeToo()
+        {
+            // 攻撃者チャンピオンも ChampionEngageRange の対象(常にチャンピオン扱い)
+            var d = LaneBotLogic.Decide(LaneBotState.Engage,
+                P(nearDist: 5f, nearKind: LaneThreatKind.Minion,
+                  attacker: true, attackerDist: 13f, championEngageRange: 14f));
+            Assert.IsTrue(d.HasAttackTarget);
+            Assert.AreEqual(LaneMove.Stop, d.Move);
+        }
+
+        [Test]
+        public void Engage_MinionIgnoresChampionEngageRange_UsesFixedAttackRange()
+        {
+            // ミニオン対象は ChampionEngageRange が広くても固定 AttackRange(11) のまま(ファーム挙動不変)
+            var d = LaneBotLogic.Decide(LaneBotState.Engage,
+                P(nearDist: 12f, nearKind: LaneThreatKind.Minion, championEngageRange: 20f));
+            Assert.AreEqual(LaneMove.Forward, d.Move);
+            Assert.IsFalse(d.HasAttackTarget);
         }
 
         // --- Retreat 遷移 ---
