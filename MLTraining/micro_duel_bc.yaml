@@ -1,0 +1,44 @@
+# B4: BC ウォームスタート — 手書きAI(CombatMicroModel)のデモから模倣で立ち上げ、PPO で微調整。
+# 外部レビュー指摘の監視点: BC への過適合(gail/extrinsic 報酬の乖離)と BC→RL 移行時の後退。
+# 手順:
+#   1. Temp/demo_record_request.json を置いて Arena.unity を play → 手書きAIプレイを録画
+#      (Assets/ML-Agents/Demos/micro_duel_scripted.demo、10分以上=数百エピソード)
+#   2. mlagents-learn MLTraining/micro_duel_bc.yaml --run-id=micro_duel_bc_v1 --force
+#      → Arena.unity を play(BehaviorType=Default に戻っていること=トリガーファイル削除)
+#   3. 評価は B3 プロトコル(共通チェイサーに対し手書き/ONNX を別測定、各100エピソード、95%CI併記)
+# 契約: 11 obs / 2 continuous actions / BehaviorName=MicroDuel(Confluence 05 B1、v5 報酬系)
+behaviors:
+  MicroDuel:
+    trainer_type: ppo
+    hyperparameters:
+      batch_size: 2048
+      buffer_size: 20480
+      learning_rate: 3.0e-4
+      beta: 5.0e-3
+      epsilon: 0.2
+      lambd: 0.95
+      num_epoch: 3
+      learning_rate_schedule: linear
+    network_settings:
+      normalize: true
+      hidden_units: 128
+      num_layers: 2
+    reward_signals:
+      extrinsic:
+        gamma: 0.99
+        strength: 1.0
+      # GAIL: デモとの分布一致を報酬化(過適合防止のため弱め)。
+      # extrinsic が伸び始めたら実質的に支配を明け渡す設計
+      gail:
+        gamma: 0.99
+        strength: 0.3
+        demo_path: Assets/ML-Agents/Demos/micro_duel_scripted.demo
+    # BC: 序盤の方策を直接デモへ引き寄せる。50万stepで線形減衰させ破滅的忘却と
+    # 模倣天井(手書き44%が上限になる)の両方を回避する
+    behavioral_cloning:
+      demo_path: Assets/ML-Agents/Demos/micro_duel_scripted.demo
+      strength: 0.5
+      steps: 500000
+    max_steps: 1500000
+    time_horizon: 128
+    summary_freq: 20000
