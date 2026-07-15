@@ -1,12 +1,15 @@
-# B4: BC ウォームスタート — 手書きAI(CombatMicroModel)のデモから模倣で立ち上げ、PPO で微調整。
-# 外部レビュー指摘の監視点: BC への過適合(gail/extrinsic 報酬の乖離)と BC→RL 移行時の後退。
-# 手順:
-#   1. Temp/demo_record_request.json を置いて Arena.unity を play → 手書きAIプレイを録画
-#      (Assets/ML-Agents/Demos/microduelscripte.demo、10分以上=数百エピソード)
+# B4: BC warm-start - imitate the scripted AI (CombatMicroModel) from demos, then fine-tune with PPO.
+# External-review watch items: overfitting to the demo (gail vs extrinsic divergence)
+# and regression at the BC->RL handoff.
+# Steps:
+#   1. Put Temp/demo_record_request.json and play Arena.unity to record scripted-AI play.
+#      (Actual output is Assets/ML-Agents/Demos/microduelscripte.demo due to SanitizeName;
+#       10+ minutes = hundreds of episodes.)
 #   2. mlagents-learn MLTraining/micro_duel_bc.yaml --run-id=micro_duel_bc_v1 --force
-#      → Arena.unity を play(BehaviorType=Default に戻っていること=トリガーファイル削除)
-#   3. 評価は B3 プロトコル(共通チェイサーに対し手書き/ONNX を別測定、各100エピソード、95%CI併記)
-# 契約: 11 obs / 2 continuous actions / BehaviorName=MicroDuel(Confluence 05 B1、v5 報酬系)
+#      then play Arena.unity (BehaviorType must be back to Default = trigger file deleted).
+#   3. Evaluate with the B3 protocol (scripted AI and ONNX measured separately vs the
+#      common chaser, 100 episodes each, report 95% CI).
+# Contract: 11 obs / 2 continuous actions / BehaviorName=MicroDuel (Confluence 05 B1, v5 rewards)
 behaviors:
   MicroDuel:
     trainer_type: ppo
@@ -27,14 +30,15 @@ behaviors:
       extrinsic:
         gamma: 0.99
         strength: 1.0
-      # GAIL: デモとの分布一致を報酬化(過適合防止のため弱め)。
-      # extrinsic が伸び始めたら実質的に支配を明け渡す設計
+      # GAIL: rewards distribution-match with the demo (kept weak to avoid overfitting;
+      # extrinsic takes over as it grows).
       gail:
         gamma: 0.99
         strength: 0.3
         demo_path: Assets/ML-Agents/Demos/microduelscripte.demo
-    # BC: 序盤の方策を直接デモへ引き寄せる。50万stepで線形減衰させ破滅的忘却と
-    # 模倣天井(手書き44%が上限になる)の両方を回避する
+    # BC: pulls the early policy directly toward the demo. Linearly decayed over 500k
+    # steps to avoid both catastrophic forgetting and the imitation ceiling
+    # (the scripted AI's 44% would otherwise cap us).
     behavioral_cloning:
       demo_path: Assets/ML-Agents/Demos/microduelscripte.demo
       strength: 0.5
