@@ -2,7 +2,7 @@
 # 外部レビュー指摘の監視点: BC への過適合(gail/extrinsic 報酬の乖離)と BC→RL 移行時の後退。
 # 手順:
 #   1. Temp/demo_record_request.json を置いて Arena.unity を play → 手書きAIプレイを録画
-#      (Assets/ML-Agents/Demos/micro_duel_scripted.demo、10分以上=数百エピソード)
+#      (Assets/ML-Agents/Demos/microduelscripte.demo、10分以上=数百エピソード)
 #   2. mlagents-learn MLTraining/micro_duel_bc.yaml --run-id=micro_duel_bc_v1 --force
 #      → Arena.unity を play(BehaviorType=Default に戻っていること=トリガーファイル削除)
 #   3. 評価は B3 プロトコル(共通チェイサーに対し手書き/ONNX を別測定、各100エピソード、95%CI併記)
@@ -32,11 +32,11 @@ behaviors:
       gail:
         gamma: 0.99
         strength: 0.3
-        demo_path: Assets/ML-Agents/Demos/micro_duel_scripted.demo
+        demo_path: Assets/ML-Agents/Demos/microduelscripte.demo
     # BC: 序盤の方策を直接デモへ引き寄せる。50万stepで線形減衰させ破滅的忘却と
     # 模倣天井(手書き44%が上限になる)の両方を回避する
     behavioral_cloning:
-      demo_path: Assets/ML-Agents/Demos/micro_duel_scripted.demo
+      demo_path: Assets/ML-Agents/Demos/microduelscripte.demo
       strength: 0.5
       steps: 500000
     max_steps: 1500000
