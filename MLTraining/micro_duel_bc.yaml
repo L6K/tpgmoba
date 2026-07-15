@@ -3,7 +3,7 @@
 # and regression at the BC->RL handoff.
 # Steps:
 #   1. Put Temp/demo_record_request.json and play Arena.unity to record scripted-AI play.
-#      (Actual output is Assets/ML-Agents/Demos/microduelscripte.demo due to SanitizeName;
+#      (Actual output is MLTraining/demos/microduelscripte.demo due to SanitizeName;
 #       10+ minutes = hundreds of episodes.)
 #   2. mlagents-learn MLTraining/micro_duel_bc.yaml --run-id=micro_duel_bc_v1 --force
 #      then play Arena.unity (BehaviorType must be back to Default = trigger file deleted).
@@ -35,12 +35,12 @@ behaviors:
       gail:
         gamma: 0.99
         strength: 0.3
-        demo_path: Assets/ML-Agents/Demos/microduelscripte.demo
+        demo_path: MLTraining/demos/microduelscripte.demo
     # BC: pulls the early policy directly toward the demo. Linearly decayed over 500k
     # steps to avoid both catastrophic forgetting and the imitation ceiling
     # (the scripted AI's 44% would otherwise cap us).
     behavioral_cloning:
-      demo_path: Assets/ML-Agents/Demos/microduelscripte.demo
+      demo_path: MLTraining/demos/microduelscripte.demo
       strength: 0.5
       steps: 500000
     max_steps: 1500000
