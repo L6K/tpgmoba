@@ -1218,7 +1218,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Enigma::Enigma.Learning.EvalRecorder
   _blue: {fileID: 474577509}
   _red: {fileID: 1712657201}
-  _label: model_v5
+  _label: eval
   _timeScale: 10
 --- !u!4 &552113788
 Transform:
