@@ -1716,16 +1716,23 @@ namespace Enigma.Character
             GameSfx.Play("skill_q_fire", _muzzle.position);
         }
 
+        // TelegraphCircle の起爆遅延（予兆時間）。SkillCaster.CastGroundAoe と同一値のハードコード定数
+        // （def 側に windup 用フィールドが無いため、両呼び出し元で個別に同じ値を持つ）。
+        private const float GroundAoeDetonationDelay = 0.8f;
+
         private void CastBotGroundAoe(int slot, SkillDefinition def, HealthComponent target)
         {
             if (_telegraphPrefab == null) return;
 
-            // ターゲット足元に設置（自分の y に合わせる）
-            var pos = target.transform.position;
+            // リード照準: 起爆までの予兆時間(GroundAoeDetonationDelay)の間に対象が動く分を見越して設置する。
+            // 射程を超える場合は発射者→予測地点方向を保ったまま射程内にクランプする。
+            var predicted = AimLeadLogic.PredictGroundPoint(
+                target.transform.position, _trackedTargetVelocity, GroundAoeDetonationDelay);
+            var pos = AimLeadLogic.ClampToRange(transform.position, predicted, def.Range);
             pos.y   = transform.position.y;
 
             var telegraph = Instantiate(_telegraphPrefab, pos, Quaternion.identity);
-            telegraph.Init(def.Radius, 0.8f, def.Damage, gameObject);
+            telegraph.Init(def.Radius, GroundAoeDetonationDelay, def.Damage, gameObject);
             telegraph.SetStatusEffects(def.StunDuration, def.RootDuration, def.SlowStrength, def.SlowDuration);
             telegraph.SetHealOnHit(def.HealPerChampionHit, def.HealPerMinionHit);
 
