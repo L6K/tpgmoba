@@ -26,6 +26,19 @@ public static partial class BuildAetherRiftMap
     private const string SkillDir    = "Assets/_Project/Data/Skills";
     private const string ItemDir     = "Assets/_Project/Data/Items";
 
+    // ---- マップ座標定数(現行キャンバスの正値を1箇所へ集約)----
+    // 旧レイアウトの ±56 / ±68 / ±48 / 泉半径10 / レーン半径45 等は全て無効。以降のコメントは
+    // 実値の代わりに下記の定数名を参照する。
+    private const float FountainCenterX = 100f; // 泉/基地パッド中心 |x|(視覚リング 4.2〜5、基地パッド r6)
+    private const float FountainRadius  = 5f;   // FountainRegen 半径
+    private const float TitanCenterX    = 82f;  // タイタン(ネクサス)中心 |x|。影リング半径4 → レーン側端 |x|=78
+    // 攻城最終WP: タイタン前で Top(+Z)/Bot(-Z) を分離し、旧 (±72.8, z=0) の一点集約を解消する。
+    // x=76 はタイタン索敵(_aggroRange=8 + カプセル半径2.6 = 到達10.6m)が z=±8 でも表面7.4m<8mで
+    // 届く前進位置。旧 x=72.8 のまま z=8 にすると表面9.6m>8m でウェーブがタイタンを索敵できず攻城が
+    // 成立しないため、分離量 z=±8 を満たす最小の前進 x を採る。
+    private const float SiegeWaypointX  = 76f;
+    private const float SiegeWaypointZ  = 8f;
+
     public static void Execute()
     {
         // 壁レジストリ(散布プロップ除去用)をクリア。static のためドメイン内の再実行で蓄積する
@@ -66,8 +79,8 @@ public static partial class BuildAetherRiftMap
 
         // 3. ジオメトリ配置（円形マップ）
         // ---- レイアウト定数 ----
-        // プレイフィールド半径70、レーンアーク半径R=45、レーン幅10
-        // 本拠地中心(±56,0,0) 半径11
+        // レーンリング帯 r56〜70(中心アーク R=63)、レーン内壁 r54〜55.5。
+        // 本拠地/泉 中心(±FountainCenterX,0,0) 半径 FountainRadius、タイタン中心(±TitanCenterX,0,0)。
 
         // Ground: 立体化(M-A)で矩形グリッドメッシュへ移行。目形境界の内側判定は
         // OutOfBoundsLogic と同式(R=120,B=48)。外側頂点は原点からの radial 二分法で境界へスナップし、
@@ -345,7 +358,7 @@ public static partial class BuildAetherRiftMap
         PlaceJungleMaze();
         PlaceOuterLaneWalls();
 
-        // ---- 泉回復圏(半径10)の視覚リング。ショップ範囲/タイタンと役割を見分けやすくする ----
+        // ---- 泉回復圏(FountainRegen 半径 FountainRadius=5)の視覚リング。タイタンと役割を見分けやすくする ----
         PlaceFountainRings();
 
         // ---- 地表植生の散布（草タフト・小石）----
@@ -361,13 +374,13 @@ public static partial class BuildAetherRiftMap
         RemovePropsOverlappingWalls();
 
         // リスポーンパッド: 各チームの色付き円盤は「リスポーン地点だけ」を示す小さな目印にする
-        // (LoL の召喚士の祭壇)。場外境界(±56 中心の TubePocket 内径17.4)は不変で、その内側の
-        // 大部分はメイン地面が見える。パッドは ±68 中心・半径6・薄板(地面とほぼ同高)。
+        // (LoL の召喚士の祭壇)。パッドは基地プラトー天面(±FountainCenterX 中心・半径6・薄板、
+        // 地面とほぼ同高)。泉回復圏(中心±FountainCenterX・半径 FountainRadius)と同一パッド上に置く。
         {
             var baseBlue = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseBlue.name = "Base_Blue";
             // 基地プラトー天面(+2.5)に追従
-            baseBlue.transform.position   = new Vector3(-100f, 2.56f, 0f);
+            baseBlue.transform.position   = new Vector3(-FountainCenterX, 2.56f, 0f);
             baseBlue.transform.localScale = new Vector3(12f, 0.12f, 12f);
             UseFlatMeshCollider(baseBlue, keepCollider: true);
             SetStatic(baseBlue);
@@ -375,20 +388,20 @@ public static partial class BuildAetherRiftMap
 
             var baseRed = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
             baseRed.name = "Base_Red";
-            baseRed.transform.position   = new Vector3(100f, 2.56f, 0f);
+            baseRed.transform.position   = new Vector3(FountainCenterX, 2.56f, 0f);
             baseRed.transform.localScale = new Vector3(12f, 0.12f, 12f);
             UseFlatMeshCollider(baseRed, keepCollider: true);
             SetStatic(baseRed);
             SetMat(baseRed, matRed);
         }
 
-        // タイタン=ネクサス: リスポーンパッド(±68)とレーン円形帯(r=40〜50)の間 (±56) に独立配置。
-        // タイタン台座(r=4.5)中心 ±56:
-        //   レーン外側 x=50 ⟷ 台座内端 x=51.5 = 1.5m 余裕
-        //   リスポーンパッド外端 x=62 ⟷ 台座外端 x=60.5 = 1.5m 余裕
-        // 「復帰→ネクサス→レーン」の並びを保ちつつ、両側に均等な隙間を確保する。
-        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-82f, 0f, 0f), matBlue);
-        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( 82f, 0f, 0f), matRed);
+        // タイタン=ネクサス: レーンリング帯(r56〜70)と基地プラトー(±FountainCenterX)の間 (±TitanCenterX) に配置。
+        // タイタン台座 最大段 r4.5(=中心 ±TitanCenterX):
+        //   基地側 台座外端 |x|=TitanCenterX+4.5=86.5 ⟷ 泉リング レーン側端 |x|=FountainCenterX-FountainRadius=95
+        //     = 8.5m クリアランス(泉との必須 8m を満たす。タイタンをこれ以上基地側へ下げると割り込む)。
+        //   レーン側 影リング端 |x|=TitanCenterX-4=78 が攻城広場の最終縁になる。
+        var blueTitanHc = PlaceTitan("Titan_Blue", new Vector3(-TitanCenterX, 0f, 0f), matBlue);
+        var redTitanHc  = PlaceTitan("Titan_Red",  new Vector3( TitanCenterX, 0f, 0f), matRed);
 
         // タワー: 4本のジャングルパス(45°/135°/225°/315°方向)の両脇 ±10° に対で配置する
         // (物理ゲート導入=M-G 以前のレイアウトへ復帰。ユーザー承認済み画像レイアウト)。
@@ -1661,8 +1674,8 @@ public static partial class BuildAetherRiftMap
         var redHdr  = new Color(1.00f, 0.55f, 0.10f, 0.90f); // 橙（赤床に映える）
         // 基地床の外周に発光リム（水平アニュラス・加算・単色）。CreateRingBandMesh は UV 無しのため
         // テクスチャは使わず単色加算にする（テクスチャを使うと (0,0) サンプルで暗くなる）。
-        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimBlue", new Vector3(-82f, 1.3f, 0f), blueHdr);
-        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimRed",  new Vector3( 82f, 1.3f, 0f), redHdr);
+        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimBlue", new Vector3(-TitanCenterX, 1.3f, 0f), blueHdr);
+        CreateBaseNeonRim(neonParent.transform, "MapNeon_RimRed",  new Vector3( TitanCenterX, 1.3f, 0f), redHdr);
 
         // 中央コア（NeutralBoss）の発光ハロー
         var boss = FindInSceneByName(scene, "NeutralBoss");
@@ -1686,14 +1699,14 @@ public static partial class BuildAetherRiftMap
         Debug.Log("[BuildAetherRiftMap] マップネオンを付与しました（基地リム×2 + 中央コアハロー）");
     }
 
-    // 泉回復圏(FountainRegen 半径10)を床リングで可視化する。Blue=基地最奥(-64,0)、Red=(64,0)。
-    // ショップ範囲(±56 r14)やタイタン(±48)と役割を視覚的に区別できるようにする。
+    // 泉回復圏(FountainRegen 半径 FountainRadius=5)を床リングで可視化する。Blue=(-FountainCenterX,0)、Red=(FountainCenterX,0)。
+    // ショップ範囲(中心±FountainCenterX r6)やタイタン(±TitanCenterX)と役割を視覚的に区別できるようにする。
     private static void PlaceFountainRings()
     {
         var parent = new GameObject("FountainRings");
         SetStatic(parent);
-        CreateFountainRing(parent.transform, "FountainRing_Blue", new Vector3(-100f, 3.56f, 0f), new Color(0.35f, 0.75f, 1.00f, 0.32f));
-        CreateFountainRing(parent.transform, "FountainRing_Red",  new Vector3( 100f, 3.56f, 0f), new Color(1.00f, 0.55f, 0.30f, 0.32f));
+        CreateFountainRing(parent.transform, "FountainRing_Blue", new Vector3(-FountainCenterX, 3.56f, 0f), new Color(0.35f, 0.75f, 1.00f, 0.32f));
+        CreateFountainRing(parent.transform, "FountainRing_Red",  new Vector3( FountainCenterX, 3.56f, 0f), new Color(1.00f, 0.55f, 0.30f, 0.32f));
     }
 
     // 泉回復半径(10)の内縁に薄い半透明リングを敷く（床面のすぐ上）。
@@ -2494,6 +2507,9 @@ public static partial class BuildAetherRiftMap
         soTt.FindProperty("_team").enumValueIndex = pos.x < 0f ? (int)TeamId.Blue : (int)TeamId.Red;
         soTt.ApplyModifiedPropertiesWithoutUndo();
 
+        // 露出ゲート: 自チームの1レーン分のタワー全滅まで、全攻撃者のダメージを 0 化する。
+        root.AddComponent<Enigma.Character.TitanGuard>();
+
         return hc;
     }
 
@@ -2665,8 +2681,8 @@ public static partial class BuildAetherRiftMap
         // (PlaceFountainRings)と一致させる。各 Bot のスポーンは z オフセットで散らすが泉中心は1点。
         var botFountain   = go.AddComponent<Enigma.Combat.FountainRegen>();
         var soBotFountain = new SerializedObject(botFountain);
-        soBotFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(Mathf.Sign(spawnPos.x) * 100f, 3.6f, 0f);
-        soBotFountain.FindProperty("_radius").floatValue           = 5f;
+        soBotFountain.FindProperty("_fountainCenter").vector3Value = new Vector3(Mathf.Sign(spawnPos.x) * FountainCenterX, 3.6f, 0f);
+        soBotFountain.FindProperty("_radius").floatValue           = FountainRadius;
         soBotFountain.ApplyModifiedPropertiesWithoutUndo();
 
         var xp = go.AddComponent<XpReward>();
@@ -3017,49 +3033,52 @@ public static partial class BuildAetherRiftMap
             return new Vector3(63f * Mathf.Cos(r), 0f, 63f * Mathf.Sin(r));
         }
 
-        // 各ルートの終端はレーン開口(±70, ±11.2)から敵タイタン前(±72.8, ±5.6 → ±72.8, 0)まで延伸する。
-        // 最終WP(±72.8, 0)は敵タイタン(±82, 0)の中心から約9.2m。ミニオンの索敵(_aggroRange=8, スケール外の
-        // ユニット性能値)は OverlapSphere=コライダー基準のため、タイタンカプセル(r2.6)の表面まで約6.6m<8m で
-        // 届き、ウェーブは到達前にタイタンを標的化して攻城に移る(=タイタン撃破で決着が付く。実機検証済 2026-07-04)。
+        // 各ルートの終端はレーン開口(±70, ±11.2)から敵タイタン前の分離WP(±SiegeWaypointX, ±SiegeWaypointZ)まで
+        // 延伸する。旧レイアウトは Top/Bot とも (±72.8, z=0) の一点に畳まれ攻城が短いチョークに集中したため、
+        // Top 由来を +Z / Bot 由来を -Z へ分離する(横方向の有効戦闘面を確保)。最終WP(±76, ±8)は敵タイタン
+        // (±TitanCenterX, 0)のカプセル(r2.6)表面まで約7.4m<_aggroRange(8) で届くため、ウェーブは到達直前に
+        // タイタンを標的化し攻城へ移る(=タイタン撃破で決着。索敵成立の x=76 は分離量 z=±8 を満たす最小前進)。
+        // ※x を旧 72.8 のままにすると z=8 で表面9.6m>8m となり索敵が成立しないため SiegeWaypointX へ前進させた。
 
         // 立体化(M-A)で出発点を基地内(±76,±6)へ移設(旧±70,±14は囲い壁帯r70.5〜72に埋まっていた)。
         // 出発点→最初のアーク WP への直線が壁帯(r70.5〜72)を横切る角度は各ゲート開口(±8°)内に
         // 収まることを事前計算済み(RedTop/RedBot/BlueTop/BlueBotいずれも開口内)。後続WPは不変。
 
-        // BlueTop: 出発(-76,0,6)→ θ=160,135,90,45,20 のアーク→敵開口→Redタイタン前
+        // BlueTop(Top由来→+Z): 出発(-76,0,6)→ θ=160,135,90,45,20 のアーク→敵開口→Redタイタン前(+X,+Z)
         PlaceSpawner("Spawner_BlueTop",
             new Vector3(-76f, 0f, 6f),
             TeamId.Blue, matBlue, minionPrefab,
             new Vector3[] {
                 ArcPt(160f), ArcPt(135f), ArcPt(90f), ArcPt(45f), ArcPt(20f),
-                new Vector3(70f, 0f, 11.2f), new Vector3(72.8f, 0f, 5.6f), new Vector3(72.8f, 0f, 0f)
+                new Vector3(70f, 0f, 11.2f), new Vector3(73f, 0f, 9f), new Vector3(SiegeWaypointX, 0f, SiegeWaypointZ)
             });
 
-        // RedTop: 出発(76,0,6)→ θ=20,45,90,135,160 のアーク→敵開口→Blueタイタン前
+        // RedTop(Top由来→+Z): 出発(76,0,6)→ θ=20,45,90,135,160 のアーク→敵開口→Blueタイタン前(-X,+Z)
         PlaceSpawner("Spawner_RedTop",
             new Vector3(76f, 0f, 6f),
             TeamId.Red, matRed, minionPrefab,
             new Vector3[] {
                 ArcPt(20f), ArcPt(45f), ArcPt(90f), ArcPt(135f), ArcPt(160f),
-                new Vector3(-70f, 0f, 11.2f), new Vector3(-72.8f, 0f, 5.6f), new Vector3(-72.8f, 0f, 0f)
+                new Vector3(-70f, 0f, 11.2f), new Vector3(-73f, 0f, 9f), new Vector3(-SiegeWaypointX, 0f, SiegeWaypointZ)
             });
 
-        // BlueBot: z 符号反転版
+        // BlueBot(Bot由来→-Z): z 符号反転版。敵タイタン前(+X,-Z)
         PlaceSpawner("Spawner_BlueBot",
             new Vector3(-76f, 0f, -6f),
             TeamId.Blue, matBlue, minionPrefab,
             new Vector3[] {
                 ArcPt(200f), ArcPt(225f), ArcPt(270f), ArcPt(315f), ArcPt(340f),
-                new Vector3(70f, 0f, -11.2f), new Vector3(72.8f, 0f, -5.6f), new Vector3(72.8f, 0f, 0f)
+                new Vector3(70f, 0f, -11.2f), new Vector3(73f, 0f, -9f), new Vector3(SiegeWaypointX, 0f, -SiegeWaypointZ)
             });
 
         // RedBot: z 符号反転版
+        // RedBot(Bot由来→-Z): z 符号反転版。敵タイタン前(-X,-Z)
         PlaceSpawner("Spawner_RedBot",
             new Vector3(76f, 0f, -6f),
             TeamId.Red, matRed, minionPrefab,
             new Vector3[] {
                 ArcPt(340f), ArcPt(315f), ArcPt(270f), ArcPt(225f), ArcPt(200f),
-                new Vector3(-70f, 0f, -11.2f), new Vector3(-72.8f, 0f, -5.6f), new Vector3(-72.8f, 0f, 0f)
+                new Vector3(-70f, 0f, -11.2f), new Vector3(-73f, 0f, -9f), new Vector3(-SiegeWaypointX, 0f, -SiegeWaypointZ)
             });
     }
 

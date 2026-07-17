@@ -4,6 +4,7 @@ using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Enigma.Character;
+using Enigma.Combat;
 using Enigma.Core;
 
 namespace Enigma.Learning
@@ -77,7 +78,7 @@ namespace Enigma.Learning
             {
                 // MatchEnd イベントを取りこぼして Result へ遷移した場合の保険。
                 // シムと違い次試合へは進めない(=待機するだけ)ため、ここでは記録の締めのみ行う。
-                if (!_matchResolved) FinishCurrentMatch("unknown");
+                if (!_matchResolved) FinishCurrentMatch("unknown", "unknown");
             }
         }
 
@@ -127,7 +128,10 @@ namespace Enigma.Learning
 
             if (e.Type == MatchEventType.MatchEnd)
             {
-                FinishCurrentMatch(MatchStatsRecording.TeamName(e.Team));
+                // 決着種別(外部レビュー指摘対応): OT減衰開始後の決着は自然決着と区別する。
+                float elapsed = Time.time - _matchStartTime;
+                string outcome = elapsed >= OvertimeDecayLogic.DefaultOvertimeStartSeconds ? "ot_decay" : "natural";
+                FinishCurrentMatch(MatchStatsRecording.TeamName(e.Team), outcome);
                 return;
             }
 
@@ -172,12 +176,13 @@ namespace Enigma.Learning
             }
         }
 
-        private void FinishCurrentMatch(string winnerTeam)
+        private void FinishCurrentMatch(string winnerTeam, string outcome)
         {
             if (_matchResolved) return;
             _matchResolved = true;
 
             _currentStats.SetWinner(winnerTeam);
+            _currentStats.SetOutcome(outcome);
             _currentStats.SetDuration(Time.time - _matchStartTime);
 
             if (!_rosterCaptured)

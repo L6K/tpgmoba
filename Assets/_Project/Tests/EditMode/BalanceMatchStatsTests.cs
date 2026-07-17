@@ -246,6 +246,39 @@ namespace Enigma.Tests
             StringAssert.Contains("\"human\":true", json);
         }
 
+        // ── outcome（決着種別: natural/ot_decay/timeout/unknown）─────────────
+
+        [Test]
+        public void ToJsonLine_DefaultsOutcomeToUnknown_WhenNotSet()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"outcome\":\"unknown\"", json);
+        }
+
+        [Test]
+        public void SetOutcome_IsReflectedInJson()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            stats.SetOutcome("ot_decay");
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"outcome\":\"ot_decay\"", json);
+        }
+
+        [Test]
+        public void SetOutcome_NullOrEmpty_FallsBackToUnknown()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            stats.SetOutcome(null);
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"outcome\":\"unknown\"", json);
+        }
+
         [Test]
         public void ToJsonLine_WithTowerAndKillEvents_ProducesParsableJson_BraceAndBracketBalance()
         {

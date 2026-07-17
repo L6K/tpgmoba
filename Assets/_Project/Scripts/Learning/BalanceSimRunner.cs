@@ -106,7 +106,7 @@ namespace Enigma.Learning
             {
                 // Result へ遷移してしまった場合の保険。MatchEnd を取りこぼしていても
                 // ここで確実に試合を打ち切り、次試合（または終了）へ進める。
-                if (!_matchResolved) FinishCurrentMatch(DetermineWinnerFallback());
+                if (!_matchResolved) FinishCurrentMatch(DetermineWinnerFallback(), "timeout");
                 ProceedToNextMatchOrFinish();
             }
         }
@@ -211,7 +211,10 @@ namespace Enigma.Learning
 
             if (e.Type == MatchEventType.MatchEnd)
             {
-                FinishCurrentMatch(MatchStatsRecording.TeamName(e.Team));
+                // 決着種別(外部レビュー指摘対応): OT減衰開始後の決着は自然決着と区別する。
+                float elapsed = Time.time - _matchStartTime;
+                string outcome = elapsed >= OvertimeDecayLogic.DefaultOvertimeStartSeconds ? "ot_decay" : "natural";
+                FinishCurrentMatch(MatchStatsRecording.TeamName(e.Team), outcome);
                 ProceedToNextMatchOrFinish();
                 return;
             }
@@ -254,19 +257,20 @@ namespace Enigma.Learning
             float elapsed = Time.time - _matchStartTime;
             if (elapsed > TimeoutSeconds)
             {
-                FinishCurrentMatch("timeout");
+                FinishCurrentMatch("timeout", "timeout");
                 ProceedToNextMatchOrFinish();
             }
         }
 
         // MatchEnd 到達時は Update での二重打ち切りを避けるため、
         // 打ち切り後すぐ次試合へ進める（OnSceneLoaded 側の Result 検知とも整合させる）。
-        private void FinishCurrentMatch(string winnerTeam)
+        private void FinishCurrentMatch(string winnerTeam, string outcome)
         {
             if (_matchResolved) return;
             _matchResolved = true;
 
             _currentStats.SetWinner(winnerTeam);
+            _currentStats.SetOutcome(outcome);
             _currentStats.SetDuration(Time.time - _matchStartTime);
 
             if (!_rosterCaptured)

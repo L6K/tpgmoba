@@ -56,6 +56,11 @@ namespace Enigma.Learning
         // 人間プレイセッション記録用: Bot シム由来のデータと区別するためのフラグ（既定 false = シム由来）。
         public bool Human { get; private set; }
 
+        // 決着種別(外部レビュー指摘対応): natural（試合時間<900秒の MatchEnd）/ot_decay（OT減衰下の MatchEnd）/
+        // timeout（タイムアウト・フォールバック経路）/unknown（未設定=取りこぼし保険経路）。
+        // 明示的にセットされなかったことが分かるよう、既定は natural ではなく unknown にする。
+        public string Outcome { get; private set; } = "unknown";
+
         public BalanceMatchStats(int matchId, int seed)
         {
             MatchId = matchId;
@@ -80,6 +85,12 @@ namespace Enigma.Learning
         public void SetHuman(bool human)
         {
             Human = human;
+        }
+
+        /// <summary>決着種別を記録する。呼び側(Runner/Recorder)が natural/ot_decay/timeout/unknown を判定して渡す。</summary>
+        public void SetOutcome(string outcome)
+        {
+            Outcome = string.IsNullOrEmpty(outcome) ? "unknown" : outcome;
         }
 
         public void SetRosters(string[] blueRoster, string[] redRoster)
@@ -159,6 +170,7 @@ namespace Enigma.Learning
             sb.Append("\"rosterSeed\":").Append(RosterSeed).Append(',');
             sb.Append("\"mirrored\":").Append(Mirrored ? "true" : "false").Append(',');
             sb.Append("\"human\":").Append(Human ? "true" : "false").Append(',');
+            sb.Append("\"outcome\":\"").Append(Escape(Outcome)).Append("\",");
 
             sb.Append("\"blueRoster\":[").Append(JoinQuoted(_blueRoster)).Append("],");
             sb.Append("\"redRoster\":[").Append(JoinQuoted(_redRoster)).Append("],");
