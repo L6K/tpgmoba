@@ -53,6 +53,9 @@ namespace Enigma.Learning
         public int RosterSeed { get; private set; }
         public bool Mirrored { get; private set; }
 
+        // 人間プレイセッション記録用: Bot シム由来のデータと区別するためのフラグ（既定 false = シム由来）。
+        public bool Human { get; private set; }
+
         public BalanceMatchStats(int matchId, int seed)
         {
             MatchId = matchId;
@@ -71,6 +74,12 @@ namespace Enigma.Learning
         {
             RosterSeed = rosterSeed;
             Mirrored = mirrored;
+        }
+
+        /// <summary>人間プレイセッション記録用: HumanPlayRecorder が呼ぶ。Bot シムは呼ばず既定 false のままにする。</summary>
+        public void SetHuman(bool human)
+        {
+            Human = human;
         }
 
         public void SetRosters(string[] blueRoster, string[] redRoster)
@@ -149,6 +158,7 @@ namespace Enigma.Learning
             sb.Append("\"gitHash\":\"").Append(Escape(GitHash)).Append("\",");
             sb.Append("\"rosterSeed\":").Append(RosterSeed).Append(',');
             sb.Append("\"mirrored\":").Append(Mirrored ? "true" : "false").Append(',');
+            sb.Append("\"human\":").Append(Human ? "true" : "false").Append(',');
 
             sb.Append("\"blueRoster\":[").Append(JoinQuoted(_blueRoster)).Append("],");
             sb.Append("\"redRoster\":[").Append(JoinQuoted(_redRoster)).Append("],");

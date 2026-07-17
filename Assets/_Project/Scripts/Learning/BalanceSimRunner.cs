@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -59,10 +58,6 @@ namespace Enigma.Learning
         private int _currentRosterSeed;
         private bool _currentMirrored;
 
-        // 結果への実装バージョン記録用。エディタ起動中に1回だけ取得してキャッシュする（プロセス起動は重いため）。
-        private static string s_gitHashCache;
-        private static bool s_gitHashResolved;
-
         // GameObject 名（例: "BlueBot_Top"）→ CharId の解決テーブル。試合開始ごとに再構築する。
         private readonly Dictionary<string, string> _nameToCharId = new();
 
@@ -89,7 +84,7 @@ namespace Enigma.Learning
 
             // gitHash はバッチごとに取り直す(エディタセッション内キャッシュだと
             // 途中コミット後のバッチに古いハッシュが記録される — 2026-07-12 実測)
-            s_gitHashResolved = false;
+            MatchStatsRecording.ResetGitHashCache();
 
             _startedAt = DateTime.Now;
             Directory.CreateDirectory(RunsDir);
@@ -188,41 +183,9 @@ namespace Enigma.Learning
             SubscribeMatchEvents();
 
             _currentStats = new BalanceMatchStats(_matchIndex, _matchIndex);
-            _currentStats.SetGitHash(GetGitHash());
+            _currentStats.SetGitHash(MatchStatsRecording.GetGitHash());
             _currentStats.SetRosterInfo(_currentRosterSeed, _currentMirrored);
             _rosterCaptured = false;
-        }
-
-        // 結果への実装バージョン記録用。git rev-parse --short HEAD をエディタ起動中に1回だけ実行して
-        // キャッシュする(以降は同じ Unity セッション内で使い回す)。失敗時は "unknown" にフォールバックする。
-        private static string GetGitHash()
-        {
-            if (s_gitHashResolved) return s_gitHashCache;
-            s_gitHashResolved = true;
-
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "git",
-                    Arguments = "rev-parse --short HEAD",
-                    RedirectStandardOutput = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    WorkingDirectory = Application.dataPath,
-                };
-                using var proc = Process.Start(psi);
-                string output = proc.StandardOutput.ReadToEnd().Trim();
-                proc.WaitForExit(5000);
-                s_gitHashCache = string.IsNullOrEmpty(output) ? "unknown" : output;
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[BalanceSimRunner] git rev-parse failed, using \"unknown\": {e.Message}");
-                s_gitHashCache = "unknown";
-            }
-
-            return s_gitHashCache;
         }
 
         private void SubscribeMatchEvents()
@@ -246,32 +209,14 @@ namespace Enigma.Learning
         {
             if (_matchResolved) return;
 
-            switch (e.Type)
+            if (e.Type == MatchEventType.MatchEnd)
             {
-                case MatchEventType.ChampionKill:
-                    _currentStats.RecordKill(ResolveCharId(e.ActorName));
-                    // 偏り調査用: 先制キル/キルタイミングの Blue-Red 比較に使う時刻付きログ。
-                    _currentStats.RecordChampionKillAt(Time.time - _matchStartTime, TeamName(e.Team));
-                    break;
-                case MatchEventType.ChampionDeath:
-                    _currentStats.RecordDeath(ResolveCharId(e.ActorName));
-                    break;
-                case MatchEventType.MinionKill:
-                    _currentStats.RecordCs(ResolveCharId(e.ActorName));
-                    break;
-                case MatchEventType.TowerDestroyed:
-                    _currentStats.RecordTowerDestroyed(TeamName(e.Team));
-                    // 偏り調査用: OT(900s)前後のタワーレース非対称を時系列で特定するための時刻付きログ。
-                    _currentStats.RecordTowerDestroyedAt(Time.time - _matchStartTime, TeamName(e.Team));
-                    break;
-                case MatchEventType.CoreCaptured:
-                    _currentStats.RecordCoreCaptured(TeamName(e.Team));
-                    break;
-                case MatchEventType.MatchEnd:
-                    FinishCurrentMatch(TeamName(e.Team));
-                    ProceedToNextMatchOrFinish();
-                    break;
+                FinishCurrentMatch(MatchStatsRecording.TeamName(e.Team));
+                ProceedToNextMatchOrFinish();
+                return;
             }
+
+            MatchStatsRecording.Apply(_currentStats, e, ResolveCharId, Time.time - _matchStartTime);
         }
 
         // GameObject 名（例: "BlueBot_Top"）から EnemyChampionAI.CharId を解決する。
@@ -288,14 +233,6 @@ namespace Enigma.Learning
             return charId;
         }
 
-        private static string TeamName(int team)
-        {
-            var t = (TeamId)team;
-            if (t == TeamId.Blue) return "Blue";
-            if (t == TeamId.Red) return "Red";
-            return "Neutral";
-        }
-
         private void Update()
         {
             if (_matchResolved || _currentStats == null) return;
@@ -305,7 +242,7 @@ namespace Enigma.Learning
             // 遷移してしまうフォールバック経路でも編成を残せるようにするため。
             if (!_rosterCaptured)
             {
-                var rosters = CollectRosters();
+                var rosters = MatchStatsRecording.CollectBotRosters();
                 if (rosters.blue.Length > 0 || rosters.red.Length > 0)
                 {
                     _capturedBlue = rosters.blue;
@@ -334,7 +271,7 @@ namespace Enigma.Learning
 
             if (!_rosterCaptured)
             {
-                var rosters = CollectRosters();
+                var rosters = MatchStatsRecording.CollectBotRosters();
                 _capturedBlue = rosters.blue;
                 _capturedRed = rosters.red;
             }
@@ -347,24 +284,6 @@ namespace Enigma.Learning
             _matchIndex++;
             if (_matchIndex % ProgressLogInterval == 0 || _matchIndex >= _request.matches)
                 Debug.Log($"[BalanceSimRunner] completed {_matchIndex}/{_request.matches} matches");
-        }
-
-        private (string[] blue, string[] red) CollectRosters()
-        {
-            var blue = new List<string>();
-            var red = new List<string>();
-
-            var bots = UnityEngine.Object.FindObjectsByType<EnemyChampionAI>(FindObjectsSortMode.None);
-            foreach (var bot in bots)
-            {
-                if (bot == null || !bot.gameObject.activeInHierarchy) continue;
-                var tag = bot.GetComponent<TeamTag>();
-                if (tag == null) continue;
-                if (tag.Team == TeamId.Blue) blue.Add(bot.CharId);
-                else if (tag.Team == TeamId.Red) red.Add(bot.CharId);
-            }
-
-            return (blue.ToArray(), red.ToArray());
         }
 
         // MatchEnd/timeout どちらでも取りこぼした場合の保険（Result シーン到達時のフォールバック勝者判定）。

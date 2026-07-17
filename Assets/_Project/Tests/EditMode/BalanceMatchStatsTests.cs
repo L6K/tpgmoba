@@ -224,6 +224,28 @@ namespace Enigma.Tests
             StringAssert.Contains("\"mirrored\":true", json);
         }
 
+        // ── human（人間プレイセッション記録用フラグ）─────────────
+
+        [Test]
+        public void ToJsonLine_DefaultsHumanToFalse_WhenNotSet()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"human\":false", json);
+        }
+
+        [Test]
+        public void SetHuman_IsReflectedInJson()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            stats.SetHuman(true);
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"human\":true", json);
+        }
+
         [Test]
         public void ToJsonLine_WithTowerAndKillEvents_ProducesParsableJson_BraceAndBracketBalance()
         {
