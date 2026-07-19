@@ -149,7 +149,33 @@ namespace Enigma.Tests
 
             string json = stats.ToJsonLine();
 
-            StringAssert.Contains("\"killEvents\":[{\"t\":12.3,\"team\":\"Red\"}]", json);
+            // x/z 省略時は既定 0(位置不明な呼び出し元との互換)。
+            StringAssert.Contains("\"killEvents\":[{\"t\":12.3,\"team\":\"Red\",\"x\":0.0,\"z\":0.0}]", json);
+        }
+
+        [Test]
+        public void ToJsonLine_ContainsKillEventsWithPosition()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            stats.RecordChampionKillAt(12.3f, "Red", 15.6f, -8.4f);
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains("\"killEvents\":[{\"t\":12.3,\"team\":\"Red\",\"x\":15.6,\"z\":-8.4}]", json);
+        }
+
+        [Test]
+        public void ToJsonLine_MultipleKillEventsWithPosition_PreservesEachEntry()
+        {
+            var stats = new BalanceMatchStats(1, 1);
+            stats.RecordChampionKillAt(10f, "Blue", 1.2f, 3.4f);
+            stats.RecordChampionKillAt(20f, "Red", -5.6f, 7.8f);
+
+            string json = stats.ToJsonLine();
+
+            StringAssert.Contains(
+                "\"killEvents\":[{\"t\":10.0,\"team\":\"Blue\",\"x\":1.2,\"z\":3.4},{\"t\":20.0,\"team\":\"Red\",\"x\":-5.6,\"z\":7.8}]",
+                json);
         }
 
         [Test]

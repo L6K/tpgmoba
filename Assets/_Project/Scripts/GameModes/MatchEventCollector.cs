@@ -4,6 +4,7 @@ using UnityEngine;
 using Enigma.Combat;
 using Enigma.Core;
 using Enigma.Character;
+using Enigma.Objective;
 
 namespace Enigma.GameModes
 {
@@ -22,11 +23,6 @@ namespace Enigma.GameModes
         }
 
         private readonly HashSet<HealthComponent> _subscribed = new();
-        // CentralObjectiveDirector.BossHealth は死亡時(および Dormant 中)に null を返すため、
-        // 生存・出現中に観測できたボス参照をここに記憶し、死亡通知時にそれを参照する。
-        // ボスの GameObject は Dormant 中もアクティブ(コンポーネントのみ無効化)なので、
-        // 初回購読時だけの判定では Dormant 中に購読した場合にボスと認識できない。
-        private readonly HashSet<HealthComponent> _bossHcs = new();
 
         private void Start()
         {
@@ -44,16 +40,9 @@ namespace Enigma.GameModes
 
         private void SubscribeNew()
         {
-            // 毎スキャンで「今生きて出現中のボス」を再確認する(Dormant 中は null のため、
-            // Active 中のスキャンで一度でも一致すればボスとして記憶される)。
-            var boss = CentralObjectiveDirector.Instance != null
-                ? CentralObjectiveDirector.Instance.BossHealth
-                : null;
-
             var all = Object.FindObjectsByType<HealthComponent>(FindObjectsSortMode.None);
             foreach (var hc in all)
             {
-                if (hc == boss) _bossHcs.Add(hc);
                 if (_subscribed.Add(hc))
                     hc.Model.Died += () => OnVictimDied(hc);
             }
@@ -69,8 +58,13 @@ namespace Enigma.GameModes
             int victimTeam = victimTag != null ? (int)victimTag.Team : (int)TeamId.Neutral;
             var lastAttacker = victim.LastAttacker;
             var attackerTag = lastAttacker != null ? lastAttacker.GetComponentInParent<TeamTag>() : null;
+            var victimPos = victim.transform.position;
 
-            bool isBoss = _bossHcs.Contains(victim);
+            // NeutralBossController はボスの GameObject にのみ付与される([RequireComponent(HealthComponent)])ため、
+            // 生死やスキャンタイミングに依存せず確実にボスを判定できる。
+            // (旧実装は 1Hz ポーリングで「今アクティブなボス」と一致した時だけ記憶する方式だったため、
+            //  ボスがポーリング間隔1秒未満で撃破されると一度も一致せず CoreCaptured が欠落していた)
+            bool isBoss = victim.GetComponent<NeutralBossController>() != null;
             string name = victim.name;
 
             if (isBoss)
@@ -100,9 +94,9 @@ namespace Enigma.GameModes
             bool isChampion = victim.GetComponent<EnemyChampionAI>() != null || victim.GetComponent<PlayerController>() != null;
             if (isChampion)
             {
-                log.Log(new MatchEvent(time, MatchEventType.ChampionDeath, victimTeam, name));
+                log.Log(new MatchEvent(time, MatchEventType.ChampionDeath, victimTeam, name, victimPos.x, victimPos.z));
                 if (lastAttacker != null && attackerTag != null)
-                    log.Log(new MatchEvent(time, MatchEventType.ChampionKill, (int)attackerTag.Team, lastAttacker.name));
+                    log.Log(new MatchEvent(time, MatchEventType.ChampionKill, (int)attackerTag.Team, lastAttacker.name, victimPos.x, victimPos.z));
                 return;
             }
 

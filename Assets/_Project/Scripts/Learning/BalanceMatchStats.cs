@@ -17,7 +17,7 @@ namespace Enigma.Learning
             public int Cs;
         }
 
-        // タワー撃破/チャンピオンキルの時刻付きイベント(偏り調査用。試合開始からの経過秒+破壊/キル側チーム名)。
+        // タワー撃破の時刻付きイベント(偏り調査用。試合開始からの経過秒+破壊側チーム名)。
         private readonly struct TimedTeamEvent
         {
             public readonly float Time;
@@ -27,6 +27,24 @@ namespace Enigma.Learning
             {
                 Time = time;
                 Team = team;
+            }
+        }
+
+        // チャンピオンキルの時刻+位置付きイベント(偏り調査用。マップ上のどこでキルが起きたかを見るために
+        // 倒された側の座標(X,Z)を持つ)。
+        private readonly struct KillTeamEvent
+        {
+            public readonly float Time;
+            public readonly string Team;
+            public readonly float X;
+            public readonly float Z;
+
+            public KillTeamEvent(float time, string team, float x, float z)
+            {
+                Time = time;
+                Team = team;
+                X = x;
+                Z = z;
             }
         }
 
@@ -40,7 +58,7 @@ namespace Enigma.Learning
         private readonly List<string> _championOrder = new();
 
         private readonly List<TimedTeamEvent> _towerEvents = new();
-        private readonly List<TimedTeamEvent> _killEvents = new();
+        private readonly List<KillTeamEvent> _killEvents = new();
 
         public float DurationSec { get; private set; }
         public string WinnerTeam { get; private set; } = "timeout";
@@ -133,10 +151,11 @@ namespace Enigma.Learning
             _towerEvents.Add(new TimedTeamEvent(elapsedSec, team));
         }
 
-        /// <summary>チャンピオンキルイベントを経過秒付きで記録する(偏り調査用の時系列ログ)。</summary>
-        public void RecordChampionKillAt(float elapsedSec, string team)
+        /// <summary>チャンピオンキルイベントを経過秒+位置付きで記録する(偏り調査用の時系列ログ)。
+        /// x/z は倒された側の座標。位置不明な呼び出し元との互換のため既定 0。</summary>
+        public void RecordChampionKillAt(float elapsedSec, string team, float x = 0f, float z = 0f)
         {
-            _killEvents.Add(new TimedTeamEvent(elapsedSec, team));
+            _killEvents.Add(new KillTeamEvent(elapsedSec, team, x, z));
         }
 
         public void RecordCoreCaptured(string team)
@@ -194,7 +213,7 @@ namespace Enigma.Learning
             sb.Append("\"coreCapturesRed\":").Append(CoreCapturesRed).Append(',');
 
             sb.Append("\"towerEvents\":[").Append(JoinTimedEvents(_towerEvents)).Append("],");
-            sb.Append("\"killEvents\":[").Append(JoinTimedEvents(_killEvents)).Append(']');
+            sb.Append("\"killEvents\":[").Append(JoinKillEvents(_killEvents)).Append(']');
 
             sb.Append('}');
             return sb.ToString();
@@ -209,6 +228,22 @@ namespace Enigma.Learning
                 var e = events[i];
                 sb.Append("{\"t\":").Append(e.Time.ToString("F1"))
                   .Append(",\"team\":\"").Append(Escape(e.Team)).Append("\"}");
+            }
+            return sb.ToString();
+        }
+
+        private static string JoinKillEvents(List<KillTeamEvent> events)
+        {
+            var sb = new StringBuilder();
+            for (int i = 0; i < events.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                var e = events[i];
+                sb.Append("{\"t\":").Append(e.Time.ToString("F1"))
+                  .Append(",\"team\":\"").Append(Escape(e.Team)).Append('"')
+                  .Append(",\"x\":").Append(e.X.ToString("F1"))
+                  .Append(",\"z\":").Append(e.Z.ToString("F1"))
+                  .Append('}');
             }
             return sb.ToString();
         }

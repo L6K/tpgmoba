@@ -24,8 +24,8 @@ namespace Enigma.Learning
             {
                 case MatchEventType.ChampionKill:
                     stats.RecordKill(resolveCharId(e.ActorName));
-                    // 偏り調査用: 先制キル/キルタイミングの Blue-Red 比較に使う時刻付きログ。
-                    stats.RecordChampionKillAt(elapsedSeconds, TeamName(e.Team));
+                    // 偏り調査用: 先制キル/キルタイミング + 発生位置の Blue-Red 比較に使う時刻・座標付きログ。
+                    stats.RecordChampionKillAt(elapsedSeconds, TeamName(e.Team), e.X, e.Z);
                     break;
                 case MatchEventType.ChampionDeath:
                     stats.RecordDeath(resolveCharId(e.ActorName));

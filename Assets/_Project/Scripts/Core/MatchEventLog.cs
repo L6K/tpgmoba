@@ -11,13 +11,19 @@ namespace Enigma.Core
         public readonly MatchEventType Type;
         public readonly int Team;
         public readonly string ActorName;
+        // 発生位置(倒された側の transform.position の X/Z)。バランス計測でマップ上の偏りを見るために使う。
+        // 既存の発行箇所を壊さないよう既定値 0 とする(未設定=原点扱い)。
+        public readonly float X;
+        public readonly float Z;
 
-        public MatchEvent(float time, MatchEventType type, int team, string actorName)
+        public MatchEvent(float time, MatchEventType type, int team, string actorName, float x = 0f, float z = 0f)
         {
             Time = time;
             Type = type;
             Team = team;
             ActorName = actorName;
+            X = x;
+            Z = z;
         }
     }
 
