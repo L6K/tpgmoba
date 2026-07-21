@@ -448,22 +448,23 @@ namespace Enigma.Character
         }
 
         // ジャングラーが巡回/キャンプ狩りを中断してプッシュ/ボス討伐へ合流すべきか。
-        // 自チーム優勢の閉幕プッシュ中、またはボスが押し切りライン以下でコミット中の場合に true。
+        // 判断は ObjectiveMacroLogic(純粋関数)へ委譲し、ここはボスのアクティブ状態を集めて渡すだけ。
         // _macro は直前の Sense で算出済みの値（0.3s 間隔のためフレーム遅延は許容）。
+        //
+        // 根本原因の是正: 旧実装はボス討伐合流を「ボス残HP<BossCommitHpFraction(0.6)」でのみ許可して
+        // いたため、満HPで湧いた直後のボスには誰も着手できず、ジャングラーが永久にキャンプを狩り続ける
+        // デッドロックだった(誰も先に削らない→60%を割らない→合流しない)。ボスがアクティブなら満HPでも
+        // 合流させ、討伐の口火を切らせる。BossCommitHpFraction は ApplyMacroOverride 側の
+        // 「コミット(敵接近でも離脱しない)」判定に引き続き使う(こちらは合流の可否とは別責務)。
         private bool JunglerShouldJoinPush()
         {
-            if (_macro == BotMacroAction.CloseOutSiege) return true;
-
+            bool bossActive = false;
             if (_macro == BotMacroAction.GroupForObjective)
             {
                 var director = ResolveObjectiveDirector();
-                var bossHc = director != null ? director.BossHealth : null;
-                if (bossHc != null && bossHc.Model.MaxHp > 0f
-                    && (bossHc.Model.CurrentHp / bossHc.Model.MaxHp) < BotMacroDecisionModel.BossCommitHpFraction)
-                    return true;
+                bossActive = director != null && director.BossHealth != null;
             }
-
-            return false;
+            return ObjectiveMacroLogic.JunglerShouldAbandonCamp(_macro, bossActive);
         }
 
         // マクロ判断を行動へ落とす。専用挙動を実行したら true を返し、呼び側はその場で return する。
