@@ -69,5 +69,87 @@ namespace Enigma.Tests
             Assert.IsFalse(
                 ObjectiveMacroLogic.JunglerShouldAbandonCamp(BotMacroAction.Defend, bossActive: true));
         }
+
+        // ── ボス討伐コミット(問題B): 削り途中の離脱→ボス全快リセットの是正 ──
+
+        // BossCommitHpFraction=0.6。0.6 未満のボス残HPを「押し切りライン」とする。
+        private const float Below = 0.5f; // < 0.6
+        private const float Above = 0.7f; // >= 0.6
+
+        [Test]
+        public void BossCommit_Starts_WhenNearAndBossDamagedPastLine()
+        {
+            // 未コミットでも、至近でボスが押し切りライン未満まで削れていれば着手コミットする。
+            Assert.IsTrue(ObjectiveMacroLogic.NextBossCommit(
+                alreadyCommitted: false, bossActive: true, bossHpFraction: Below,
+                selfCanFight: true, nearObjective: true));
+        }
+
+        [Test]
+        public void BossCommit_DoesNotStart_WhenBossHpAboveLine()
+        {
+            // まだ十分削れていない(>=0.6)なら着手コミットしない(全員がやみくもに張り付かない)。
+            Assert.IsFalse(ObjectiveMacroLogic.NextBossCommit(
+                alreadyCommitted: false, bossActive: true, bossHpFraction: Above,
+                selfCanFight: true, nearObjective: true));
+        }
+
+        [Test]
+        public void BossCommit_DoesNotStart_WhenFarFromBoss()
+        {
+            // 至近に居ない(交戦していない)なら、ボスが削れていても着手コミットしない。
+            Assert.IsFalse(ObjectiveMacroLogic.NextBossCommit(
+                alreadyCommitted: false, bossActive: true, bossHpFraction: Below,
+                selfCanFight: true, nearObjective: false));
+        }
+
+        [Test]
+        public void BossCommit_Maintained_EvenWhenPushedOutAndBossHealed()
+        {
+            // 一度コミットしたら、至近から押し出されてもボスHPが戻っても維持する(マクロ再評価による離脱を止める)。
+            Assert.IsTrue(ObjectiveMacroLogic.NextBossCommit(
+                alreadyCommitted: true, bossActive: true, bossHpFraction: 1f,
+                selfCanFight: true, nearObjective: false));
+        }
+
+        [Test]
+        public void BossCommit_Released_OnRetreat()
+        {
+            // 低HP撤退(selfCanFight=false)はコミットより優先: 例外として解除する。
+            Assert.IsFalse(ObjectiveMacroLogic.NextBossCommit(
+                alreadyCommitted: true, bossActive: true, bossHpFraction: Below,
+                selfCanFight: false, nearObjective: true));
+        }
+
+        [Test]
+        public void BossCommit_Released_WhenBossDies()
+        {
+            // ボス消滅/死亡(bossActive=false)でコミット解除。
+            Assert.IsFalse(ObjectiveMacroLogic.NextBossCommit(
+                alreadyCommitted: true, bossActive: false, bossHpFraction: Below,
+                selfCanFight: true, nearObjective: true));
+        }
+
+        [Test]
+        public void ApplyBossCommit_ForcesGroupForObjective_WhenCommitted()
+        {
+            // コミット中は Decide が Farm/CloseOutSiege/Defend を返しても GroupForObjective に固定する。
+            Assert.AreEqual(BotMacroAction.GroupForObjective,
+                ObjectiveMacroLogic.ApplyBossCommit(BotMacroAction.Farm, committed: true));
+            Assert.AreEqual(BotMacroAction.GroupForObjective,
+                ObjectiveMacroLogic.ApplyBossCommit(BotMacroAction.CloseOutSiege, committed: true));
+            Assert.AreEqual(BotMacroAction.GroupForObjective,
+                ObjectiveMacroLogic.ApplyBossCommit(BotMacroAction.Defend, committed: true));
+        }
+
+        [Test]
+        public void ApplyBossCommit_PassesThrough_WhenNotCommitted()
+        {
+            // 非コミット時は Decide の結果をそのまま通す。
+            Assert.AreEqual(BotMacroAction.Farm,
+                ObjectiveMacroLogic.ApplyBossCommit(BotMacroAction.Farm, committed: false));
+            Assert.AreEqual(BotMacroAction.Retreat,
+                ObjectiveMacroLogic.ApplyBossCommit(BotMacroAction.Retreat, committed: false));
+        }
     }
 }

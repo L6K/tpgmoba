@@ -146,6 +146,20 @@ namespace Enigma.Character
         private float _objectiveStuckSince = float.NaN;
         private float _objectiveGiveUpAt   = float.NaN;
 
+        // ボス討伐コミット・ラッチ(問題B): 一度着手したボスから離脱しないよう GroupForObjective を固定する。
+        private bool _bossCommitted;
+
+        // 巡回凍結番犬(問題A)用: 実移動量を測るためのアンカー位置と時刻。
+        private Vector3 _freezeAnchorPos;
+        private float   _freezeAnchorTime = float.NaN;
+
+        // 脱出オーバーライド(問題A): マクロの専用挙動(MoveDirectlyToward 等)やウェイポイント歩行を
+        // 上書きして、番犬が指定した到達可能ノードへ直進させる。全移動モードが従うため、
+        // Retreat/GroupForObjective/Defend(ウェイポイントを歩かないマクロ)中の凍結にも効く。
+        private Vector3 _freezeEscapeTarget;
+        private float   _freezeEscapeUntil = float.NaN; // NaN/過去 = 非アクティブ
+        private int     _freezeAttempt;                 // 連続発火での目標切替カウンタ(進捗で 0 リセット)
+
         // Sense と同頻度で算出するマクロ判断（撤退/中央集合/防衛等）。
         private BotMacroAction _macro = BotMacroAction.Farm;
 
@@ -381,6 +395,11 @@ namespace Enigma.Character
                 _senseTimer = SenseInterval;
                 Sense();
             }
+
+            // 巡回凍結番犬(問題A): 物理的に進めなくなったら脱出目標を仕込む(Sense 後=最新マクロで判定)。
+            UpdatePatrolFreezeWatchdog();
+            // 脱出オーバーライド: 生きている間はマクロの専用挙動/ウェイポイント歩行を上書きして脱出目標へ直進する。
+            if (TryApplyFreezeEscape()) return;
 
             _shoppingCheckTimer -= Time.deltaTime;
             if (_shoppingCheckTimer <= 0f)
@@ -1022,11 +1041,21 @@ namespace Enigma.Character
             // アンチデッドロック: 壁ジャム等でエンゲージ圏に到達できないまま GroupForObjective を
             // 選び続けると棒立ちで恒久的に詰む(実測: コアから56m地点の遠方組が壁際で凍結)。
             // 直近のギブアップからクールダウン中は GroupForObjective を選ばせず Farm へ逃がす。
-            if (decided == BotMacroAction.GroupForObjective
-                && ObjectiveGiveUpLogic.IsOnCooldown(_objectiveGiveUpAt, Time.time))
+            bool giveUpActive = ObjectiveGiveUpLogic.IsOnCooldown(_objectiveGiveUpAt, Time.time);
+            if (decided == BotMacroAction.GroupForObjective && giveUpActive)
             {
                 decided = BotMacroAction.Farm;
             }
+
+            // ボス討伐コミット(問題B): 削り途中の離脱でボスが全快リセットするのを止める。
+            // 至近でボスを押し切りライン未満まで削ったら Retreat/ボス消滅まで GroupForObjective に固定する。
+            // ギブアップ中(壁ジャム等でコアに到達できない)は安全弁を優先しコミットを張らない(デッドロック回帰防止)。
+            bool bossActive = bossHc != null && !bossHc.Model.IsDead && objectiveActiveOrSoon;
+            _bossCommitted = !giveUpActive && ObjectiveMacroLogic.NextBossCommit(
+                _bossCommitted, bossActive, bossHpFraction,
+                selfCanFight: decided != BotMacroAction.Retreat,
+                nearObjective: distToObjective <= BossEngageRange);
+            decided = ObjectiveMacroLogic.ApplyBossCommit(decided, _bossCommitted);
 
             _macro = decided;
         }
@@ -1276,6 +1305,113 @@ namespace Enigma.Character
                 FaceAndAttack(_neutralTarget, allowSkills: false, useMicro: false);
                 ApplyMovement(LaneMove.Stop);
             }
+        }
+
+        // 実位置がほとんど動かない「凍結」を検知し、発動したら到達可能な目的地へ抜けさせる番犬(問題A)。
+        // 対象マクロはロール別(WatchdogEligible): ジャングラー=Farm/Push、レーナー=ジャングル内での
+        // Farm/Push/Retreat。中立狩り(_neutralTarget)/交戦(_nearestEnemy)/攻囲(_nearestTowerHc)の
+        // 意図した静止と、リコール/ダッシュ(呼び出し位置の early-return 後)は除外する。
+        private void UpdatePatrolFreezeWatchdog()
+        {
+            // 「やることが無いのに動けない」状態だけを対象にする(交戦/攻囲/中立狩りの意図した静止は除外)。
+            bool noDistraction = _neutralTarget == null
+                                 && _nearestEnemy == null
+                                 && _nearestTowerHc == null;
+
+            // マクロ・ロール・位置で適用可否を判定(中心=マップ原点=ボス/オブジェクティブ)。
+            // ジャングラーは Farm/Push のみ(挙動不変)、レーナーはジャングル内(r<54)なら Retreat も対象。
+            Vector3 p = transform.position;
+            float distFromCenter = Mathf.Sqrt(p.x * p.x + p.z * p.z);
+            bool patrolling = noDistraction
+                              && PatrolFreezeLogic.WatchdogEligible(_farmsNeutralCamps, _macro, distFromCenter);
+            if (!patrolling)
+            {
+                _freezeAnchorTime = float.NaN; // 監視対象外の間はアンカーを無効化
+                return;
+            }
+
+            float now = Time.time;
+            if (float.IsNaN(_freezeAnchorTime))
+            {
+                _freezeAnchorPos  = transform.position;
+                _freezeAnchorTime = now;
+                return;
+            }
+
+            float moved = Vector3.Distance(transform.position, _freezeAnchorPos);
+            if (!PatrolFreezeLogic.IsFrozen(moved, now - _freezeAnchorTime))
+            {
+                // 進捗があればアンカーを現在地へ更新し、脱出試行カウンタもリセット(新しい凍結エピソードは最寄りから)。
+                if (moved >= PatrolFreezeLogic.FreezeMoveEpsilon)
+                {
+                    _freezeAnchorPos  = transform.position;
+                    _freezeAnchorTime = now;
+                    _freezeAttempt    = 0;
+                }
+                return;
+            }
+
+            // 凍結発動。
+            int nearest = NearestWaypointIndex();
+            int wpCount = _waypoints?.Length ?? 0;
+
+            if (_farmsNeutralCamps && (_macro == BotMacroAction.Farm || _macro == BotMacroAction.Push))
+            {
+                // ジャングラーの Farm/Push: 実績のある反転復帰(ウェイポイント歩行がそのまま従うので有効)。
+                if (_waypoints != null && _waypoints.Length > 1)
+                    System.Array.Reverse(_waypoints);
+                _waypointIndex = NearestWaypointIndex();
+                _freezeEscapeUntil = float.NaN; // このケースは脱出オーバーライドを使わない
+                Debug.Log($"[PatrolFreeze] {name} reverse -> wp{_waypointIndex} (macro={_macro})");
+            }
+            else
+            {
+                // それ以外(レーナー全般、ジャングラーの GroupForObjective 帰り等): 脱出オーバーライド。
+                // これらのマクロは MoveDirectlyToward で直進し、ウェイポイント再アンカーは参照されない(no-op)ため、
+                // 全移動モードが従う直進目標を仕込む。再凍結のたびに目標ノードを自陣方向へずらして塞がれた壁を回避する。
+                bool retreatBias = _macro == BotMacroAction.Retreat;
+                int escIdx = PatrolFreezeLogic.EscapeTargetIndex(nearest, wpCount, retreatBias, _freezeAttempt);
+                _freezeEscapeTarget = wpCount > 0 ? _waypoints[escIdx] : transform.position;
+                _freezeEscapeUntil  = now + PatrolFreezeLogic.FreezeEscapeDuration;
+                _freezeAttempt++;
+                Debug.Log($"[PatrolFreeze] {name} escape -> wp{escIdx} (macro={_macro})");
+            }
+
+            // スタック検知の内部状態もリセットして再計測させる。
+            _stuckTimer      = 0f;
+            _stuckBestWpDist = float.MaxValue;
+            _stuckWpIndex    = -1;
+
+            _freezeAnchorPos  = transform.position;
+            _freezeAnchorTime = now;
+        }
+
+        // 脱出オーバーライドが生きている間、マクロの専用挙動より優先して脱出目標へ直進する。
+        // 期限切れ or 到達(FreezeEscapeArriveRadius 以内)で解除し通常制御へ返す(false)。
+        // 移動している間(=脱出継続)は true を返し、呼び側は通常の Sense/マクロ処理をスキップする。
+        private bool TryApplyFreezeEscape()
+        {
+            if (float.IsNaN(_freezeEscapeUntil)) return false;
+
+            // 脱出中に交戦相手が現れたら打ち切り、通常制御(戦闘/退避)へ即座に返す。
+            if (_nearestEnemy != null)
+            {
+                _freezeEscapeUntil = float.NaN;
+                return false;
+            }
+
+            float dist = Vector3.Distance(transform.position, _freezeEscapeTarget);
+            if (Time.time >= _freezeEscapeUntil || dist <= PatrolFreezeLogic.FreezeEscapeArriveRadius)
+            {
+                if (dist <= PatrolFreezeLogic.FreezeEscapeArriveRadius)
+                    _freezeAttempt = 0; // 到達成功: 次のエピソードは最寄りから
+                _freezeEscapeUntil = float.NaN;
+                return false;
+            }
+
+            // 既存の移動プリミティブで脱出目標へ直進(CC/重力/速度倍率は MoveDirectlyToward 内で反映)。
+            MoveDirectlyToward(_freezeEscapeTarget);
+            return true;
         }
 
         // 現在位置に最も近いウェイポイントのインデックスを返す（経路逸脱からの復帰用）。
@@ -1894,6 +2030,10 @@ namespace Enigma.Character
             // 見た目（フェード/転倒）は DeathPresenter に委譲。AI 側は当たり/移動だけ止める
             _isDead = true;
             _recalling = false; // 死亡で詠唱状態を破棄（復活後に誤ってテレポート完走しないように）
+            _bossCommitted     = false;     // 死亡でボスコミットを解除（復活後に古いラッチを引き継がない）
+            _freezeAnchorTime  = float.NaN; // 巡回凍結番犬のアンカーも無効化
+            _freezeEscapeUntil = float.NaN; // 脱出オーバーライドも解除
+            _freezeAttempt     = 0;
             _controller.enabled = false;
             // 死亡中に自陣タワーがさらに被弾しても、リスポーン後に古い脅威へ釣られないようリセットする。
             _lastTowerDamageTime = float.NegativeInfinity;
