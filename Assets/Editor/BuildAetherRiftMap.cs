@@ -3141,7 +3141,9 @@ public static partial class BuildAetherRiftMap
 
         var bossHp = boss.AddComponent<HealthComponent>();
         var soBossHp = new SerializedObject(bossHp);
-        soBossHp.FindProperty("_maxHp").floatValue = 1000f;
+        // 550: Bot が現実に送り込めるのは1〜2体で、1000だとソロは削り切る前にマクロ窓が閉じて
+        // 全快リセットされる(2026-07-22 プローブ実測)。ソロ〜2体で取り切れる耐久に合わせる。
+        soBossHp.FindProperty("_maxHp").floatValue = 550f;
         soBossHp.ApplyModifiedPropertiesWithoutUndo();
 
         // ボスは中立（ミニオンの攻撃対象外）
