@@ -22,9 +22,26 @@ namespace Enigma.Vision
         private const float TowerSight     = 12f;
         private const float EyeHeight      = 1.6f;   // 接地yからの目線オフセット(視界2.0: 高低差/LoS 判定用)
 
-        // マップシーンでのみ自動生成(メニュー/選択シーンでは動かさない)
+        // マップシーンでのみ自動生成(メニュー/選択シーンでは動かさない)。
+        // AfterSceneLoad はプロセス開始後1回しか走らず、本体は DontDestroyOnLoad でもないため、
+        // BalanceSimRunner 等が2試合目のために AetherRift_Map を再ロードすると破棄されたまま
+        // 再生成されない(CentralObjectiveDirector と同じ既知の穴)。sceneLoaded 購読で毎回補充する。
+        private static bool _sceneLoadedHooked;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSpawn()
+        {
+            if (!_sceneLoadedHooked)
+            {
+                SceneManager.sceneLoaded += OnSceneLoaded;
+                _sceneLoadedHooked = true;
+            }
+            TrySpawn();
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => TrySpawn();
+
+        private static void TrySpawn()
         {
             var scene = SceneManager.GetActiveScene();
             if (scene.name != "AetherRift_Map") return;

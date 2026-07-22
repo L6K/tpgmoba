@@ -47,8 +47,25 @@ namespace Enigma.GameModes
         public RiftState State { get; private set; } = RiftState.Dormant;
         public float SecondsToNextChange { get; private set; }
 
+        // AfterSceneLoad はプロセス開始後1回しか走らず、本体は DontDestroyOnLoad でもないため、
+        // BalanceSimRunner 等が2試合目のために AetherRift_Map を再ロードすると破棄されたまま
+        // 再生成されない(CentralObjectiveDirector と同じ既知の穴)。sceneLoaded 購読で毎回補充する。
+        private static bool _sceneLoadedHooked;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSpawn()
+        {
+            if (!_sceneLoadedHooked)
+            {
+                SceneManager.sceneLoaded += OnSceneLoaded;
+                _sceneLoadedHooked = true;
+            }
+            TrySpawn();
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => TrySpawn();
+
+        private static void TrySpawn()
         {
             if (SceneManager.GetActiveScene().name != "AetherRift_Map") return;
             if (Instance != null) return;

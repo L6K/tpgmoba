@@ -53,8 +53,26 @@ namespace Enigma.GameModes
             return false;
         }
 
+        // AfterSceneLoad はプロセス開始後1回しか走らない。ディレクター自身は DontDestroyOnLoad
+        // ではない通常シーンオブジェクトのため、BalanceSimRunner 等が2試合目のために
+        // AetherRift_Map を再ロードすると破棄されたまま再生成されず、中央ボスが起動しなくなる
+        // (実測: 2試合目以降 CoreCaptured が一切発生しない)。sceneLoaded 購読で毎回補充する。
+        private static bool _sceneLoadedHooked;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoSpawn()
+        {
+            if (!_sceneLoadedHooked)
+            {
+                SceneManager.sceneLoaded += OnSceneLoaded;
+                _sceneLoadedHooked = true;
+            }
+            TrySpawn();
+        }
+
+        private static void OnSceneLoaded(Scene scene, LoadSceneMode mode) => TrySpawn();
+
+        private static void TrySpawn()
         {
             if (SceneManager.GetActiveScene().name != "AetherRift_Map") return;
             if (FindObjectOfType<CentralObjectiveDirector>() != null) return;
